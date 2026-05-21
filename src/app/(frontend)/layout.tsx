@@ -45,12 +45,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link href="/favicon.svg" rel="icon" type="image/svg+xml" />
       </head>
       <body>
-        <Providers>
-          <Header />
-          {children}
-          <Footer />
-          <WhatsAppButton />
-        </Providers>
+        <div className="flex min-h-screen flex-col">
+          <Providers>
+            <Header />
+            <main className="flex-1 pt-[var(--header-height,4rem)]">{children}</main>
+            <Footer />
+            <WhatsAppButton />
+          </Providers>
+        </div>
       </body>
     </html>
   )

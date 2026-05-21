@@ -28,7 +28,8 @@ export function CartPageClient() {
     if (!validate()) return
 
     const lines = items.map(
-      (item) => `• ${item.quantity}x ${item.name} (${item.weight}) - ${formatPrice(item.price * item.quantity)}`,
+      (item) =>
+        `• ${item.quantity}x ${item.name} (${item.weight}) - ${formatPrice(item.price * item.quantity)}`,
     )
 
     const message = [
@@ -158,7 +159,9 @@ export function CartPageClient() {
 
               <div className="flex justify-between mb-6 pb-4 border-b border-border">
                 <span className="font-sans text-muted-foreground">Total ({itemCount} produse)</span>
-                <span className="font-sans text-xl font-bold text-primary">{formatPrice(total)}</span>
+                <span className="font-sans text-xl font-bold text-primary">
+                  {formatPrice(total)}
+                </span>
               </div>
 
               <div className="space-y-4 mb-6">
@@ -189,7 +192,9 @@ export function CartPageClient() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-sans font-medium mb-1">Adresă de livrare *</label>
+                  <label className="block text-sm font-sans font-medium mb-1">
+                    Adresă de livrare *
+                  </label>
                   <textarea
                     value={form.address}
                     onChange={(e) => setForm({ ...form, address: e.target.value })}

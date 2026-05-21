@@ -29,9 +29,7 @@ export const ProductsPageClient: React.FC<{ products: Product[] }> = ({ products
   const [activeFilter, setActiveFilter] = useState('all')
 
   const filtered =
-    activeFilter === 'all'
-      ? products
-      : products.filter((p) => p.category === activeFilter)
+    activeFilter === 'all' ? products : products.filter((p) => p.category === activeFilter)
 
   return (
     <div className="py-12">

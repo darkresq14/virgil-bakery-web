@@ -16,7 +16,10 @@ interface HeroProps {
 
 export const Hero: React.FC<HeroProps> = ({ heading, subheading, backgroundImage }) => {
   return (
-    <section className="relative h-screen min-h-150 flex items-center justify-center overflow-hidden">
+    <section
+      className="relative h-screen min-h-150 flex items-center justify-center overflow-hidden"
+      style={{ marginTop: 'calc(-1 * var(--header-height, 4rem))' }}
+    >
       {backgroundImage?.url && (
         <Image
           src={backgroundImage.url}

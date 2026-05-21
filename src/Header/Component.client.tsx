@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ShoppingBag, Menu, X, MessageCircle } from 'lucide-react'
@@ -21,6 +21,19 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data, adminBarProps 
   const [mobileOpen, setMobileOpen] = useState(false)
   const { itemCount } = useCart()
   const pathname = usePathname()
+
+  useEffect(() => {
+    const header = document.querySelector('header')
+    if (!header) return
+    const observer = new ResizeObserver(([entry]) => {
+      document.documentElement.style.setProperty(
+        '--header-height',
+        `${entry.contentRect.height}px`,
+      )
+    })
+    observer.observe(header)
+    return () => observer.disconnect()
+  }, [])
 
   const navLinks = [
     { href: '/', label: 'Acasă' },
