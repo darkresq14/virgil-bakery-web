@@ -1,0 +1,42 @@
+import type { Metadata } from 'next'
+import configPromise from '@payload-config'
+import { getPayload } from 'payload'
+import { draftMode } from 'next/headers'
+import { ProductsPageClient } from './page.client'
+
+export const metadata: Metadata = {
+  title: 'Produse | Pâine cu Maia by Virgil',
+  description: 'Descoperă gama noastră de pâine artizanală cu maia: pâine curentă, dulci și produse ocazionale.',
+}
+
+export default async function ProductsPage() {
+  const { isEnabled: draft } = await draftMode()
+  const payload = await getPayload({ config: configPromise })
+
+  const products = await payload.find({
+    collection: 'products',
+    draft,
+    limit: 100,
+    overrideAccess: draft,
+    where: {
+      _status: { equals: 'published' },
+    },
+    sort: 'name',
+  })
+
+  return (
+    <ProductsPageClient
+      products={products.docs.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        shortDescription: p.shortDescription,
+        price: p.price,
+        weight: p.weight,
+        category: p.category,
+        available: p.available,
+        featuredImage: p.featuredImage as any,
+      }))}
+    />
+  )
+}

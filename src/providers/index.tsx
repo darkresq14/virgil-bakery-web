@@ -1,14 +1,14 @@
 import React from 'react'
 
-import { HeaderThemeProvider } from './HeaderTheme'
-import { ThemeProvider } from './Theme'
+import { CartProvider } from './Cart'
+import { ToastProvider } from '@/components/Toast'
 
 export const Providers: React.FC<{
   children: React.ReactNode
 }> = ({ children }) => {
   return (
-    <ThemeProvider>
-      <HeaderThemeProvider>{children}</HeaderThemeProvider>
-    </ThemeProvider>
+    <CartProvider>
+      <ToastProvider>{children}</ToastProvider>
+    </CartProvider>
   )
 }
