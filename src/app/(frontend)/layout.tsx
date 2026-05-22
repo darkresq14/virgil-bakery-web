@@ -3,6 +3,8 @@ import { Playfair_Display, Merriweather, Inter } from 'next/font/google'
 
 import { cn } from '@/utilities/ui'
 import React from 'react'
+import { SpeedInsights } from '@vercel/speed-insights/next'
+import { Analytics } from '@vercel/analytics/next'
 
 import { Footer } from '@/Footer/Component'
 import { Header } from '@/Header/Component'
@@ -59,6 +61,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </main>
             <Footer />
             <WhatsAppButton />
+            <SpeedInsights />
+            <Analytics />
           </Providers>
         </div>
       </body>
