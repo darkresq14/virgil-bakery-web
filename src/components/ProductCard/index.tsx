@@ -48,18 +48,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       className="group flex flex-col rounded-xl bg-card shadow-md hover:shadow-lg transition-shadow overflow-hidden"
       aria-label={`${product.name} — ${new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'RON' }).format(product.price)}`}
     >
-      <div className="relative aspect-[4/3] overflow-hidden">
+      <div className="relative aspect-4/3 overflow-hidden">
         {product.featuredImage?.url ? (
           <Image
-            src={product.featuredImage.url}
+            src={product.featuredImage.sizes?.card?.url || product.featuredImage.url}
             alt={product.featuredImage.alt || product.name}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
         ) : (
-          <div className="w-full h-full bg-secondary flex items-center justify-center" role="img" aria-label={product.name}>
-            <span className="text-4xl" aria-hidden="true">🍞</span>
+          <div
+            className="w-full h-full bg-secondary flex items-center justify-center"
+            role="img"
+            aria-label={product.name}
+          >
+            <span className="text-4xl" aria-hidden="true">
+              🍞
+            </span>
           </div>
         )}
         {!product.available && (
@@ -81,7 +87,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <div className="mt-auto flex items-center justify-between">
           <div className="font-sans">
             <span className="text-lg font-semibold text-primary">
-              {new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'RON' }).format(product.price)}
+              {new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'RON' }).format(
+                product.price,
+              )}
             </span>
             {product.weight && (
               <span className="text-sm text-muted-foreground ml-1">/ {product.weight}</span>
