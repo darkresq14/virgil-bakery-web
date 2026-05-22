@@ -12,6 +12,8 @@ export const metadata: Metadata = {
     'Descoperă gama noastră de pâine artizanală cu maia: pâine curentă, dulci și produse ocazionale.',
 }
 
+export const revalidate = 600
+
 export default async function ProductsPage() {
   const { isEnabled: draft } = await draftMode()
   const payload = await getPayload({ config: configPromise })

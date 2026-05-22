@@ -82,7 +82,7 @@ export function CartPageClient() {
               {items.map((item) => (
                 <div
                   key={item.productId}
-                  className="flex items-center gap-4 rounded-lg border border-border bg-card p-4"
+                  className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-lg border border-border bg-card p-4"
                 >
                   <div className="flex-1 min-w-0">
                     <Link
@@ -99,38 +99,40 @@ export function CartPageClient() {
                     </p>
                   </div>
 
-                  {/* Quantity controls */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between sm:gap-4">
+                    {/* Quantity controls */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                        className="flex items-center justify-center w-8 h-8 rounded-full border border-border hover:bg-secondary transition-colors"
+                        aria-label="Scade cantitatea"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <span className="w-8 text-center font-sans font-medium">{item.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                        className="flex items-center justify-center w-8 h-8 rounded-full border border-border hover:bg-secondary transition-colors"
+                        aria-label="Crește cantitatea"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+
+                    {/* Subtotal */}
+                    <span className="font-sans font-semibold min-w-[5rem] text-right">
+                      {formatPrice(item.price * item.quantity)}
+                    </span>
+
+                    {/* Remove */}
                     <button
-                      onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                      className="flex items-center justify-center w-8 h-8 rounded-full border border-border hover:bg-secondary transition-colors"
-                      aria-label="Scade cantitatea"
+                      onClick={() => removeItem(item.productId)}
+                      className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+                      aria-label={`Elimină ${item.name}`}
                     >
-                      <Minus className="w-3 h-3" />
-                    </button>
-                    <span className="w-8 text-center font-sans font-medium">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                      className="flex items-center justify-center w-8 h-8 rounded-full border border-border hover:bg-secondary transition-colors"
-                      aria-label="Crește cantitatea"
-                    >
-                      <Plus className="w-3 h-3" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-
-                  {/* Subtotal */}
-                  <span className="font-sans font-semibold min-w-[5rem] text-right">
-                    {formatPrice(item.price * item.quantity)}
-                  </span>
-
-                  {/* Remove */}
-                  <button
-                    onClick={() => removeItem(item.productId)}
-                    className="p-2 text-muted-foreground hover:text-destructive transition-colors"
-                    aria-label={`Elimină ${item.name}`}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
                 </div>
               ))}
             </div>

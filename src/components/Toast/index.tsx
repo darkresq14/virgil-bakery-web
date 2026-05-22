@@ -31,10 +31,11 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <ToastContext value={{ showToast }}>
       {children}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2">
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2" aria-live="polite">
         {toasts.map((toast) => (
           <div
             key={toast.id}
+            role="status"
             className="rounded-lg bg-foreground text-background px-4 py-3 shadow-lg text-sm font-sans animate-[slideUp_0.3s_ease-out]"
           >
             {toast.message}

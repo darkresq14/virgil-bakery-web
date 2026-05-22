@@ -57,6 +57,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     <Link
       href={`/produse/${product.slug}`}
       className="group flex flex-col rounded-xl bg-card shadow-md hover:shadow-lg transition-shadow overflow-hidden"
+      aria-label={`${product.name} — ${new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'RON' }).format(product.price)}`}
     >
       <div className="relative aspect-[4/3] overflow-hidden">
         {product.featuredImage?.url ? (
@@ -68,8 +69,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
         ) : (
-          <div className="w-full h-full bg-secondary flex items-center justify-center">
-            <span className="text-4xl">🍞</span>
+          <div className="w-full h-full bg-secondary flex items-center justify-center" role="img" aria-label={product.name}>
+            <span className="text-4xl" aria-hidden="true">🍞</span>
           </div>
         )}
         {product.category && (

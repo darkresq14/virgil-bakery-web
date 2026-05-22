@@ -30,16 +30,16 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ testimonials }) => {
   const testimonial = testimonials[current]
 
   return (
-    <section className="py-20 bg-secondary/50">
+    <section className="py-20 bg-secondary/50" aria-label="Testimoniale clienți">
       <div className="container">
         <h2 className="text-3xl font-heading text-center mb-12">Ce spun clienții</h2>
 
-        <div className="max-w-3xl mx-auto text-center">
-          <Quote className="w-12 h-12 text-primary/30 mx-auto mb-6" />
+        <div className="max-w-3xl mx-auto text-center" aria-roledescription="carusel" aria-label="Testimoniale">
+          <Quote className="w-12 h-12 text-primary/30 mx-auto mb-6" aria-hidden="true" />
           <blockquote className="text-lg md:text-xl font-serif italic text-foreground/80 mb-6 min-h-[6rem]">
             &ldquo;{testimonial.content}&rdquo;
           </blockquote>
-          <p className="font-sans font-medium text-foreground">— {testimonial.author}</p>
+          <cite className="font-sans font-medium text-foreground not-italic">— {testimonial.author}</cite>
         </div>
 
         {testimonials.length > 1 && (

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ShoppingBag, Menu, X, MessageCircle } from 'lucide-react'
@@ -17,10 +17,20 @@ interface HeaderClientProps {
   adminBarProps?: { preview: boolean }
 }
 
+const navLinks = [
+  { href: '/', label: 'Acasă' },
+  { href: '/produse', label: 'Produse' },
+  { href: '/maiaua-mea', label: 'Despre' },
+  { href: '/posts', label: 'Blog' },
+  { href: '/#contact', label: 'Contact' },
+]
+
 export const HeaderClient: React.FC<HeaderClientProps> = ({ data, adminBarProps }) => {
   const [mobileOpen, setMobileOpen] = useState(false)
   const { itemCount } = useCart()
   const pathname = usePathname()
+  const overlayRef = useRef<HTMLDivElement>(null)
+  const closeRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     const header = document.querySelector('header')
@@ -35,13 +45,48 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data, adminBarProps 
     return () => observer.disconnect()
   }, [])
 
-  const navLinks = [
-    { href: '/', label: 'Acasă' },
-    { href: '/produse', label: 'Produse' },
-    { href: '/maiaua-mea', label: 'Despre' },
-    { href: '/posts', label: 'Blog' },
-    { href: '/#contact', label: 'Contact' },
-  ]
+  // Lock body scroll & handle focus trapping when mobile menu is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden'
+
+      // Focus the close button after opening
+      requestAnimationFrame(() => closeRef.current?.focus())
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setMobileOpen(false)
+          return
+        }
+
+        if (e.key === 'Tab' && overlayRef.current) {
+          const focusable = overlayRef.current.querySelectorAll<HTMLElement>(
+            'a[href], button, [tabindex]:not([tabindex="-1"])',
+          )
+          const first = focusable[0]
+          const last = focusable[focusable.length - 1]
+
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        }
+      }
+
+      document.addEventListener('keydown', handleKeyDown)
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown)
+        document.body.style.overflow = ''
+      }
+    } else {
+      document.body.style.overflow = ''
+    }
+  }, [mobileOpen])
+
+  const closeMobile = useCallback(() => setMobileOpen(false), [])
 
   return (
     <>
@@ -49,12 +94,12 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data, adminBarProps 
         <AdminBar adminBarProps={adminBarProps} />
         <div className="container flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center shrink-0">
+          <Link href="/" className="flex items-center shrink-0" aria-label="Pâine cu Maia — Pagina principală">
             <Logo />
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden md:flex items-center gap-6" aria-label="Navigare principală">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -88,6 +133,8 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data, adminBarProps 
               className="md:hidden flex items-center justify-center w-10 h-10 rounded-full hover:bg-secondary transition-colors"
               onClick={() => setMobileOpen(true)}
               aria-label="Deschide meniul"
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-menu"
             >
               <Menu className="w-6 h-6" />
             </button>
@@ -97,13 +144,21 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data, adminBarProps 
 
       {/* Mobile Menu Overlay */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-60 bg-white flex flex-col">
+        <div
+          ref={overlayRef}
+          id="mobile-menu"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Meniu navigare"
+          className="fixed inset-0 z-60 bg-white flex flex-col"
+        >
           <div className="flex items-center justify-between h-16 px-4">
-            <Link href="/" onClick={() => setMobileOpen(false)}>
+            <Link href="/" onClick={closeMobile} aria-label="Pâine cu Maia — Pagina principală">
               <Logo />
             </Link>
             <button
-              onClick={() => setMobileOpen(false)}
+              ref={closeRef}
+              onClick={closeMobile}
               className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-secondary transition-colors"
               aria-label="Închide meniul"
             >
@@ -111,12 +166,12 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data, adminBarProps 
             </button>
           </div>
 
-          <nav className="flex flex-col items-center justify-center flex-1 gap-6">
+          <nav className="flex flex-col items-center justify-center flex-1 gap-6" aria-label="Navigare principală">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                onClick={() => setMobileOpen(false)}
+                onClick={closeMobile}
                 className="text-2xl font-heading transition-colors hover:text-primary"
               >
                 {link.label}
