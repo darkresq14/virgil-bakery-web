@@ -64,7 +64,9 @@ export default buildConfig({
   db: sqliteAdapter({
     client: {
       url: process.env.DATABASE_URL || '',
+      authToken: process.env.DATABASE_AUTH_TOKEN,
     },
+    wal: true,
   }),
   collections: [Pages, Posts, Media, Categories, Users, Products, Testimonials],
   cors: [getServerSideURL()].filter(Boolean),
