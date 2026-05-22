@@ -37,7 +37,7 @@ export const Products: CollectionConfig<'products'> = {
     slug: true,
   },
   admin: {
-    defaultColumns: ['name', 'slug', 'category', 'price', 'available'],
+    defaultColumns: ['name', 'slug', 'productType', 'price', 'available'],
     livePreview: {
       url: ({ data, req }) =>
         generatePreviewPath({
@@ -94,16 +94,47 @@ export const Products: CollectionConfig<'products'> = {
               label: 'Descriere detaliată',
             },
             {
-              name: 'category',
+              name: 'productType',
               type: 'select',
-              label: 'Categorie',
+              label: 'Tip produs',
               options: [
-                { label: 'Curente', value: 'regular' },
-                { label: 'Dulci', value: 'sweet' },
-                { label: 'Ocazionale', value: 'occasional' },
+                { label: 'Pâine', value: 'paine' },
+                { label: 'Baghetă', value: 'bagheta' },
+                { label: 'Chifle', value: 'chifle' },
+                { label: 'Focaccia', value: 'focaccia' },
+                { label: 'Biscotti', value: 'biscotti' },
+                { label: 'Cozonac', value: 'cozonac' },
+                { label: 'Desert', value: 'desert' },
+                { label: 'Saleuri', value: 'saleuri' },
+                { label: 'Set/Cadou', value: 'set-cadou' },
               ],
               required: true,
-              defaultValue: 'regular',
+              defaultValue: 'paine',
+            },
+            {
+              name: 'tags',
+              type: 'select',
+              label: 'Tag-uri',
+              hasMany: true,
+              options: [
+                { label: 'Dulce', value: 'dulce' },
+                { label: 'Sărat', value: 'sarat' },
+                { label: 'Fără gluten', value: 'fara-gluten' },
+                { label: 'Integrală', value: 'integrala' },
+                { label: 'Secară', value: 'secara' },
+                { label: 'Seasonal', value: 'seasonal' },
+                { label: 'Cadou', value: 'cadou' },
+                { label: 'Ornamental', value: 'ornamental' },
+              ],
+            },
+            {
+              name: 'sortOrder',
+              type: 'number',
+              label: 'Ordine sortare',
+              defaultValue: 0,
+              admin: {
+                description: 'Număr mai mic = apare primul în tipul său',
+              },
             },
             {
               name: 'available',

@@ -12,10 +12,16 @@ import { useToast } from '@/components/Toast'
 import { Product } from '@/payload-types'
 import { isExpandedDoc } from '@/utilities/type-guards'
 
-const categoryLabels: Record<string, string> = {
-  regular: 'Curente',
-  sweet: 'Dulci',
-  occasional: 'Ocazionale',
+const productTypeLabels: Record<string, string> = {
+  paine: 'Pâine',
+  bagheta: 'Baghetă',
+  chifle: 'Chifle',
+  focaccia: 'Focaccia',
+  biscotti: 'Biscotti',
+  cozonac: 'Cozonac',
+  desert: 'Desert',
+  saleuri: 'Saleuri',
+  'set-cadou': 'Set/Cadou',
 }
 
 export const ProductDetailClient: React.FC<{ product: Product }> = ({ product }) => {
@@ -45,7 +51,7 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
       name: product.name,
       price: product.price,
       weight: product.weight || '',
-      category: product.category || 'regular',
+      productType: product.productType || 'paine',
       slug: product.slug,
     })
     showToast(`${product.name} adăugat în coș`)
@@ -116,9 +122,9 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
         {/* Details */}
         <ScrollReveal delay={150}>
           <div>
-            {product.category && (
+            {product.productType && (
               <span className="inline-block rounded-full bg-secondary px-3 py-1 text-xs font-sans font-medium text-muted-foreground mb-3">
-                {categoryLabels[product.category] || product.category}
+                {productTypeLabels[product.productType] || product.productType}
               </span>
             )}
             <h1 className="text-3xl md:text-4xl font-heading mb-2">{product.name}</h1>

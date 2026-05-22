@@ -8,7 +8,7 @@ export interface CartItem {
   price: number
   quantity: number
   weight: string
-  category: string
+  productType: string
   slug: string
 }
 

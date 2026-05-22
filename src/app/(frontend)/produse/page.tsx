@@ -26,7 +26,7 @@ export default async function ProductsPage() {
     where: {
       _status: { equals: 'published' },
     },
-    sort: 'name',
+    sort: '-available,sortOrder,name',
   })
 
   return (
@@ -38,8 +38,10 @@ export default async function ProductsPage() {
         shortDescription: p.shortDescription,
         price: p.price,
         weight: p.weight,
-        category: p.category,
+        productType: p.productType,
+        tags: p.tags ?? undefined,
         available: p.available ?? undefined,
+        sortOrder: p.sortOrder ?? undefined,
         featuredImage: isExpandedDoc(p.featuredImage) ? p.featuredImage : null,
       }))}
     />

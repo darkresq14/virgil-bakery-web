@@ -17,22 +17,11 @@ interface ProductCardProps {
     shortDescription?: string
     price: number
     weight?: string
-    category?: string
+    productType?: string
+    tags?: string[]
     available?: boolean
     featuredImage?: Media | null
   }
-}
-
-const categoryLabels: Record<string, string> = {
-  regular: 'Curente',
-  sweet: 'Dulci',
-  occasional: 'Ocazionale',
-}
-
-const categoryColors: Record<string, string> = {
-  regular: 'bg-amber-100 text-amber-800',
-  sweet: 'bg-pink-100 text-pink-800',
-  occasional: 'bg-blue-100 text-blue-800',
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
@@ -47,7 +36,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       name: product.name,
       price: product.price,
       weight: product.weight || '',
-      category: product.category || 'regular',
+      productType: product.productType || 'paine',
       slug: product.slug,
     })
     showToast(`${product.name} adăugat în coș`)
@@ -72,13 +61,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <div className="w-full h-full bg-secondary flex items-center justify-center" role="img" aria-label={product.name}>
             <span className="text-4xl" aria-hidden="true">🍞</span>
           </div>
-        )}
-        {product.category && (
-          <span
-            className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-sans font-medium ${categoryColors[product.category] || 'bg-secondary text-foreground'}`}
-          >
-            {categoryLabels[product.category] || product.category}
-          </span>
         )}
         {!product.available && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">

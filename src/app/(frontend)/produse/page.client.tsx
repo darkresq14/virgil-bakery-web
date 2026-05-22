@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { ProductCard } from '@/components/ProductCard'
 import { ScrollReveal } from '@/components/ScrollReveal'
 
@@ -13,42 +13,85 @@ interface Product {
   shortDescription?: string
   price: number
   weight?: string
-  category?: string
+  productType?: string
+  tags?: string[]
   available?: boolean
+  sortOrder?: number
   featuredImage?: Media | null
 }
 
-const filters = [
+const typeFilters = [
   { value: 'all', label: 'Toate' },
-  { value: 'regular', label: 'Curente' },
-  { value: 'sweet', label: 'Dulci' },
-  { value: 'occasional', label: 'Ocazionale' },
+  { value: 'paine', label: 'Pâine' },
+  { value: 'bagheta', label: 'Baghete' },
+  { value: 'chifle', label: 'Chifle' },
+  { value: 'focaccia', label: 'Focaccia' },
+  { value: 'biscotti', label: 'Biscotti' },
+  { value: 'cozonac', label: 'Cozonac' },
+  { value: 'desert', label: 'Desert' },
+  { value: 'saleuri', label: 'Saleuri' },
+  { value: 'set-cadou', label: 'Set/Cadou' },
 ]
 
-export const ProductsPageClient: React.FC<{ products: Product[] }> = ({ products }) => {
-  const [activeFilter, setActiveFilter] = useState('all')
+const typeOrder: Record<string, number> = {
+  paine: 1,
+  bagheta: 2,
+  chifle: 3,
+  focaccia: 4,
+  biscotti: 5,
+  cozonac: 6,
+  desert: 7,
+  saleuri: 8,
+  'set-cadou': 9,
+}
 
-  const filtered =
-    activeFilter === 'all' ? products : products.filter((p) => p.category === activeFilter)
+export const ProductsPageClient: React.FC<{ products: Product[] }> = ({ products }) => {
+  const [activeType, setActiveType] = useState('all')
+
+  const filtered = useMemo(() => {
+    let result = products
+
+    if (activeType !== 'all') {
+      result = result.filter((p) => p.productType === activeType)
+    }
+
+    return result.sort((a, b) => {
+      // Available products first
+      const aAvail = a.available ? 0 : 1
+      const bAvail = b.available ? 0 : 1
+      if (aAvail !== bAvail) return aAvail - bAvail
+
+      // Group by product type order
+      const aType = a.productType ? (typeOrder[a.productType] ?? 99) : 99
+      const bType = b.productType ? (typeOrder[b.productType] ?? 99) : 99
+      if (aType !== bType) return aType - bType
+
+      // Then by sortOrder
+      const aSort = a.sortOrder ?? 0
+      const bSort = b.sortOrder ?? 0
+      if (aSort !== bSort) return aSort - bSort
+
+      // Then alphabetically
+      return a.name.localeCompare(b.name, 'ro')
+    })
+  }, [products, activeType])
 
   return (
     <div className="py-12">
       <div className="container">
         <ScrollReveal>
-          <h1 className="text-3xl md:text-4xl font-heading text-center mb-8">
-            Produsele noastre
-          </h1>
+          <h1 className="text-3xl md:text-4xl font-heading text-center mb-8">Produsele noastre</h1>
         </ScrollReveal>
 
-        {/* Filters */}
+        {/* Type filters */}
         <ScrollReveal>
-          <div className="flex flex-wrap justify-center gap-2 mb-10">
-            {filters.map((filter) => (
+          <div className="flex flex-wrap justify-center gap-2 mb-4">
+            {typeFilters.map((filter) => (
               <button
                 key={filter.value}
-                onClick={() => setActiveFilter(filter.value)}
+                onClick={() => setActiveType(filter.value)}
                 className={`rounded-full px-5 py-2 text-sm font-sans font-medium transition-colors ${
-                  activeFilter === filter.value
+                  activeType === filter.value
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-secondary text-foreground hover:bg-secondary/80'
                 }`}
@@ -70,7 +113,7 @@ export const ProductsPageClient: React.FC<{ products: Product[] }> = ({ products
           </div>
         ) : (
           <p className="text-center text-muted-foreground font-sans py-12">
-            Nu am găsit produse în această categorie.
+            Nu am găsit produse care să corespundă filtrelor selectate.
           </p>
         )}
       </div>

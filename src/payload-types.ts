@@ -811,7 +811,21 @@ export interface Product {
     };
     [k: string]: unknown;
   } | null;
-  category: 'regular' | 'sweet' | 'occasional';
+  productType:
+    | 'paine'
+    | 'bagheta'
+    | 'chifle'
+    | 'focaccia'
+    | 'biscotti'
+    | 'cozonac'
+    | 'desert'
+    | 'saleuri'
+    | 'set-cadou';
+  tags?: ('dulce' | 'sarat' | 'fara-gluten' | 'integrala' | 'secara' | 'seasonal' | 'cadou' | 'ornamental')[] | null;
+  /**
+   * Număr mai mic = apare primul în tipul său
+   */
+  sortOrder?: number | null;
   available?: boolean | null;
   /**
    * Ex: "Disponibil vineri"
@@ -1456,7 +1470,9 @@ export interface ProductsSelect<T extends boolean = true> {
   shortDescription?: T;
   introProduct?: T;
   description?: T;
-  category?: T;
+  productType?: T;
+  tags?: T;
+  sortOrder?: T;
   available?: T;
   availabilityText?: T;
   featured?: T;

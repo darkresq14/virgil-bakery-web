@@ -30,7 +30,7 @@ export default async function HomePage() {
     where: {
       and: [{ featured: { equals: true } }, { _status: { equals: 'published' } }],
     },
-    sort: 'name',
+    sort: '-available,sortOrder,name',
   })
 
   const testimonials = await payload.find({
@@ -85,7 +85,8 @@ export default async function HomePage() {
                         shortDescription: product.shortDescription,
                         price: product.price,
                         weight: product.weight,
-                        category: product.category,
+                        productType: product.productType,
+                        tags: product.tags ?? undefined,
                         available: product.available ?? undefined,
                         featuredImage: isExpandedDoc(product.featuredImage)
                           ? product.featuredImage
