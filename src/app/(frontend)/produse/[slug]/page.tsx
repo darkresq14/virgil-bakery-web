@@ -6,7 +6,6 @@ import { notFound } from 'next/navigation'
 import { cache } from 'react'
 
 import { ProductDetailClient } from './page.client'
-import { PayloadRedirects } from '@/components/PayloadRedirects'
 import { LivePreviewListener } from '@/components/LivePreviewListener'
 import { generateMeta } from '@/utilities/generateMeta'
 
@@ -42,7 +41,7 @@ export default async function ProductPage({ params: paramsPromise }: Args) {
   return (
     <div className="py-12">
       {draft && <LivePreviewListener />}
-      <ProductDetailClient product={product as any} />
+      <ProductDetailClient product={product} />
     </div>
   )
 }
@@ -52,7 +51,7 @@ export async function generateMetadata({ params: paramsPromise }: Args): Promise
   const decodedSlug = decodeURIComponent(slug)
   const product = await queryProductBySlug({ slug: decodedSlug })
 
-  return generateMeta({ doc: product as any })
+  return generateMeta({ doc: product })
 }
 
 const queryProductBySlug = cache(async ({ slug }: { slug: string }) => {

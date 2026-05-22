@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ShoppingBag } from 'lucide-react'
 
+import type { Media } from '@/payload-types'
 import { useCart } from '@/providers/Cart'
 import { useToast } from '@/components/Toast'
 
@@ -18,12 +19,7 @@ interface ProductCardProps {
     weight?: string
     category?: string
     available?: boolean
-    featuredImage?: {
-      url: string
-      alt?: string
-      width?: number
-      height?: number
-    } | null
+    featuredImage?: Media | null
   }
 }
 

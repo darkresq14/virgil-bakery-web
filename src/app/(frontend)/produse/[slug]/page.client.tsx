@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ShoppingBag, ArrowLeft, Check, AlertCircle } from 'lucide-react'
@@ -8,32 +8,8 @@ import RichText from '@/components/RichText'
 import { useCart } from '@/providers/Cart'
 import { useToast } from '@/components/Toast'
 
-interface Product {
-  id: string
-  name: string
-  slug: string
-  shortDescription?: string
-  introProduct?: string
-  description?: any
-  characteristics?: { value: string }[]
-  ingredients?: string
-  allergens?: string
-  nutritionalValues?: any
-  weight?: string
-  price: number
-  category?: string
-  available?: boolean
-  availabilityText?: string
-  featured?: boolean
-  featuredImage?: {
-    url: string
-    alt?: string
-    width?: number
-    height?: number
-  } | null
-  gallery?: { image?: { url: string; alt?: string } }[]
-  orderingInfo?: any
-}
+import { Product } from '@/payload-types'
+import { isExpandedDoc } from '@/utilities/type-guards'
 
 const categoryLabels: Record<string, string> = {
   regular: 'Curente',
@@ -46,14 +22,25 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
   const { showToast } = useToast()
   const [selectedImage, setSelectedImage] = useState(0)
 
-  const allImages = [
-    product.featuredImage,
-    ...(product.gallery || []).map((g) => g.image).filter(Boolean),
-  ].filter(Boolean)
+  const allImages = useMemo(() => {
+    const images: Array<{ url: string; alt?: string | null }> = []
+
+    if (isExpandedDoc(product.featuredImage) && product.featuredImage.url) {
+      images.push({ url: product.featuredImage.url!, alt: product.featuredImage.alt })
+    }
+
+    product.gallery?.forEach((item) => {
+      if (isExpandedDoc(item.image) && item.image.url) {
+        images.push({ url: item.image.url!, alt: item.image.alt })
+      }
+    })
+
+    return images
+  }, [product.featuredImage, product.gallery])
 
   const handleAddToCart = () => {
     addItem({
-      productId: product.id,
+      productId: String(product.id),
       name: product.name,
       price: product.price,
       weight: product.weight || '',
@@ -67,9 +54,13 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
     <div className="container">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-8 font-sans text-sm text-muted-foreground">
-        <Link href="/" className="hover:text-foreground transition-colors">Acasă</Link>
+        <Link href="/" className="hover:text-foreground transition-colors">
+          Acasă
+        </Link>
         <span>/</span>
-        <Link href="/produse" className="hover:text-foreground transition-colors">Produse</Link>
+        <Link href="/produse" className="hover:text-foreground transition-colors">
+          Produse
+        </Link>
         <span>/</span>
         <span className="text-foreground">{product.name}</span>
       </div>
@@ -80,8 +71,8 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
           <div className="relative aspect-square rounded-xl overflow-hidden bg-secondary">
             {allImages[selectedImage]?.url ? (
               <Image
-                src={(allImages[selectedImage] as any).url}
-                alt={(allImages[selectedImage] as any).alt || product.name}
+                src={allImages[selectedImage].url}
+                alt={allImages[selectedImage].alt || product.name}
                 fill
                 className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 50vw"
@@ -104,8 +95,8 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
                   }`}
                 >
                   <Image
-                    src={(img as any).url}
-                    alt={(img as any).alt || `${product.name} ${i + 1}`}
+                    src={img.url}
+                    alt={img.alt || `${product.name} ${i + 1}`}
                     fill
                     className="object-cover"
                     sizes="80px"
@@ -125,13 +116,17 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
           )}
           <h1 className="text-3xl md:text-4xl font-heading mb-2">{product.name}</h1>
           {product.shortDescription && (
-            <p className="text-lg text-muted-foreground font-serif mb-4">{product.shortDescription}</p>
+            <p className="text-lg text-muted-foreground font-serif mb-4">
+              {product.shortDescription}
+            </p>
           )}
 
           {/* Price & Weight */}
           <div className="flex items-baseline gap-3 mb-6">
             <span className="text-2xl font-sans font-bold text-primary">
-              {new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'RON' }).format(product.price)}
+              {new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'RON' }).format(
+                product.price,
+              )}
             </span>
             {product.weight && (
               <span className="text-sm text-muted-foreground font-sans">{product.weight}</span>

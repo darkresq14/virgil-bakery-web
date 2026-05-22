@@ -3,6 +3,8 @@
 import React, { useState } from 'react'
 import { ProductCard } from '@/components/ProductCard'
 
+import type { Media } from '@/payload-types'
+
 interface Product {
   id: string
   name: string
@@ -12,10 +14,7 @@ interface Product {
   weight?: string
   category?: string
   available?: boolean
-  featuredImage?: {
-    url: string
-    alt?: string
-  } | null
+  featuredImage?: Media | null
 }
 
 const filters = [

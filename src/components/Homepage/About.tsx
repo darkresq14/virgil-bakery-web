@@ -3,21 +3,15 @@ import Image from 'next/image'
 import Link from 'next/link'
 import RichText from '@/components/RichText'
 
+import { Media } from '@/payload-types'
+
+type RichTextData = Parameters<typeof RichText>[0]['data'] | null
+
 interface AboutProps {
-  heading?: any
-  description?: any
-  image1?: {
-    url: string
-    alt?: string
-    width?: number
-    height?: number
-  } | null
-  image2?: {
-    url: string
-    alt?: string
-    width?: number
-    height?: number
-  } | null
+  heading?: RichTextData
+  description?: RichTextData
+  image1?: Media | null
+  image2?: Media | null
 }
 
 export const About: React.FC<AboutProps> = ({ heading, description, image1, image2 }) => {
@@ -34,9 +28,7 @@ export const About: React.FC<AboutProps> = ({ heading, description, image1, imag
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
-            {description && (
-              <RichText data={description} enableGutter={false} enableProse={true} />
-            )}
+            {description && <RichText data={description} enableGutter={false} enableProse={true} />}
             <Link
               href="/maiaua-mea"
               className="inline-flex items-center mt-6 text-primary font-sans font-medium hover:underline"
@@ -47,7 +39,7 @@ export const About: React.FC<AboutProps> = ({ heading, description, image1, imag
 
           <div className="grid grid-cols-2 gap-4">
             {image1?.url && (
-              <div className="relative aspect-[3/4] rounded-lg overflow-hidden">
+              <div className="relative aspect-3/4 rounded-lg overflow-hidden">
                 <Image
                   src={image1.url}
                   alt={image1.alt || 'Despre Virgil'}
@@ -58,7 +50,7 @@ export const About: React.FC<AboutProps> = ({ heading, description, image1, imag
               </div>
             )}
             {image2?.url && (
-              <div className="relative aspect-[3/4] rounded-lg overflow-hidden mt-8">
+              <div className="relative aspect-3/4 rounded-lg overflow-hidden mt-8">
                 <Image
                   src={image2.url}
                   alt={image2.alt || 'Despre Virgil'}

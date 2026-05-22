@@ -3,6 +3,7 @@ import { getPayload } from 'payload'
 import { getCachedGlobal } from '@/utilities/getGlobals'
 import { draftMode } from 'next/headers'
 
+import { isExpandedDoc } from '@/utilities/type-guards'
 import { Hero } from '@/components/Homepage/Hero'
 import { About } from '@/components/Homepage/About'
 import { Testimonials } from '@/components/Homepage/Testimonials'
@@ -39,9 +40,9 @@ export default async function HomePage() {
     },
   })
 
-  const heroBg = homepage?.heroBackgroundImage as any
-  const aboutImg1 = homepage?.aboutImage1 as any
-  const aboutImg2 = homepage?.aboutImage2 as any
+  const heroBg = homepage?.heroBackgroundImage
+  const aboutImg1 = homepage?.aboutImage1
+  const aboutImg2 = homepage?.aboutImage2
 
   return (
     <div>
@@ -49,7 +50,7 @@ export default async function HomePage() {
       <Hero
         heading={homepage?.heroHeading || 'Pâine cu Maia by Virgil'}
         subheading={homepage?.heroSubheading || undefined}
-        backgroundImage={heroBg ? { url: heroBg.url, alt: heroBg.alt } : null}
+        backgroundImage={isExpandedDoc(heroBg) ? heroBg : null}
       />
 
       {/* About */}
@@ -57,8 +58,8 @@ export default async function HomePage() {
         <About
           heading={homepage.aboutHeading}
           description={homepage.aboutDescription}
-          image1={aboutImg1 ? { url: aboutImg1.url, alt: aboutImg1.alt } : null}
-          image2={aboutImg2 ? { url: aboutImg2.url, alt: aboutImg2.alt } : null}
+          image1={isExpandedDoc(aboutImg1) ? aboutImg1 : null}
+          image2={isExpandedDoc(aboutImg2) ? aboutImg2 : null}
         />
       )}
 
@@ -68,19 +69,21 @@ export default async function HomePage() {
           <div className="container">
             <h2 className="text-3xl font-heading text-center mb-12">Produse recomandate</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredProducts.docs.map((product: any) => (
+              {featuredProducts.docs.map((product) => (
                 <ProductCard
                   key={product.id}
                   product={{
-                    id: product.id,
+                    id: String(product.id),
                     name: product.name,
                     slug: product.slug,
                     shortDescription: product.shortDescription,
                     price: product.price,
                     weight: product.weight,
                     category: product.category,
-                    available: product.available,
-                    featuredImage: product.featuredImage as any,
+                    available: product.available ?? undefined,
+                    featuredImage: isExpandedDoc(product.featuredImage)
+                      ? product.featuredImage
+                      : null,
                   }}
                 />
               ))}
@@ -100,8 +103,8 @@ export default async function HomePage() {
       {/* Testimonials */}
       {testimonials.docs.length > 0 && (
         <Testimonials
-          testimonials={testimonials.docs.map((t: any) => ({
-            id: t.id,
+          testimonials={testimonials.docs.map((t) => ({
+            id: String(t.id),
             author: t.author,
             content: t.content,
             language: t.language,

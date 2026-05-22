@@ -4,9 +4,12 @@ import { getPayload } from 'payload'
 import { draftMode } from 'next/headers'
 import { ProductsPageClient } from './page.client'
 
+import { isExpandedDoc } from '@/utilities/type-guards'
+
 export const metadata: Metadata = {
   title: 'Produse | Pâine cu Maia by Virgil',
-  description: 'Descoperă gama noastră de pâine artizanală cu maia: pâine curentă, dulci și produse ocazionale.',
+  description:
+    'Descoperă gama noastră de pâine artizanală cu maia: pâine curentă, dulci și produse ocazionale.',
 }
 
 export default async function ProductsPage() {
@@ -26,16 +29,16 @@ export default async function ProductsPage() {
 
   return (
     <ProductsPageClient
-      products={products.docs.map((p: any) => ({
-        id: p.id,
+      products={products.docs.map((p) => ({
+        id: String(p.id),
         name: p.name,
         slug: p.slug,
         shortDescription: p.shortDescription,
         price: p.price,
         weight: p.weight,
         category: p.category,
-        available: p.available,
-        featuredImage: p.featuredImage as any,
+        available: p.available ?? undefined,
+        featuredImage: isExpandedDoc(p.featuredImage) ? p.featuredImage : null,
       }))}
     />
   )

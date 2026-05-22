@@ -3,15 +3,12 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ChevronDown } from 'lucide-react'
 
+import type { Media } from '@/payload-types'
+
 interface HeroProps {
   heading: string
   subheading?: string
-  backgroundImage?: {
-    url: string
-    alt?: string
-    width?: number
-    height?: number
-  } | null
+  backgroundImage?: Media | null
 }
 
 export const Hero: React.FC<HeroProps> = ({ heading, subheading, backgroundImage }) => {
@@ -23,7 +20,7 @@ export const Hero: React.FC<HeroProps> = ({ heading, subheading, backgroundImage
       {backgroundImage?.url && (
         <Image
           src={backgroundImage.url}
-          alt={backgroundImage.alt || heading}
+          alt={backgroundImage.alt ?? heading}
           fill
           className="object-cover"
           priority
