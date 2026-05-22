@@ -3,12 +3,15 @@ import React, { Fragment } from 'react'
 import type { Props } from './types'
 
 import { ImageMedia } from './ImageMedia'
+import { PdfMedia } from './PdfMedia'
 import { VideoMedia } from './VideoMedia'
 
 export const Media: React.FC<Props> = (props) => {
   const { className, htmlElement = 'div', resource } = props
 
-  const isVideo = typeof resource === 'object' && resource?.mimeType?.includes('video')
+  const mimeType = typeof resource === 'object' ? resource?.mimeType : undefined
+  const isVideo = mimeType?.includes('video')
+  const isPdf = mimeType?.includes('pdf')
   const Tag = htmlElement || Fragment
 
   return (
@@ -19,7 +22,13 @@ export const Media: React.FC<Props> = (props) => {
           }
         : {})}
     >
-      {isVideo ? <VideoMedia {...props} /> : <ImageMedia {...props} />}
+      {isVideo ? (
+        <VideoMedia {...props} />
+      ) : isPdf ? (
+        <PdfMedia {...props} />
+      ) : (
+        <ImageMedia {...props} />
+      )}
     </Tag>
   )
 }
