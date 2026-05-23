@@ -24,13 +24,13 @@ export async function Footer() {
       <div className="container py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Logo & tagline */}
-          <div className="flex flex-col items-start gap-5">
+          <div className="flex flex-col items-start gap-3">
             <Link href="/" className="group">
               {footerData?.footerLogo ? (
                 <Media
                   resource={footerData.footerLogo}
                   pictureClassName="rounded-md overflow-hidden shadow-sm group-hover:shadow-md transition-shadow"
-                  imgClassName="h-24 w-auto"
+                  imgClassName="h-32 w-auto"
                 />
               ) : (
                 <Logo />

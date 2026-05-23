@@ -8,6 +8,7 @@ import { ShoppingBag, Menu, X, MessageCircle } from 'lucide-react'
 import type { Header as HeaderType } from '@/payload-types'
 
 import { Logo } from '@/components/Logo/Logo'
+import { Media } from '@/components/Media'
 import { HeaderNav } from './Nav'
 import { useCart } from '@/providers/Cart'
 import { AdminBar } from '@/components/AdminBar'
@@ -36,10 +37,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data, adminBarProps 
     const header = document.querySelector('header')
     if (!header) return
     const observer = new ResizeObserver(([entry]) => {
-      document.documentElement.style.setProperty(
-        '--header-height',
-        `${entry.contentRect.height}px`,
-      )
+      document.documentElement.style.setProperty('--header-height', `${entry.contentRect.height}px`)
     })
     observer.observe(header)
     return () => observer.disconnect()
@@ -94,8 +92,26 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data, adminBarProps 
         <AdminBar adminBarProps={adminBarProps} />
         <div className="container flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center shrink-0" aria-label="Pâine cu Maia — Pagina principală">
-            <Logo />
+          <Link
+            href="/"
+            className="flex items-center shrink-0 gap-2"
+            aria-label="Pâine cu Maia — Pagina principală"
+          >
+            {data?.logo ? (
+              <>
+                <Media resource={data.logo} imgClassName="h-10 w-auto" />
+                <div className="flex flex-col leading-none">
+                  <span className="font-heading text-lg font-bold tracking-tight">
+                    Pâine cu Maia
+                  </span>
+                  <span className="text-[10px] text-foreground/60 tracking-[0.15em] uppercase font-sans">
+                    by Virgil
+                  </span>
+                </div>
+              </>
+            ) : (
+              <Logo />
+            )}
           </Link>
 
           {/* Desktop Nav */}
@@ -153,8 +169,27 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data, adminBarProps 
           className="fixed inset-0 z-60 bg-white flex flex-col"
         >
           <div className="flex items-center justify-between h-16 px-4">
-            <Link href="/" onClick={closeMobile} aria-label="Pâine cu Maia — Pagina principală">
-              <Logo />
+            <Link
+              href="/"
+              onClick={closeMobile}
+              className="flex items-center gap-2"
+              aria-label="Pâine cu Maia — Pagina principală"
+            >
+              {data?.logo ? (
+                <>
+                  <Media resource={data.logo} imgClassName="h-10 w-auto" />
+                  <div className="flex flex-col leading-none">
+                    <span className="font-heading text-lg font-bold tracking-tight">
+                      Pâine cu Maia
+                    </span>
+                    <span className="text-[10px] text-foreground/60 tracking-[0.15em] uppercase font-sans">
+                      by Virgil
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <Logo />
+              )}
             </Link>
             <button
               ref={closeRef}
@@ -166,7 +201,10 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data, adminBarProps 
             </button>
           </div>
 
-          <nav className="flex flex-col items-center justify-center flex-1 gap-6" aria-label="Navigare principală">
+          <nav
+            className="flex flex-col items-center justify-center flex-1 gap-6"
+            aria-label="Navigare principală"
+          >
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -192,7 +230,6 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data, adminBarProps 
           </div>
         </div>
       )}
-
     </>
   )
 }
