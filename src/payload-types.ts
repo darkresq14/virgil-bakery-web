@@ -1732,6 +1732,7 @@ export interface Header {
  */
 export interface Footer {
   id: number;
+  footerLogo?: (number | null) | Media;
   navItems?:
     | {
         link: {
@@ -1875,6 +1876,7 @@ export interface HeaderSelect<T extends boolean = true> {
  * via the `definition` "footer_select".
  */
 export interface FooterSelect<T extends boolean = true> {
+  footerLogo?: T;
   navItems?:
     | T
     | {

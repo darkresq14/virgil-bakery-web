@@ -10,6 +10,12 @@ export const Footer: GlobalConfig = {
   },
   fields: [
     {
+      name: 'footerLogo',
+      type: 'upload',
+      relationTo: 'media',
+      label: 'Logo footer',
+    },
+    {
       name: 'navItems',
       type: 'array',
       fields: [

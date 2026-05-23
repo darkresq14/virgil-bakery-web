@@ -1,8 +1,8 @@
 import { getCachedGlobal } from '@/utilities/getGlobals'
 import Link from 'next/link'
-import React from 'react'
 
 import { Logo } from '@/components/Logo/Logo'
+import { Media } from '@/components/Media'
 import { MessageCircle, Facebook, Instagram, Mail, Phone } from 'lucide-react'
 
 export async function Footer() {
@@ -24,11 +24,19 @@ export async function Footer() {
       <div className="container py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Logo & tagline */}
-          <div className="flex flex-col gap-4">
-            <Link href="/" className="flex items-center">
-              <Logo />
+          <div className="flex flex-col items-start gap-5">
+            <Link href="/" className="group">
+              {footerData?.footerLogo ? (
+                <Media
+                  resource={footerData.footerLogo}
+                  pictureClassName="rounded-md overflow-hidden shadow-sm group-hover:shadow-md transition-shadow"
+                  imgClassName="h-24 w-auto"
+                />
+              ) : (
+                <Logo />
+              )}
             </Link>
-            <p className="text-sm text-background/70 font-sans">
+            <p className="text-sm text-background/60 font-sans leading-relaxed max-w-65">
               Pâine artizanală, fermentată lent, coaptă pe vatră.
             </p>
           </div>
