@@ -40,7 +40,9 @@ export const Media: CollectionConfig = {
     },
   ],
   upload: {
-    staticDir: path.resolve(dirname, '../../public/media'),
+    ...(process.env.NODE_ENV === 'development' && {
+      staticDir: path.resolve(dirname, '../../public/media'),
+    }),
     adminThumbnail: 'thumbnail',
     focalPoint: true,
     imageSizes: [
