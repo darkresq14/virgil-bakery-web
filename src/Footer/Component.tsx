@@ -43,7 +43,7 @@ export async function Footer() {
 
           {/* Quick links */}
           <div>
-            <h4 className="font-heading text-lg mb-4">Linkuri rapide</h4>
+            <h3 className="font-heading text-lg mb-4">Linkuri rapide</h3>
             <nav className="flex flex-col gap-2">
               {footerLinks.map((link) => (
                 <Link
@@ -59,7 +59,7 @@ export async function Footer() {
 
           {/* Contact & Social */}
           <div>
-            <h4 className="font-heading text-lg mb-4">Contact</h4>
+            <h3 className="font-heading text-lg mb-4">Contact</h3>
             <div className="flex flex-col gap-2 text-sm text-background/70 font-sans">
               {siteConfig?.contactPhone && (
                 <a
