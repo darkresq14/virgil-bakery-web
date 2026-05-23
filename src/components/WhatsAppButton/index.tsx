@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { MessageCircle } from 'lucide-react'
+import Image from 'next/image'
 
 export const WhatsAppButton = () => {
   const [visible, setVisible] = useState(false)
@@ -32,11 +32,11 @@ export const WhatsAppButton = () => {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Contactează-ne pe WhatsApp"
-      className={`fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg transition-transform hover:scale-110 ${
+      className={`fixed bottom-6 right-6 z-40 transition-transform hover:scale-110 ${
         reducedMotion ? '' : 'animate-[pulse_2s_ease-in-out_infinite]'
       }`}
     >
-      <MessageCircle className="h-7 w-7" />
+      <Image src="/WhatsApp_White.svg" alt="WhatsApp" width={56} height={56} />
     </a>
   )
 }

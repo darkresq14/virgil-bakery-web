@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, MessageCircle } from 'lucide-react'
+import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react'
+import Image from 'next/image'
 import { useCart } from '@/providers/Cart'
 import { getCachedGlobal } from '@/utilities/getGlobals'
 
@@ -214,7 +215,7 @@ export function CartPageClient() {
                 onClick={handleCheckout}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] text-white px-8 py-3 font-sans font-medium hover:bg-[#20bd5a] transition-colors"
               >
-                <MessageCircle className="w-5 h-5" />
+                <Image src="/WhatsApp_White.svg" alt="WhatsApp" width={24} height={24} />
                 Comandă prin WhatsApp
               </button>
             </div>
