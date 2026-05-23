@@ -17,7 +17,9 @@ export const WhatsAppButton = () => {
 
   useEffect(() => {
     const handleScroll = () => {
-      setVisible(window.scrollY > window.innerHeight * 0.5)
+      const scrolledHalf = window.scrollY > window.innerHeight * 0.5
+      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 100
+      setVisible(scrolledHalf && !atBottom)
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })

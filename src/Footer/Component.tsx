@@ -120,9 +120,23 @@ export async function Footer() {
           </div>
         </div>
 
-        {/* Copyright */}
-        <div className="mt-8 pt-8 border-t border-background/10 text-center text-sm text-background/50 font-sans">
-          © {new Date().getFullYear()} Pâine cu Maia by Virgil. Toate drepturile rezervate.
+        {/* Bottom bar */}
+        <div className="mt-10 pt-6 border-t border-background/8 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs font-sans text-background/35 tracking-wide">
+            &copy; {new Date().getFullYear()} P&acirc;ine cu Maia by Virgil. Toate drepturile
+            rezervate.
+          </p>
+          <p className="text-xs font-sans text-background/35 flex items-center gap-1">
+            crafted with <span className="text-accent/60 text-[0.7rem]">♥</span> by{' '}
+            <a
+              href="https://github.com/darkresq14"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-heading text-sm text-background/50 hover:text-accent transition-colors duration-300"
+            >
+              Răzvan Bielz
+            </a>
+          </p>
         </div>
       </div>
     </footer>

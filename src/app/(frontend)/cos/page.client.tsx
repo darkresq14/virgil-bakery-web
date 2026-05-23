@@ -121,7 +121,7 @@ export function CartPageClient() {
                     </div>
 
                     {/* Subtotal */}
-                    <span className="font-sans font-semibold min-w-[5rem] text-right">
+                    <span className="font-sans font-semibold min-w-20 text-right">
                       {formatPrice(item.price * item.quantity)}
                     </span>
 
