@@ -8,6 +8,8 @@ import { cache } from 'react'
 import { ProductDetailClient } from './page.client'
 import { LivePreviewListener } from '@/components/LivePreviewListener'
 import { generateMeta } from '@/utilities/generateMeta'
+import { productSchema, breadcrumbSchema } from '@/utilities/schema'
+import { getServerSideURL } from '@/utilities/getURL'
 
 export async function generateStaticParams() {
   const payload = await getPayload({ config: configPromise })
@@ -38,8 +40,26 @@ export default async function ProductPage({ params: paramsPromise }: Args) {
 
   if (!product) return notFound()
 
+  const baseUrl = getServerSideURL()
+  const productUrl = `${baseUrl}/produse/${decodedSlug}`
+
+  const pSchema = productSchema({ product, url: productUrl })
+  const bSchema = breadcrumbSchema([
+    { name: 'Acasă', url: baseUrl },
+    { name: 'Produse', url: `${baseUrl}/produse` },
+    { name: product.name, url: productUrl },
+  ])
+
   return (
     <div className="py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(pSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(bSchema) }}
+      />
       {draft && <LivePreviewListener />}
       <ProductDetailClient product={product} />
     </div>

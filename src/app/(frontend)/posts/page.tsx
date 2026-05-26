@@ -32,7 +32,7 @@ export default async function Page() {
       <PageClient />
       <div className="container mb-16">
         <div className="prose dark:prose-invert max-w-none">
-          <h1>Posts</h1>
+          <h1>Blog</h1>
         </div>
       </div>
 
@@ -58,6 +58,8 @@ export default async function Page() {
 
 export function generateMetadata(): Metadata {
   return {
-    title: `Payload Website Template Posts`,
+    title: 'Blog | Pâine cu Maia by Virgil',
+    description:
+      'Articole despre pâinea cu maia, fermentația lentă și secretele brutăriei artizanale.',
   }
 }

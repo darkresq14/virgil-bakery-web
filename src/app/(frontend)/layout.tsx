@@ -11,6 +11,8 @@ import { Header } from '@/Header/Component'
 import { Providers } from '@/providers'
 import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
 import { WhatsAppButton } from '@/components/WhatsAppButton'
+import { localBusinessSchema } from '@/utilities/schema'
+import { getCachedGlobal } from '@/utilities/getGlobals'
 
 import './globals.css'
 import { getServerSideURL } from '@/utilities/getURL'
@@ -35,6 +37,16 @@ const inter = Inter({
 })
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const siteConfig = await getCachedGlobal('siteConfig', 1)()
+  const homepage = await getCachedGlobal('homepage', 1)()
+
+  const bizSchema = localBusinessSchema({
+    name: 'Pâine cu Maia by Virgil',
+    phone: siteConfig?.contactPhone,
+    email: siteConfig?.contactEmail,
+    address: homepage?.contactSection?.address,
+  })
+
   return (
     <html
       className={cn(playfair.variable, merriweather.variable, inter.variable)}
@@ -43,6 +55,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(bizSchema) }}
+        />
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-100 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:text-sm focus:font-sans"
