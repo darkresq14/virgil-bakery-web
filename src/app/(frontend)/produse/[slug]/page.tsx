@@ -71,7 +71,7 @@ export async function generateMetadata({ params: paramsPromise }: Args): Promise
   const decodedSlug = decodeURIComponent(slug)
   const product = await queryProductBySlug({ slug: decodedSlug })
 
-  return generateMeta({ doc: product })
+  return generateMeta({ doc: product, pathPrefix: '/produse' })
 }
 
 const queryProductBySlug = cache(async ({ slug }: { slug: string }) => {

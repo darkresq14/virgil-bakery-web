@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 
 import { RelatedPosts } from '@/blocks/RelatedPosts/Component'
 import { PayloadRedirects } from '@/components/PayloadRedirects'
@@ -14,6 +15,9 @@ import { PostHero } from '@/heros/PostHero'
 import { generateMeta } from '@/utilities/generateMeta'
 import PageClient from './page.client'
 import { LivePreviewListener } from '@/components/LivePreviewListener'
+import { Breadcrumbs } from '@/components/Breadcrumbs'
+import { breadcrumbSchema } from '@/utilities/schema'
+import { getServerSideURL } from '@/utilities/getURL'
 
 export async function generateStaticParams() {
   const payload = await getPayload({ config: configPromise })
@@ -51,6 +55,15 @@ export default async function Post({ params: paramsPromise }: Args) {
 
   if (!post) return <PayloadRedirects url={url} />
 
+  const baseUrl = getServerSideURL()
+  const postUrl = `${baseUrl}/posts/${decodedSlug}`
+
+  const bSchema = breadcrumbSchema([
+    { name: 'Acasă', url: baseUrl },
+    { name: 'Blog', url: `${baseUrl}/posts` },
+    { name: post.title || '', url: postUrl },
+  ])
+
   return (
     <article className="pt-16 pb-16">
       <PageClient />
@@ -60,10 +73,24 @@ export default async function Post({ params: paramsPromise }: Args) {
 
       {draft && <LivePreviewListener />}
 
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(bSchema) }}
+      />
+
       <PostHero post={post} />
 
       <div className="flex flex-col items-center gap-4 pt-8">
         <div className="container">
+          <div className="max-w-3xl mx-auto">
+            <Breadcrumbs
+              items={[
+                { label: 'Acasă', href: '/' },
+                { label: 'Blog', href: '/posts' },
+                { label: post.title || '' },
+              ]}
+            />
+          </div>
           <RichText className="max-w-3xl mx-auto" data={post.content} enableGutter={false} />
           {post.relatedPosts && post.relatedPosts.length > 0 && (
             <RelatedPosts
@@ -71,6 +98,14 @@ export default async function Post({ params: paramsPromise }: Args) {
               docs={post.relatedPosts.filter((post) => typeof post === 'object')}
             />
           )}
+          <div className="max-w-3xl mx-auto mt-12">
+            <Link
+              href="/posts"
+              className="inline-flex items-center gap-2 text-muted-foreground font-sans text-sm hover:text-foreground transition-colors"
+            >
+              ← Înapoi la blog
+            </Link>
+          </div>
         </div>
       </div>
     </article>
@@ -83,7 +118,7 @@ export async function generateMetadata({ params: paramsPromise }: Args): Promise
   const decodedSlug = decodeURIComponent(slug)
   const post = await queryPostBySlug({ slug: decodedSlug })
 
-  return generateMeta({ doc: post })
+  return generateMeta({ doc: post, pathPrefix: '/posts' })
 }
 
 const queryPostBySlug = cache(async ({ slug }: { slug: string }) => {

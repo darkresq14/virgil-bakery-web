@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ShoppingBag, ArrowLeft, Check, AlertCircle } from 'lucide-react'
 import RichText from '@/components/RichText'
 import { ScrollReveal } from '@/components/ScrollReveal'
+import { Breadcrumbs } from '@/components/Breadcrumbs'
 import { useCart } from '@/providers/Cart'
 import { useToast } from '@/components/Toast'
 
@@ -59,21 +60,13 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
 
   return (
     <div className="container">
-      {/* Breadcrumb */}
-      <nav
-        aria-label="Breadcrumb"
-        className="flex items-center gap-2 mb-8 font-sans text-sm text-muted-foreground"
-      >
-        <Link href="/" className="hover:text-foreground transition-colors">
-          Acasă
-        </Link>
-        <span aria-hidden="true">/</span>
-        <Link href="/produse" className="hover:text-foreground transition-colors">
-          Produse
-        </Link>
-        <span aria-hidden="true">/</span>
-        <span className="text-foreground">{product.name}</span>
-      </nav>
+      <Breadcrumbs
+        items={[
+          { label: 'Acasă', href: '/' },
+          { label: 'Produse', href: '/produse' },
+          { label: product.name },
+        ]}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* Images */}

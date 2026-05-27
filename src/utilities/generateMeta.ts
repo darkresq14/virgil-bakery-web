@@ -25,8 +25,9 @@ const getImageURL = (image?: Media | Config['db']['defaultIDType'] | null) => {
 
 export const generateMeta = async (args: {
   doc: Partial<Page> | Partial<Post> | Partial<Product> | null
+  pathPrefix?: string
 }): Promise<Metadata> => {
-  const { doc } = args
+  const { doc, pathPrefix = '' } = args
 
   const ogImage = getImageURL(doc?.meta?.image)
 
@@ -38,8 +39,16 @@ export const generateMeta = async (args: {
     doc?.meta?.description ||
     'Pâine artizanală, fermentată lent, coaptă pe vatră. Comandă pâine cu maia naturală de la Pâine cu Maia by Virgil.'
 
+  const slug = Array.isArray(doc?.slug) ? doc.slug.join('/') : (doc?.slug || '')
+  const path = `${pathPrefix}/${slug}`.replace(/\/+/g, '/').replace(/\/$/, '') || '/'
+  const serverUrl = getServerSideURL()
+  const canonicalUrl = `${serverUrl}${path}`
+
   return {
     description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: mergeOpenGraph({
       description,
       images: ogImage
@@ -50,7 +59,7 @@ export const generateMeta = async (args: {
           ]
         : undefined,
       title,
-      url: Array.isArray(doc?.slug) ? doc?.slug.join('/') : '/',
+      url: canonicalUrl,
     }),
     title,
   }
