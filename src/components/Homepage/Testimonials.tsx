@@ -16,30 +16,47 @@ interface TestimonialsProps {
 
 export const Testimonials: React.FC<TestimonialsProps> = ({ testimonials }) => {
   const [current, setCurrent] = useState(0)
+  const [paused, setPaused] = useState(false)
 
   useEffect(() => {
-    if (testimonials.length <= 1) return
+    if (testimonials.length <= 1 || paused) return
     const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % testimonials.length)
     }, 5000)
     return () => clearInterval(timer)
-  }, [testimonials.length])
+  }, [testimonials.length, paused, current])
 
   if (!testimonials.length) return null
-
-  const testimonial = testimonials[current]
 
   return (
     <section className="py-20 bg-secondary/50" aria-label="Testimoniale clienți">
       <div className="container">
         <h2 className="text-3xl font-heading text-center mb-12">Ce spun clienții</h2>
 
-        <div className="max-w-3xl mx-auto text-center" aria-roledescription="carusel" aria-label="Testimoniale">
+        <div
+          className="max-w-3xl mx-auto text-center"
+          aria-roledescription="carusel"
+          aria-label="Testimoniale"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+        >
           <Quote className="w-12 h-12 text-primary/30 mx-auto mb-6" aria-hidden="true" />
-          <blockquote className="text-lg md:text-xl font-serif italic text-foreground/80 mb-6 min-h-[6rem]">
-            &ldquo;{testimonial.content}&rdquo;
-          </blockquote>
-          <cite className="font-sans font-medium text-foreground not-italic">— {testimonial.author}</cite>
+          <div className="relative">
+            {testimonials.map((t, i) => (
+              <div
+                key={t.id}
+                className={`text-center transition-opacity duration-500 ${
+                  i === current ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                } ${i !== 0 ? 'absolute inset-0 flex flex-col items-center justify-center' : ''}`}
+                aria-hidden={i !== current}
+              >
+                <blockquote className="text-lg md:text-xl font-serif italic text-foreground/80 mb-6">
+                  &ldquo;{t.content}&rdquo;
+                </blockquote>
+                <cite className="font-sans font-medium text-foreground not-italic">— {t.author}</cite>
+              </div>
+            ))}
+          </div>
         </div>
 
         {testimonials.length > 1 && (

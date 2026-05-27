@@ -24,6 +24,16 @@ const dirname = path.dirname(filename)
 
 export default buildConfig({
   admin: {
+    meta: {
+      title: 'Pâine cu Maia by Virgil',
+      description: 'Admin panel',
+      titleSuffix: '- Pâine cu Maia',
+      openGraph: {
+        title: 'Pâine cu Maia by Virgil',
+        description: 'Admin panel',
+        siteName: 'Pâine cu Maia by Virgil',
+      },
+    },
     components: {
       // The `BeforeLogin` component renders a message that you see while logging into your admin panel.
       // Feel free to delete this at any time. Simply remove the line below.
