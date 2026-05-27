@@ -1,5 +1,5 @@
 import { getServerSideURL } from './getURL'
-import type { Product } from '@/payload-types'
+import type { Post, Product } from '@/payload-types'
 
 export function localBusinessSchema(args: {
   name: string
@@ -72,5 +72,44 @@ export function breadcrumbSchema(
       name: item.name,
       item: item.url,
     })),
+  }
+}
+
+export function blogPostSchema(args: {
+  post: Post
+  url: string
+}) {
+  const { post, url } = args
+  const baseUrl = getServerSideURL()
+
+  const image =
+    typeof post.heroImage === 'object' && post.heroImage?.url
+      ? post.heroImage.url.startsWith('http')
+        ? post.heroImage.url
+        : baseUrl + post.heroImage.url
+      : undefined
+
+  const authorName =
+    post.populatedAuthors?.[0]?.name || undefined
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.title,
+    url,
+    ...(image && { image }),
+    datePublished: post.publishedAt || undefined,
+    dateModified: post.updatedAt || undefined,
+    ...(authorName && {
+      author: {
+        '@type': 'Person',
+        name: authorName,
+      },
+    }),
+    publisher: {
+      '@type': 'Organization',
+      name: 'Pâine cu Maia by Virgil',
+      url: baseUrl,
+    },
   }
 }

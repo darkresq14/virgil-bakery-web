@@ -84,7 +84,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
 export const metadata: Metadata = {
   metadataBase: new URL(getServerSideURL()),
-  title: 'Pâine cu Maia by Virgil',
+  title: 'Pâine cu Maia by Virgil — Pâine Artizanală cu Maia Naturală',
   description:
     'Pâine artizanală, fermentată lent, coaptă pe vatră. Comandă pâine cu maia naturală de la Pâine cu Maia by Virgil.',
   openGraph: mergeOpenGraph(),

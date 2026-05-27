@@ -17,6 +17,7 @@ import PageClient from './page.client'
 import { LivePreviewListener } from '@/components/LivePreviewListener'
 import { Breadcrumbs } from '@/components/Breadcrumbs'
 import { breadcrumbSchema } from '@/utilities/schema'
+import { blogPostSchema } from '@/utilities/schema'
 import { getServerSideURL } from '@/utilities/getURL'
 
 export async function generateStaticParams() {
@@ -64,6 +65,8 @@ export default async function Post({ params: paramsPromise }: Args) {
     { name: post.title || '', url: postUrl },
   ])
 
+  const aSchema = blogPostSchema({ post, url: postUrl })
+
   return (
     <article className="pt-16 pb-16">
       <PageClient />
@@ -76,6 +79,10 @@ export default async function Post({ params: paramsPromise }: Args) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(bSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(aSchema) }}
       />
 
       <PostHero post={post} />

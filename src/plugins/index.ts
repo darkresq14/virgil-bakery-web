@@ -8,17 +8,25 @@ import { revalidateRedirects } from '@/hooks/revalidateRedirects'
 import { GenerateTitle, GenerateURL } from '@payloadcms/plugin-seo/types'
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
 
-import { Page, Post } from '@/payload-types'
+import { Page, Post, Product } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
 
-const generateTitle: GenerateTitle<Post | Page> = ({ doc }) => {
-  return doc?.title ? `${doc.title} | Pâine cu Maia by Virgil` : 'Pâine cu Maia by Virgil'
+const generateTitle: GenerateTitle<Post | Page | Product> = ({ doc }) => {
+  const title = doc && ('title' in doc ? doc.title : doc.name)
+  return title ? `${title} | Pâine cu Maia by Virgil` : 'Pâine cu Maia by Virgil'
 }
 
-const generateURL: GenerateURL<Post | Page> = ({ doc }) => {
+const generateURL: GenerateURL<Post | Page | Product> = ({ doc, collectionSlug }) => {
   const url = getServerSideURL()
+  if (!doc?.slug) return url
 
-  return doc?.slug ? `${url}/${doc.slug}` : url
+  const prefix: Record<string, string> = {
+    posts: '/posts',
+    products: '/produse',
+  }
+  const path = prefix[collectionSlug ?? ''] ?? ''
+
+  return `${url}${path}/${doc.slug}`
 }
 
 export const plugins: Plugin[] = [

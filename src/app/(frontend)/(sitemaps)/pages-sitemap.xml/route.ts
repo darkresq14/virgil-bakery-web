@@ -33,6 +33,10 @@ const getPagesSitemap = unstable_cache(
 
     const defaultSitemap = [
       {
+        loc: `${SITE_URL}/produse`,
+        lastmod: dateFallback,
+      },
+      {
         loc: `${SITE_URL}/posts`,
         lastmod: dateFallback,
       },
