@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight, Quote } from 'lucide-react'
+import type React from 'react'
+import { useEffect, useState } from 'react'
 
 interface Testimonial {
   id: string
@@ -24,7 +25,7 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ testimonials }) => {
       setCurrent((prev) => (prev + 1) % testimonials.length)
     }, 5000)
     return () => clearInterval(timer)
-  }, [testimonials.length, paused, current])
+  }, [testimonials.length, paused])
 
   if (!testimonials.length) return null
 
@@ -53,7 +54,9 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ testimonials }) => {
                 <blockquote className="text-lg md:text-xl font-serif italic text-foreground/80 mb-6">
                   &ldquo;{t.content}&rdquo;
                 </blockquote>
-                <cite className="font-sans font-medium text-foreground not-italic">— {t.author}</cite>
+                <cite className="font-sans font-medium text-foreground not-italic">
+                  — {t.author}
+                </cite>
               </div>
             ))}
           </div>
@@ -62,7 +65,9 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ testimonials }) => {
         {testimonials.length > 1 && (
           <div className="flex items-center justify-center gap-4 mt-8">
             <button
-              onClick={() => setCurrent((prev) => (prev - 1 + testimonials.length) % testimonials.length)}
+              onClick={() =>
+                setCurrent((prev) => (prev - 1 + testimonials.length) % testimonials.length)
+              }
               className="p-2 rounded-full hover:bg-secondary transition-colors"
               aria-label="Testimonialul anterior"
             >

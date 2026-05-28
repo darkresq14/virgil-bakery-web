@@ -1,6 +1,5 @@
-import type { GlobalConfig } from 'payload'
-
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
+import type { GlobalConfig } from 'payload'
 import { revalidateSiteConfig } from './hooks/revalidateSiteConfig'
 
 export const SiteConfig: GlobalConfig = {

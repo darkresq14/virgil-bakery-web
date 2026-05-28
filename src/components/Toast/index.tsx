@@ -1,6 +1,7 @@
 'use client'
 
-import React, { createContext, useCallback, use, useState } from 'react'
+import type React from 'react'
+import { createContext, use, useCallback, useState } from 'react'
 
 interface Toast {
   id: number

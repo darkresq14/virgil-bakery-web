@@ -1,16 +1,16 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import { AlertCircle, ArrowLeft, Check, ShoppingBag } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ShoppingBag, ArrowLeft, Check, AlertCircle } from 'lucide-react'
+import type React from 'react'
+import { useMemo, useState } from 'react'
+import { Breadcrumbs } from '@/components/Breadcrumbs'
 import RichText from '@/components/RichText'
 import { ScrollReveal } from '@/components/ScrollReveal'
-import { Breadcrumbs } from '@/components/Breadcrumbs'
-import { useCart } from '@/providers/Cart'
 import { useToast } from '@/components/Toast'
-
-import { Product } from '@/payload-types'
+import type { Product } from '@/payload-types'
+import { useCart } from '@/providers/Cart'
 import { isExpandedDoc } from '@/utilities/type-guards'
 
 const productTypeLabels: Record<string, string> = {

@@ -1,7 +1,7 @@
-import React from 'react'
+import { ChevronDown } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ChevronDown } from 'lucide-react'
+import type React from 'react'
 
 import type { Media } from '@/payload-types'
 

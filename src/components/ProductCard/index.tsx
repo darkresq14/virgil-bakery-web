@@ -1,13 +1,12 @@
 'use client'
 
-import React from 'react'
+import { ShoppingBag } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ShoppingBag } from 'lucide-react'
-
+import type React from 'react'
+import { useToast } from '@/components/Toast'
 import type { Media } from '@/payload-types'
 import { useCart } from '@/providers/Cart'
-import { useToast } from '@/components/Toast'
 
 interface ProductCardProps {
   product: {

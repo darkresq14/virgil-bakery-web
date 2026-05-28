@@ -1,15 +1,15 @@
-import { getCachedGlobal } from '@/utilities/getGlobals'
+import { Facebook, Instagram, Mail, MessageCircle, Phone } from 'lucide-react'
 import Link from 'next/link'
 
 import { Logo } from '@/components/Logo/Logo'
 import { Media } from '@/components/Media'
-import { MessageCircle, Facebook, Instagram, Mail, Phone } from 'lucide-react'
+import { getCachedGlobal } from '@/utilities/getGlobals'
 
 export async function Footer() {
   const footerData = await getCachedGlobal('footer', 1)()
   const siteConfig = await getCachedGlobal('siteConfig', 1)()
 
-  const navItems = footerData?.navItems || []
+  const _navItems = footerData?.navItems || []
 
   const footerLinks = [
     { href: '/', label: 'Acasă' },

@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
+import { useEffect, useState } from 'react'
 
 export const WhatsAppButton = () => {
   const [visible, setVisible] = useState(false)
@@ -18,7 +18,8 @@ export const WhatsAppButton = () => {
   useEffect(() => {
     const handleScroll = () => {
       const scrolledHalf = window.scrollY > window.innerHeight * 0.5
-      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 100
+      const atBottom =
+        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 100
       setVisible(scrolledHalf && !atBottom)
     }
 

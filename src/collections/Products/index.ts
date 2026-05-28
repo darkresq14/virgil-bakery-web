@@ -1,4 +1,10 @@
-import type { CollectionConfig } from 'payload'
+import {
+  MetaDescriptionField,
+  MetaImageField,
+  MetaTitleField,
+  OverviewField,
+  PreviewField,
+} from '@payloadcms/plugin-seo/fields'
 
 import {
   BlocksFeature,
@@ -7,22 +13,14 @@ import {
   InlineToolbarFeature,
   lexicalEditor,
 } from '@payloadcms/richtext-lexical'
-
+import type { CollectionConfig } from 'payload'
+import { slugField } from 'payload'
 import { authenticated } from '../../access/authenticated'
 import { authenticatedOrPublished } from '../../access/authenticatedOrPublished'
 import { MediaBlock } from '../../blocks/MediaBlock/config'
+import { populatePublishedAt } from '../../hooks/populatePublishedAt'
 import { generatePreviewPath } from '../../utilities/generatePreviewPath'
 import { revalidateDelete, revalidateProduct } from './hooks/revalidateProduct'
-
-import {
-  MetaDescriptionField,
-  MetaImageField,
-  MetaTitleField,
-  OverviewField,
-  PreviewField,
-} from '@payloadcms/plugin-seo/fields'
-import { slugField } from 'payload'
-import { populatePublishedAt } from '../../hooks/populatePublishedAt'
 
 export const Products: CollectionConfig<'products'> = {
   slug: 'products',
@@ -248,10 +246,7 @@ export const Products: CollectionConfig<'products'> = {
               type: 'richText',
               editor: lexicalEditor({
                 features: ({ rootFeatures }) => {
-                  return [
-                    ...rootFeatures,
-                    FixedToolbarFeature(),
-                  ]
+                  return [...rootFeatures, FixedToolbarFeature()]
                 },
               }),
               label: 'Informații comandă',

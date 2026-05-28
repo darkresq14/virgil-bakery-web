@@ -1,54 +1,112 @@
 'use client'
 
-import React, { useState } from 'react'
-import Link from 'next/link'
-import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
+import { useMemo, useState } from 'react'
 import { useCart } from '@/providers/Cart'
-import { getCachedGlobal } from '@/utilities/getGlobals'
+import { getDeliveryDates } from '@/utilities/deliveryDates'
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'RON' }).format(price)
 }
 
+const STORAGE_KEY = 'vb-repeat-customer'
+
 export function CartPageClient() {
   const { items, updateQuantity, removeItem, clearCart, total, itemCount } = useCart()
-  const [form, setForm] = useState({ name: '', phone: '', address: '' })
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [form, setForm] = useState({ name: '', phone: '', address: '', deliveryDate: '' })
+  const [formError, setFormError] = useState('')
+  const [isFirstOrder, setIsFirstOrder] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true
+    return localStorage.getItem(STORAGE_KEY) !== 'true'
+  })
+  const [fieldErrors, setFieldErrors] = useState({ name: '', phone: '', address: '' })
 
-  const validate = () => {
-    const errors: Record<string, string> = {}
-    if (!form.name.trim()) errors.name = 'Numele este obligatoriu'
-    if (!form.phone.trim()) errors.phone = 'Telefonul este obligatoriu'
-    if (!form.address.trim()) errors.address = 'Adresa este obligatorie'
-    setFormErrors(errors)
-    return Object.keys(errors).length === 0
+  const toggleFirstOrder = (value: boolean) => {
+    setIsFirstOrder(value)
+    localStorage.setItem(STORAGE_KEY, value ? 'false' : 'true')
+    setFieldErrors({ name: '', phone: '', address: '' })
   }
 
-  const handleCheckout = () => {
-    if (!validate()) return
+  const deliveryDates = useMemo(() => getDeliveryDates(), [])
+
+  const defaultDeliveryLabel = useMemo(() => {
+    const selectable = deliveryDates.find((d) => d.isSelectable)
+    return selectable?.label ?? ''
+  }, [deliveryDates])
+
+  const selectedDelivery = form.deliveryDate || defaultDeliveryLabel
+
+  const handleCheckout = async () => {
+    if (!selectedDelivery) {
+      setFormError('Selectează o dată de livrare')
+      return
+    }
+    setFormError('')
+
+    const errors = { name: '', phone: '', address: '' }
+    if (isFirstOrder) {
+      if (!form.name.trim()) errors.name = 'Numele este obligatoriu'
+      if (!form.phone.trim()) errors.phone = 'Telefonul este obligatoriu'
+      if (!form.address.trim()) errors.address = 'Adresa este obligatorie'
+    }
+    setFieldErrors(errors)
+    if (errors.name || errors.phone || errors.address) return
 
     const lines = items.map(
-      (item) =>
-        `• ${item.quantity}x ${item.name} (${item.weight}) - ${formatPrice(item.price * item.quantity)}`,
+      (item) => `• ${item.quantity}x ${item.name} - ${formatPrice(item.price * item.quantity)}`,
     )
 
-    const message = [
+    const selectedDate = deliveryDates.find((d) => d.label === selectedDelivery)
+
+    const messageParts = [
       'Bună ziua! Doresc să comand:',
       '',
       ...lines,
       '',
       `Total: ${formatPrice(total)}`,
-      '',
-      `Nume: ${form.name}`,
-      `Telefon: ${form.phone}`,
-      `Adresă: ${form.address}`,
-      '',
-      'Mulțumesc!',
-    ].join('\n')
+      `Livrare: ${selectedDelivery}`,
+    ]
+
+    if (form.name.trim()) messageParts.push(`Nume: ${form.name}`)
+    if (form.phone.trim()) messageParts.push(`Telefon: ${form.phone}`)
+    if (form.address.trim()) messageParts.push(`Adresă: ${form.address}`)
+
+    messageParts.push('', 'Mulțumesc!')
+
+    const message = messageParts.join('\n')
+
+    try {
+      await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: items.map((item) => ({
+            productId: item.productId,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+          total,
+          deliveryDate: selectedDate?.date.toISOString(),
+          customerName: form.name || undefined,
+          customerPhone: form.phone || undefined,
+          customerAddress: form.address || undefined,
+          whatsappMessage: message,
+          status: 'nou',
+        }),
+      })
+    } catch {
+      // Still open WhatsApp even if DB save fails
+    }
 
     const url = `https://wa.me/40746245391?text=${encodeURIComponent(message)}`
     window.open(url, '_blank')
+    if (!isFirstOrder) {
+      localStorage.setItem(STORAGE_KEY, 'true')
+    }
+    clearCart()
   }
 
   if (items.length === 0) {
@@ -168,47 +226,123 @@ export function CartPageClient() {
               </div>
 
               <div className="space-y-4 mb-6">
+                {/* Delivery date — required */}
                 <div>
-                  <label className="block text-sm font-sans font-medium mb-1">Nume *</label>
-                  <input
-                    type="text"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full rounded-lg border border-input px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="Numele tău"
-                  />
-                  {formErrors.name && (
-                    <p className="text-xs text-destructive font-sans mt-1">{formErrors.name}</p>
+                  <label className="block text-sm font-sans font-medium mb-1">Dată livrare *</label>
+                  <select
+                    value={selectedDelivery}
+                    onChange={(e) => setForm({ ...form, deliveryDate: e.target.value })}
+                    className="w-full rounded-lg border border-input px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring bg-background"
+                  >
+                    {deliveryDates.map((d) => (
+                      <option key={d.label} value={d.label} disabled={!d.isSelectable}>
+                        {d.label}
+                        {!d.isSelectable ? ' — listă închisă' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {formError && (
+                    <p className="text-xs text-destructive font-sans mt-1">{formError}</p>
                   )}
                 </div>
-                <div>
-                  <label className="block text-sm font-sans font-medium mb-1">Telefon *</label>
-                  <input
-                    type="tel"
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="w-full rounded-lg border border-input px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="+40 7XX XXX XXX"
-                  />
-                  {formErrors.phone && (
-                    <p className="text-xs text-destructive font-sans mt-1">{formErrors.phone}</p>
-                  )}
+
+                {/* First order pills */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleFirstOrder(true)}
+                    className={`rounded-full px-3 py-1 text-xs font-sans font-medium transition-all ${
+                      isFirstOrder
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Prima comandă
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleFirstOrder(false)}
+                    className={`rounded-full px-3 py-1 text-xs font-sans font-medium transition-all ${
+                      !isFirstOrder
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Am mai comandat
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-sm font-sans font-medium mb-1">
-                    Adresă de livrare *
-                  </label>
-                  <textarea
-                    value={form.address}
-                    onChange={(e) => setForm({ ...form, address: e.target.value })}
-                    className="w-full rounded-lg border border-input px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                    rows={3}
-                    placeholder="Adresa completă de livrare"
-                  />
-                  {formErrors.address && (
-                    <p className="text-xs text-destructive font-sans mt-1">{formErrors.address}</p>
-                  )}
-                </div>
+
+                {/* Fields for first-time buyers */}
+                {isFirstOrder && (
+                  <div className="space-y-3 pt-1">
+                    <div>
+                      <label className="block text-sm font-sans font-medium mb-1">
+                        Nume <span className="text-destructive">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={form.name}
+                        onChange={(e) => {
+                          setForm({ ...form, name: e.target.value })
+                          setFieldErrors({ ...fieldErrors, name: '' })
+                        }}
+                        className={`w-full rounded-lg border px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring ${
+                          fieldErrors.name ? 'border-destructive' : 'border-input'
+                        }`}
+                        placeholder="Numele tău"
+                      />
+                      {fieldErrors.name && (
+                        <p className="text-xs text-destructive font-sans mt-1">
+                          {fieldErrors.name}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-sans font-medium mb-1">
+                        Telefon <span className="text-destructive">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={form.phone}
+                        onChange={(e) => {
+                          setForm({ ...form, phone: e.target.value })
+                          setFieldErrors({ ...fieldErrors, phone: '' })
+                        }}
+                        className={`w-full rounded-lg border px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring ${
+                          fieldErrors.phone ? 'border-destructive' : 'border-input'
+                        }`}
+                        placeholder="+40 7XX XXX XXX"
+                      />
+                      {fieldErrors.phone && (
+                        <p className="text-xs text-destructive font-sans mt-1">
+                          {fieldErrors.phone}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-sans font-medium mb-1">
+                        Adresă de livrare <span className="text-destructive">*</span>
+                      </label>
+                      <textarea
+                        value={form.address}
+                        onChange={(e) => {
+                          setForm({ ...form, address: e.target.value })
+                          setFieldErrors({ ...fieldErrors, address: '' })
+                        }}
+                        className={`w-full rounded-lg border px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring resize-none ${
+                          fieldErrors.address ? 'border-destructive' : 'border-input'
+                        }`}
+                        rows={3}
+                        placeholder="Adresa completă de livrare"
+                      />
+                      {fieldErrors.address && (
+                        <p className="text-xs text-destructive font-sans mt-1">
+                          {fieldErrors.address}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <button

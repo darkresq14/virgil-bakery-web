@@ -1,24 +1,19 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
-
-import { RelatedPosts } from '@/blocks/RelatedPosts/Component'
-import { PayloadRedirects } from '@/components/PayloadRedirects'
 import configPromise from '@payload-config'
-import { getPayload } from 'payload'
+import type { Metadata } from 'next'
 import { draftMode } from 'next/headers'
-import React, { cache } from 'react'
+import Link from 'next/link'
+import { getPayload } from 'payload'
+import { cache } from 'react'
+import { RelatedPosts } from '@/blocks/RelatedPosts/Component'
+import { Breadcrumbs } from '@/components/Breadcrumbs'
+import { LivePreviewListener } from '@/components/LivePreviewListener'
+import { PayloadRedirects } from '@/components/PayloadRedirects'
 import RichText from '@/components/RichText'
-
-import type { Post } from '@/payload-types'
-
 import { PostHero } from '@/heros/PostHero'
 import { generateMeta } from '@/utilities/generateMeta'
-import PageClient from './page.client'
-import { LivePreviewListener } from '@/components/LivePreviewListener'
-import { Breadcrumbs } from '@/components/Breadcrumbs'
-import { breadcrumbSchema } from '@/utilities/schema'
-import { blogPostSchema } from '@/utilities/schema'
 import { getServerSideURL } from '@/utilities/getURL'
+import { blogPostSchema, breadcrumbSchema } from '@/utilities/schema'
+import PageClient from './page.client'
 
 export async function generateStaticParams() {
   const payload = await getPayload({ config: configPromise })
@@ -51,7 +46,7 @@ export default async function Post({ params: paramsPromise }: Args) {
   const { slug = '' } = await paramsPromise
   // Decode to support slugs with special characters
   const decodedSlug = decodeURIComponent(slug)
-  const url = '/posts/' + decodedSlug
+  const url = `/posts/${decodedSlug}`
   const post = await queryPostBySlug({ slug: decodedSlug })
 
   if (!post) return <PayloadRedirects url={url} />

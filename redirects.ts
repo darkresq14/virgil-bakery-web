@@ -34,18 +34,39 @@ export const redirects: NextConfig['redirects'] = async () => {
 
     // Old WordPress product redirects
     { source: '/paine-mixta-cu-maia', destination: '/produse/paine-mixta', permanent: true },
-    { source: '/paine-integrala-cu-maia', destination: '/produse/paine-integrala', permanent: true },
+    {
+      source: '/paine-integrala-cu-maia',
+      destination: '/produse/paine-integrala',
+      permanent: true,
+    },
     { source: '/paine-fara-gluten', destination: '/produse/paine-fara-gluten', permanent: true },
-    { source: '/paine-san-joaquin-cu-maia', destination: '/produse/paine-san-joaquin', permanent: true },
-    { source: '/paine-de-secara-cu-maia', destination: '/produse/paine-de-secara', permanent: true },
+    {
+      source: '/paine-san-joaquin-cu-maia',
+      destination: '/produse/paine-san-joaquin',
+      permanent: true,
+    },
+    {
+      source: '/paine-de-secara-cu-maia',
+      destination: '/produse/paine-de-secara',
+      permanent: true,
+    },
     { source: '/chifle-cu-maia', destination: '/produse/chifle', permanent: true },
-    { source: '/bagheta-mixta-cu-piper', destination: '/produse/bagheta-mixta-cu-piper', permanent: true },
-    { source: '/bagheta-integrala-cu-piper', destination: '/produse/bagheta-integrala-cu-piper', permanent: true },
+    {
+      source: '/bagheta-mixta-cu-piper',
+      destination: '/produse/bagheta-mixta-cu-piper',
+      permanent: true,
+    },
+    {
+      source: '/bagheta-integrala-cu-piper',
+      destination: '/produse/bagheta-integrala-cu-piper',
+      permanent: true,
+    },
     { source: '/bagheta-cu-unt', destination: '/produse/bagheta-cu-unt', permanent: true },
 
     // Old WordPress blog post redirect
     {
-      source: '/de-ce-am-facut-o-maia-de-la-zero-si-ce-a-gasit-un-studiu-european-in-ea-17-ani-mai-tarziu',
+      source:
+        '/de-ce-am-facut-o-maia-de-la-zero-si-ce-a-gasit-un-studiu-european-in-ea-17-ani-mai-tarziu',
       destination: '/posts/17-ani-de-maia',
       permanent: true,
     },

@@ -1,14 +1,15 @@
 'use client'
 
-import React, { Fragment, useCallback, useState } from 'react'
 import { toast } from '@payloadcms/ui'
+import type React from 'react'
+import { Fragment, useCallback, useState } from 'react'
 
 import './index.scss'
 
 const SuccessMessage: React.FC = () => (
   <div>
     Database seeded! You can now{' '}
-    <a target="_blank" href="/">
+    <a target="_blank" href="/" rel="noopener">
       visit your website
     </a>
   </div>

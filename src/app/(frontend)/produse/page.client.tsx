@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import type React from 'react'
+import { useMemo, useState } from 'react'
 import { ProductCard } from '@/components/ProductCard'
 import { ScrollReveal } from '@/components/ScrollReveal'
 

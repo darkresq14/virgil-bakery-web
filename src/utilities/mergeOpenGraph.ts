@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
-import { getServerSideURL } from './getURL'
 
 const defaultOpenGraph: Metadata['openGraph'] = {
   type: 'website',
-  description: 'Pâine artizanală, fermentată lent, coaptă pe vatră. Comandă pâine cu maia naturală de la Pâine cu Maia by Virgil.',
+  description:
+    'Pâine artizanală, fermentată lent, coaptă pe vatră. Comandă pâine cu maia naturală de la Pâine cu Maia by Virgil.',
   siteName: 'Pâine cu Maia by Virgil',
   title: 'Pâine cu Maia by Virgil — Pâine Artizanală cu Maia Naturală',
 }

@@ -1,9 +1,9 @@
-import React from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import type React from 'react'
 import RichText from '@/components/RichText'
 
-import { Media } from '@/payload-types'
+import type { Media } from '@/payload-types'
 
 type RichTextData = Parameters<typeof RichText>[0]['data'] | null
 

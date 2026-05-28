@@ -1,17 +1,16 @@
 import configPromise from '@payload-config'
-import { getPayload } from 'payload'
-import { getCachedGlobal } from '@/utilities/getGlobals'
+import { Mail, MapPin, Phone, Truck } from 'lucide-react'
 import { draftMode } from 'next/headers'
-
-import { isExpandedDoc } from '@/utilities/type-guards'
-import { Hero } from '@/components/Homepage/Hero'
+import Link from 'next/link'
+import { getPayload } from 'payload'
 import { About } from '@/components/Homepage/About'
+import { Hero } from '@/components/Homepage/Hero'
 import { Testimonials } from '@/components/Homepage/Testimonials'
 import { ProductCard } from '@/components/ProductCard'
-import { ScrollReveal } from '@/components/ScrollReveal'
 import RichText from '@/components/RichText'
-import Link from 'next/link'
-import { Phone, Mail, MapPin, Truck } from 'lucide-react'
+import { ScrollReveal } from '@/components/ScrollReveal'
+import { getCachedGlobal } from '@/utilities/getGlobals'
+import { isExpandedDoc } from '@/utilities/type-guards'
 
 export const revalidate = 600
 

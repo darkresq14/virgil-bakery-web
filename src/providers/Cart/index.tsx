@@ -1,6 +1,7 @@
 'use client'
 
-import React, { createContext, useCallback, use, useEffect, useState } from 'react'
+import type React from 'react'
+import { createContext, use, useCallback, useEffect, useState } from 'react'
 
 export interface CartItem {
   productId: string
@@ -75,9 +76,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       const existing = prev.find((item) => item.productId === newItem.productId)
       if (existing) {
         return prev.map((item) =>
-          item.productId === newItem.productId
-            ? { ...item, quantity: item.quantity + 1 }
-            : item,
+          item.productId === newItem.productId ? { ...item, quantity: item.quantity + 1 } : item,
         )
       }
       return [...prev, { ...newItem, quantity: 1 }]
@@ -94,9 +93,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       return
     }
     setItems((prev) =>
-      prev.map((item) =>
-        item.productId === productId ? { ...item, quantity } : item,
-      ),
+      prev.map((item) => (item.productId === productId ? { ...item, quantity } : item)),
     )
   }, [])
 

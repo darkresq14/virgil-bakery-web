@@ -1,15 +1,14 @@
-import type { Metadata } from 'next'
 import configPromise from '@payload-config'
-import { getPayload } from 'payload'
+import type { Metadata } from 'next'
 import { draftMode } from 'next/headers'
 import { notFound } from 'next/navigation'
+import { getPayload } from 'payload'
 import { cache } from 'react'
-
-import { ProductDetailClient } from './page.client'
 import { LivePreviewListener } from '@/components/LivePreviewListener'
 import { generateMeta } from '@/utilities/generateMeta'
-import { productSchema, breadcrumbSchema } from '@/utilities/schema'
 import { getServerSideURL } from '@/utilities/getURL'
+import { breadcrumbSchema, productSchema } from '@/utilities/schema'
+import { ProductDetailClient } from './page.client'
 
 export async function generateStaticParams() {
   const payload = await getPayload({ config: configPromise })

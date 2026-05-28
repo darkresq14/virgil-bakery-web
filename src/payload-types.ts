@@ -74,6 +74,7 @@ export interface Config {
     users: User;
     products: Product;
     testimonials: Testimonial;
+    orders: Order;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -97,6 +98,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     products: ProductsSelect<false> | ProductsSelect<true>;
     testimonials: TestimonialsSelect<false> | TestimonialsSelect<true>;
+    orders: OrdersSelect<false> | OrdersSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -883,6 +885,31 @@ export interface Testimonial {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders".
+ */
+export interface Order {
+  id: number;
+  items:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  total: number;
+  deliveryDate: string;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  customerAddress?: string | null;
+  whatsappMessage?: string | null;
+  status: 'nou' | 'confirmat' | 'livrat' | 'anulat';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
 export interface Redirect {
@@ -1067,6 +1094,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'testimonials';
         value: number | Testimonial;
+      } | null)
+    | ({
+        relationTo: 'orders';
+        value: number | Order;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -1446,6 +1477,22 @@ export interface TestimonialsSelect<T extends boolean = true> {
   content?: T;
   language?: T;
   published?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders_select".
+ */
+export interface OrdersSelect<T extends boolean = true> {
+  items?: T;
+  total?: T;
+  deliveryDate?: T;
+  customerName?: T;
+  customerPhone?: T;
+  customerAddress?: T;
+  whatsappMessage?: T;
+  status?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -1,0 +1,114 @@
+export interface DeliveryDateOption {
+  date: Date
+  label: string
+  isSelectable: boolean
+}
+
+const DAY_NAMES: Record<number, string> = {
+  1: 'Luni',
+  2: 'Marți',
+  3: 'Miercuri',
+  4: 'Joi',
+  5: 'Vineri',
+  6: 'Sâmbătă',
+  0: 'Duminică',
+}
+
+const MONTH_NAMES: Record<number, string> = {
+  0: 'Ianuarie',
+  1: 'Februarie',
+  2: 'Martie',
+  3: 'Aprilie',
+  4: 'Mai',
+  5: 'Iunie',
+  6: 'Iulie',
+  7: 'August',
+  8: 'Septembrie',
+  9: 'Octombrie',
+  10: 'Noiembrie',
+  11: 'Decembrie',
+}
+
+function getRomaniaNow(): Date {
+  const now = new Date()
+  const romaniaStr = now.toLocaleString('en-US', { timeZone: 'Europe/Bucharest' })
+  return new Date(romaniaStr)
+}
+
+function _nextDayAfter(date: Date, targetDay: number): Date {
+  const d = new Date(date)
+  const diff = (targetDay - d.getDay() + 7) % 7 || 7
+  d.setDate(d.getDate() + diff)
+  return d
+}
+
+function nextDayOnOrAfter(date: Date, targetDay: number): Date {
+  const d = new Date(date)
+  const diff = (targetDay - d.getDay() + 7) % 7
+  d.setDate(d.getDate() + diff)
+  return d
+}
+
+function getCutoffDate(deliveryDate: Date): Date {
+  const day = deliveryDate.getDay()
+  // Tuesday (2) → cutoff is preceding Sunday (0) at 17:00
+  // Friday (5) → cutoff is preceding Wednesday (3) at 17:00
+  const cutoffDayOffset = day === 2 ? -2 : -2
+  const cutoff = new Date(deliveryDate)
+  cutoff.setDate(cutoff.getDate() + cutoffDayOffset)
+  cutoff.setHours(17, 0, 0, 0)
+  return cutoff
+}
+
+function formatLabel(date: Date): string {
+  const dayName = DAY_NAMES[date.getDay()]
+  const day = date.getDate()
+  const month = MONTH_NAMES[date.getMonth()]
+  return `${dayName}, ${day} ${month}`
+}
+
+export function getDeliveryDates(): DeliveryDateOption[] {
+  const now = getRomaniaNow()
+  const results: DeliveryDateOption[] = []
+  const seen = new Set<string>()
+
+  let searchFrom = new Date(now)
+
+  while (results.length < 4) {
+    const nextTue = nextDayOnOrAfter(searchFrom, 2)
+    const nextFri = nextDayOnOrAfter(searchFrom, 5)
+
+    const candidates = [
+      { date: nextTue, order: nextTue.getTime() },
+      { date: nextFri, order: nextFri.getTime() },
+    ].sort((a, b) => a.order - b.order)
+
+    for (const { date } of candidates) {
+      if (results.length >= 4) break
+
+      const key = date.toISOString().slice(0, 10)
+      if (seen.has(key)) continue
+      seen.add(key)
+
+      const cutoff = getCutoffDate(date)
+      const isSelectable = now < cutoff
+
+      results.push({
+        date,
+        label: formatLabel(date),
+        isSelectable,
+      })
+    }
+
+    // Move search window forward
+    searchFrom = new Date(searchFrom)
+    searchFrom.setDate(searchFrom.getDate() + 7)
+  }
+
+  return results
+}
+
+export function getDefaultDeliveryDate(dates: DeliveryDateOption[]): string {
+  const selectable = dates.find((d) => d.isSelectable)
+  return selectable ? selectable.label : ''
+}

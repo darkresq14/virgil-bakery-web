@@ -1,17 +1,16 @@
 'use client'
 
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { Menu, MessageCircle, ShoppingBag, X } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ShoppingBag, Menu, X, MessageCircle } from 'lucide-react'
-
-import type { Header as HeaderType } from '@/payload-types'
+import type React from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { AdminBar } from '@/components/AdminBar'
 
 import { Logo } from '@/components/Logo/Logo'
 import { Media } from '@/components/Media'
-import { HeaderNav } from './Nav'
+import type { Header as HeaderType } from '@/payload-types'
 import { useCart } from '@/providers/Cart'
-import { AdminBar } from '@/components/AdminBar'
 
 interface HeaderClientProps {
   data: HeaderType

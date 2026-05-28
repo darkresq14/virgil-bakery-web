@@ -2,13 +2,13 @@ import { formBuilderPlugin } from '@payloadcms/plugin-form-builder'
 import { nestedDocsPlugin } from '@payloadcms/plugin-nested-docs'
 import { redirectsPlugin } from '@payloadcms/plugin-redirects'
 import { seoPlugin } from '@payloadcms/plugin-seo'
-import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
-import { Plugin } from 'payload'
-import { revalidateRedirects } from '@/hooks/revalidateRedirects'
-import { GenerateTitle, GenerateURL } from '@payloadcms/plugin-seo/types'
+import type { GenerateTitle, GenerateURL } from '@payloadcms/plugin-seo/types'
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
+import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
+import type { Plugin } from 'payload'
+import { revalidateRedirects } from '@/hooks/revalidateRedirects'
 
-import { Page, Post, Product } from '@/payload-types'
+import type { Page, Post, Product } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
 
 const generateTitle: GenerateTitle<Post | Page | Product> = ({ doc }) => {

@@ -1,10 +1,9 @@
-import type { Metadata } from 'next'
 import configPromise from '@payload-config'
-import { getPayload } from 'payload'
+import type { Metadata } from 'next'
 import { draftMode } from 'next/headers'
-import { ProductsPageClient } from './page.client'
-
+import { getPayload } from 'payload'
 import { isExpandedDoc } from '@/utilities/type-guards'
+import { ProductsPageClient } from './page.client'
 
 export const metadata: Metadata = {
   title: 'Produse | Pâine cu Maia by Virgil',

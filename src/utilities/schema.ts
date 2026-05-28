@@ -1,5 +1,5 @@
-import { getServerSideURL } from './getURL'
 import type { Post, Product } from '@/payload-types'
+import { getServerSideURL } from './getURL'
 
 export function localBusinessSchema(args: {
   name: string
@@ -27,10 +27,7 @@ export function localBusinessSchema(args: {
   }
 }
 
-export function productSchema(args: {
-  product: Product
-  url: string
-}) {
+export function productSchema(args: { product: Product; url: string }) {
   const { product, url } = args
 
   const image =
@@ -60,9 +57,7 @@ export function productSchema(args: {
   }
 }
 
-export function breadcrumbSchema(
-  items: { name: string; url: string }[],
-) {
+export function breadcrumbSchema(items: { name: string; url: string }[]) {
   return {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -75,10 +70,7 @@ export function breadcrumbSchema(
   }
 }
 
-export function blogPostSchema(args: {
-  post: Post
-  url: string
-}) {
+export function blogPostSchema(args: { post: Post; url: string }) {
   const { post, url } = args
   const baseUrl = getServerSideURL()
 
@@ -89,8 +81,7 @@ export function blogPostSchema(args: {
         : baseUrl + post.heroImage.url
       : undefined
 
-  const authorName =
-    post.populatedAuthors?.[0]?.name || undefined
+  const authorName = post.populatedAuthors?.[0]?.name || undefined
 
   return {
     '@context': 'https://schema.org',

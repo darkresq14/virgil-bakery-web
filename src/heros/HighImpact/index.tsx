@@ -1,19 +1,13 @@
 'use client'
-import React from 'react'
-
-import type { Page } from '@/payload-types'
-
+import type React from 'react'
 import { CMSLink } from '@/components/Link'
 import { Media } from '@/components/Media'
 import RichText from '@/components/RichText'
+import type { Page } from '@/payload-types'
 
 export const HighImpactHero: React.FC<Page['hero']> = ({ links, media, richText }) => {
-
   return (
-    <div
-      className="relative flex items-center justify-center text-white"
-      data-theme="dark"
-    >
+    <div className="relative flex items-center justify-center text-white" data-theme="dark">
       <div className="container mb-8 z-10 relative flex items-center justify-center">
         <div className="max-w-[36.5rem] md:text-center">
           {richText && <RichText className="mb-6" data={richText} enableGutter={false} />}

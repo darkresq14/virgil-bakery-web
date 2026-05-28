@@ -1,6 +1,5 @@
-import type { GlobalAfterChangeHook } from 'payload'
-
 import { revalidatePath, revalidateTag } from 'next/cache'
+import type { GlobalAfterChangeHook } from 'payload'
 
 export const revalidateHomepage: GlobalAfterChangeHook = ({ doc, req: { payload, context } }) => {
   if (!context.disableRevalidate) {

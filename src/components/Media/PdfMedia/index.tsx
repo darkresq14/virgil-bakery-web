@@ -1,9 +1,8 @@
-import React from 'react'
-
-import type { Props as MediaProps } from '../types'
+import type React from 'react'
+import { getMediaUrl } from '@/utilities/getMediaUrl'
 
 import { cn } from '@/utilities/ui'
-import { getMediaUrl } from '@/utilities/getMediaUrl'
+import type { Props as MediaProps } from '../types'
 
 const formatFileSize = (bytes: number | null | undefined): string => {
   if (!bytes) return ''

@@ -1,11 +1,12 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
+import { buildConfig, type PayloadRequest } from 'payload'
 import sharp from 'sharp'
-import path from 'path'
-import { buildConfig, PayloadRequest } from 'payload'
-import { fileURLToPath } from 'url'
-
+import { defaultLexical } from '@/fields/defaultLexical'
 import { Categories } from './collections/Categories'
 import { Media } from './collections/Media'
+import { Orders } from './collections/Orders'
 import { Pages } from './collections/Pages'
 import { Posts } from './collections/Posts'
 import { Products } from './collections/Products'
@@ -14,9 +15,8 @@ import { Users } from './collections/Users'
 import { Footer } from './Footer/config'
 import { Header } from './Header/config'
 import { Homepage } from './Homepage/config'
-import { SiteConfig } from './SiteConfig/config'
 import { plugins } from './plugins'
-import { defaultLexical } from '@/fields/defaultLexical'
+import { SiteConfig } from './SiteConfig/config'
 import { getServerSideURL } from './utilities/getURL'
 
 const filename = fileURLToPath(import.meta.url)
@@ -78,7 +78,7 @@ export default buildConfig({
     },
     wal: true,
   }),
-  collections: [Pages, Posts, Media, Categories, Users, Products, Testimonials],
+  collections: [Pages, Posts, Media, Categories, Users, Products, Testimonials, Orders],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer, SiteConfig, Homepage],
   plugins,
