@@ -47,7 +47,7 @@ export const ImageMedia: React.FC<MediaProps> = (props) => {
   if (!src && resource && typeof resource === 'object') {
     const { alt: altFromResource, height: fullHeight, url, width: fullWidth } = resource
 
-    const sizedUrl = sizeName && (resource.sizes as any)?.[sizeName]?.url
+    const sized = sizeName ? resource.sizes?.[sizeName] : undefined
 
     width = fullWidth!
     height = fullHeight!
@@ -55,7 +55,12 @@ export const ImageMedia: React.FC<MediaProps> = (props) => {
 
     const cacheTag = resource.updatedAt
 
-    src = getMediaUrl(sizedUrl || url, cacheTag)
+    src = getMediaUrl(sized?.url || url, cacheTag)
+
+    if (sized) {
+      width = sized.width ?? width
+      height = sized.height ?? height
+    }
   }
 
   const loading = loadingFromProps || (!priority ? 'lazy' : undefined)
