@@ -4,6 +4,9 @@ import { revalidateSiteConfig } from './hooks/revalidateSiteConfig'
 
 export const SiteConfig: GlobalConfig = {
   slug: 'siteConfig',
+  versions: {
+    max: 20,
+  },
   access: {
     read: () => true,
   },

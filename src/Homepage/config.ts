@@ -4,6 +4,9 @@ import { revalidateHomepage } from './hooks/revalidateHomepage'
 
 export const Homepage: GlobalConfig = {
   slug: 'homepage',
+  versions: {
+    max: 20,
+  },
   access: {
     read: () => true,
   },
