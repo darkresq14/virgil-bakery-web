@@ -20,6 +20,7 @@ interface HeaderClientProps {
 const navLinks = [
   { href: '/', label: 'Acasă' },
   { href: '/produse', label: 'Produse' },
+  { href: '/cum-comand', label: 'Cum Comanzi' },
   { href: '/maiaua-mea', label: 'Despre' },
   { href: '/posts', label: 'Blog' },
   { href: '/#contact', label: 'Contact' },
@@ -145,6 +146,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data, adminBarProps 
 
             {/* Mobile hamburger */}
             <button
+              type="button"
               className="md:hidden flex items-center justify-center w-10 h-10 rounded-full hover:bg-secondary transition-colors"
               onClick={() => setMobileOpen(true)}
               aria-label="Deschide meniul"
@@ -191,6 +193,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data, adminBarProps 
               )}
             </Link>
             <button
+              type="button"
               ref={closeRef}
               onClick={closeMobile}
               className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-secondary transition-colors"

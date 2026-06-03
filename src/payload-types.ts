@@ -1815,7 +1815,17 @@ export interface SiteConfig {
   contactPhone?: string | null;
   facebookUrl?: string | null;
   instagramUrl?: string | null;
-  deliveryInfo?: {
+  /**
+   * Pașii afișați pe pagina "Cum Comanzi". Fiecare pas primește automat un număr.
+   */
+  orderingSteps?:
+    | {
+        title: string;
+        description: string;
+        id?: string | null;
+      }[]
+    | null;
+  deliveryCourier?: {
     root: {
       type: string;
       children: {
@@ -1830,7 +1840,7 @@ export interface SiteConfig {
     };
     [k: string]: unknown;
   } | null;
-  orderingProcess?: {
+  deliveryPersonal?: {
     root: {
       type: string;
       children: {
@@ -1845,6 +1855,56 @@ export interface SiteConfig {
     };
     [k: string]: unknown;
   } | null;
+  paymentMethods?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Linkul de join la grupul de WhatsApp (https://chat.whatsapp.com/...)
+   */
+  whatsappGroupUrl?: string | null;
+  policies?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Text scurt pentru cardul de pe pagina principală (~120 caractere)
+   */
+  teaserOrdering?: string | null;
+  /**
+   * Text scurt pentru cardul de pe pagina principală (~120 caractere)
+   */
+  teaserDelivery?: string | null;
+  /**
+   * Text scurt pentru cardul de pe pagina principală (~120 caractere)
+   */
+  teaserPayment?: string | null;
+  /**
+   * Text scurt pentru cardul de pe pagina principală (~120 caractere)
+   */
+  teaserWhatsapp?: string | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -1954,8 +2014,22 @@ export interface SiteConfigSelect<T extends boolean = true> {
   contactPhone?: T;
   facebookUrl?: T;
   instagramUrl?: T;
-  deliveryInfo?: T;
-  orderingProcess?: T;
+  orderingSteps?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        id?: T;
+      };
+  deliveryCourier?: T;
+  deliveryPersonal?: T;
+  paymentMethods?: T;
+  whatsappGroupUrl?: T;
+  policies?: T;
+  teaserOrdering?: T;
+  teaserDelivery?: T;
+  teaserPayment?: T;
+  teaserWhatsapp?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

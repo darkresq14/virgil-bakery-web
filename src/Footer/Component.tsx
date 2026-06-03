@@ -14,6 +14,7 @@ export async function Footer() {
   const footerLinks = [
     { href: '/', label: 'Acasă' },
     { href: '/produse', label: 'Produse' },
+    { href: '/cum-comand', label: 'Cum Comanzi' },
     { href: '/maiaua-mea', label: 'Despre' },
     { href: '/posts', label: 'Blog' },
     { href: '/politica-de-confidentialitate', label: 'Politica de Confidențialitate' },
@@ -123,8 +124,7 @@ export async function Footer() {
         {/* Bottom bar */}
         <div className="mt-10 pt-6 border-t border-background/8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs font-sans text-background/35 tracking-wide">
-            &copy; {new Date().getFullYear()} P&acirc;ine cu Maia by Virgil. Toate drepturile
-            rezervate.
+            &copy;{' '}{new Date().getFullYear()}{' '}P&acirc;ine cu Maia by Virgil. Toate drepturile rezervate.
           </p>
           <p className="text-xs font-sans text-background/35 flex items-center gap-1">
             crafted with <span className="text-accent/60 text-[0.7rem]">♥</span> by{' '}

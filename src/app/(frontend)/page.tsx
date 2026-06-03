@@ -1,5 +1,5 @@
 import configPromise from '@payload-config'
-import { Mail, MapPin, Phone, Truck } from 'lucide-react'
+import { CreditCard, Mail, MapPin, MessageCircle, Phone, ShoppingCart, Truck } from 'lucide-react'
 import { draftMode } from 'next/headers'
 import Link from 'next/link'
 import { getPayload } from 'payload'
@@ -7,7 +7,6 @@ import { About } from '@/components/Homepage/About'
 import { Hero } from '@/components/Homepage/Hero'
 import { Testimonials } from '@/components/Homepage/Testimonials'
 import { ProductCard } from '@/components/ProductCard'
-import RichText from '@/components/RichText'
 import { ScrollReveal } from '@/components/ScrollReveal'
 import { getCachedGlobal } from '@/utilities/getGlobals'
 import { isExpandedDoc } from '@/utilities/type-guards'
@@ -122,45 +121,92 @@ export default async function HomePage() {
         </ScrollReveal>
       )}
 
-      {/* Delivery Info */}
-      {(siteConfig?.deliveryInfo || siteConfig?.orderingProcess) && (
-        <ScrollReveal>
-          <section className="py-20 bg-white">
-            <div className="container">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                {siteConfig?.deliveryInfo && (
-                  <div>
-                    <div className="flex items-center gap-3 mb-4">
-                      <Truck className="w-6 h-6 text-primary" />
-                      <h3 className="text-2xl font-heading">Livrare</h3>
-                    </div>
-                    <RichText
-                      data={siteConfig.deliveryInfo}
-                      enableGutter={false}
-                      enableProse={true}
-                    />
-                  </div>
-                )}
-                {siteConfig?.orderingProcess && (
-                  <div>
-                    <h3 className="text-2xl font-heading mb-4">Cum se comandă</h3>
-                    <RichText
-                      data={siteConfig.orderingProcess}
-                      enableGutter={false}
-                      enableProse={true}
-                    />
-                  </div>
-                )}
-              </div>
+      {/* Ordering Info Teaser */}
+      <ScrollReveal>
+        <section className="py-20 bg-white">
+          <div className="container">
+            <h2 className="text-3xl font-heading text-center mb-12">Cum funcționează</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Card: Comandă Online */}
+              <Link
+                href="/cum-comand"
+                className="group flex flex-col items-center text-center p-6 rounded-xl bg-secondary/50 hover:bg-secondary hover:shadow-md hover:-translate-y-0.5 transition-all"
+              >
+                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                  <ShoppingCart className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="font-heading text-lg mb-2">Comandă Online</h3>
+                <p className="text-sm text-muted-foreground font-sans">
+                  {siteConfig?.teaserOrdering || 'Alege produsele dorite direct din magazinul online.'}
+                </p>
+              </Link>
+
+              {/* Card: Livrare */}
+              <Link
+                href="/cum-comand#livrare"
+                className="group flex flex-col items-center text-center p-6 rounded-xl bg-secondary/50 hover:bg-secondary hover:shadow-md hover:-translate-y-0.5 transition-all"
+              >
+                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                  <Truck className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="font-heading text-lg mb-2">Livrare</h3>
+                <p className="text-sm text-muted-foreground font-sans">
+                  {siteConfig?.teaserDelivery || 'Livrăm în Brașov, Sibiu, București și în toată țara.'}
+                </p>
+              </Link>
+
+              {/* Card: Plată */}
+              <Link
+                href="/cum-comand#plata"
+                className="group flex flex-col items-center text-center p-6 rounded-xl bg-secondary/50 hover:bg-secondary hover:shadow-md hover:-translate-y-0.5 transition-all"
+              >
+                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                  <CreditCard className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="font-heading text-lg mb-2">Plată</h3>
+                <p className="text-sm text-muted-foreground font-sans">
+                  {siteConfig?.teaserPayment || 'POS, transfer bancar sau plata la livrare.'}
+                </p>
+              </Link>
+
+              {/* Card: WhatsApp */}
+              <a
+                href={siteConfig?.whatsappGroupUrl || `https://wa.me/${siteConfig?.whatsappNumber?.replace(/[^0-9]/g, '') || '40746245391'}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex flex-col items-center text-center p-6 rounded-xl bg-secondary/50 hover:bg-secondary hover:shadow-md hover:-translate-y-0.5 transition-all"
+              >
+                <div className="w-14 h-14 rounded-full bg-[#25D366]/10 flex items-center justify-center mb-4 group-hover:bg-[#25D366]/20 transition-colors">
+                  <MessageCircle className="w-6 h-6 text-[#25D366]" />
+                </div>
+                <h3 className="font-heading text-lg mb-2">WhatsApp</h3>
+                <p className="text-sm text-muted-foreground font-sans">
+                  {siteConfig?.teaserWhatsapp || 'Alătură-te grupului nostru pentru oferte și comenzi rapide.'}
+                </p>
+              </a>
             </div>
-          </section>
-        </ScrollReveal>
-      )}
+
+            {/* CTA */}
+            <div className="text-center mt-10">
+              <Link
+                href="/cum-comand"
+                className="inline-flex items-center gap-2 rounded-full border-2 border-primary text-primary px-8 py-3 font-sans font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
+              >
+                Află detalii complete
+              </Link>
+            </div>
+          </div>
+        </section>
+      </ScrollReveal>
 
       {/* Contact */}
       <ScrollReveal>
-        <section id="contact" className="py-20 bg-secondary/30">
-          <div className="container text-center">
+        <section id="contact" className="py-20 relative overflow-hidden">
+          <div className="absolute inset-0 bg-linear-to-t from-secondary/50 to-transparent" />
+          <div className="container text-center relative">
+            <span className="inline-block text-sm font-sans uppercase tracking-[0.2em] text-primary/60 mb-3">
+              Hai să vorbim
+            </span>
             <h2 className="text-3xl font-heading mb-8">Contact</h2>
             <div className="flex flex-col items-center gap-4 font-sans">
               {siteConfig?.contactPhone && (
@@ -193,7 +239,7 @@ export default async function HomePage() {
                 href={`https://wa.me/${siteConfig.whatsappNumber.replace(/[^0-9]/g, '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 mt-8 rounded-full bg-[#25D366] text-white px-8 py-3 font-sans font-medium hover:bg-[#20bd5a] transition-colors"
+                className="inline-flex items-center gap-2 mt-8 rounded-full bg-[#25D366] text-white px-8 py-3 font-sans font-medium hover:bg-[#20bd5a] hover:shadow-lg hover:shadow-[#25D366]/25 hover:scale-105 transition-all"
               >
                 Scrie-ne pe WhatsApp
               </a>
