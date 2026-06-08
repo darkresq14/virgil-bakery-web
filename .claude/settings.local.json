@@ -12,7 +12,10 @@
       "Bash(curl -s -o /dev/null -w '%{http_code}' -H 'RSC: 1' -H 'Next-Url: /' -H 'Next-Router-State-Tree: __TRACKED_VAR__' http://localhost:3000/cum-comand)",
       "Bash(curl -s \"http://localhost:3000/api/pages?where[slug][equals]=cum-comand&limit=1\")",
       "Bash(curl -sv \"http://localhost:3000/api/pages?limit=5&select%5Bslug%5D=true\")",
-      "Bash(curl -s \"http://localhost:3000/api/pages?limit=5&select%5Bslug%5D=true\")"
+      "Bash(curl -s \"http://localhost:3000/api/pages?limit=5&select%5Bslug%5D=true\")",
+      "Bash(gh label *)",
+      "Bash(gh issue *)",
+      "Bash(xargs grep -l \"zone\\\\|aria\\\\|raza\\\\|radius\")"
     ],
     "additionalDirectories": [
       "g:\\Code\\virgil-bakery-web\\src\\app\\(frontend)\\produse"
