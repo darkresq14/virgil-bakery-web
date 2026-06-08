@@ -15,7 +15,9 @@
       "Bash(curl -s \"http://localhost:3000/api/pages?limit=5&select%5Bslug%5D=true\")",
       "Bash(gh label *)",
       "Bash(gh issue *)",
-      "Bash(xargs grep -l \"zone\\\\|aria\\\\|raza\\\\|radius\")"
+      "Bash(xargs grep -l \"zone\\\\|aria\\\\|raza\\\\|radius\")",
+      "Bash(npx vitest *)",
+      "Bash(npx biome *)"
     ],
     "additionalDirectories": [
       "g:\\Code\\virgil-bakery-web\\src\\app\\(frontend)\\produse"
