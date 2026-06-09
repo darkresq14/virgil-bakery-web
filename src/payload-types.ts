@@ -899,10 +899,16 @@ export interface Order {
     | boolean
     | null;
   total: number;
+  deliveryMethod: 'personal' | 'curier';
+  shippingCost: number;
+  subtotal: number;
   deliveryDate: string;
   customerName?: string | null;
   customerPhone?: string | null;
-  customerAddress?: string | null;
+  judet?: string | null;
+  localitate?: string | null;
+  streetAddress?: string | null;
+  addressDetails?: string | null;
   whatsappMessage?: string | null;
   status: 'nou' | 'confirmat' | 'livrat' | 'anulat';
   updatedAt: string;
@@ -1487,10 +1493,16 @@ export interface TestimonialsSelect<T extends boolean = true> {
 export interface OrdersSelect<T extends boolean = true> {
   items?: T;
   total?: T;
+  deliveryMethod?: T;
+  shippingCost?: T;
+  subtotal?: T;
   deliveryDate?: T;
   customerName?: T;
   customerPhone?: T;
-  customerAddress?: T;
+  judet?: T;
+  localitate?: T;
+  streetAddress?: T;
+  addressDetails?: T;
   whatsappMessage?: T;
   status?: T;
   updatedAt?: T;

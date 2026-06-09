@@ -13,7 +13,7 @@ export const Orders: CollectionConfig = {
     update: authenticated,
   },
   admin: {
-    defaultColumns: ['id', 'customerName', 'deliveryDate', 'total', 'status', 'createdAt'],
+    defaultColumns: ['id', 'customerName', 'deliveryMethod', 'deliveryDate', 'total', 'status', 'createdAt'],
     useAsTitle: 'id',
   },
   fields: [
@@ -31,6 +31,35 @@ export const Orders: CollectionConfig = {
       name: 'total',
       type: 'number',
       required: true,
+      min: 0,
+    },
+    {
+      name: 'deliveryMethod',
+      type: 'select',
+      required: true,
+      defaultValue: 'personal',
+      options: [
+        { label: 'Personală', value: 'personal' },
+        { label: 'Curier', value: 'curier' },
+      ],
+      admin: {
+        components: {
+          Cell: '@/collections/Orders/components/DeliveryMethodCell#DeliveryMethodCell',
+        },
+      },
+    },
+    {
+      name: 'shippingCost',
+      type: 'number',
+      required: true,
+      defaultValue: 0,
+      min: 0,
+    },
+    {
+      name: 'subtotal',
+      type: 'number',
+      required: true,
+      defaultValue: 0,
       min: 0,
     },
     {
@@ -54,9 +83,24 @@ export const Orders: CollectionConfig = {
       label: 'Telefon client',
     },
     {
-      name: 'customerAddress',
-      type: 'textarea',
-      label: 'Adresă livrare',
+      name: 'judet',
+      type: 'text',
+      label: 'Județ',
+    },
+    {
+      name: 'localitate',
+      type: 'text',
+      label: 'Localitate',
+    },
+    {
+      name: 'streetAddress',
+      type: 'text',
+      label: 'Strada + Număr',
+    },
+    {
+      name: 'addressDetails',
+      type: 'text',
+      label: 'Detalii adresă',
     },
     {
       name: 'whatsappMessage',

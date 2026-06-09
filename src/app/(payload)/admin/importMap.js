@@ -32,6 +32,7 @@ import { BlocksFeatureClient as BlocksFeatureClient_e70f5e05f09f93e00b997edb1ef0
 import { FolderTableCell as FolderTableCell_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 import { FolderField as FolderField_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 import { ItemsCell as ItemsCell_125ec7ea63339793644ce31129730529 } from '@/collections/Orders/components/ItemsCell'
+import { DeliveryMethodCell as DeliveryMethodCell_c56d9a1a6ec4c0b9826282178acdd697 } from '@/collections/Orders/components/DeliveryMethodCell'
 import { StatusCell as StatusCell_8f206b1664610466b0d12ec5acac877d } from '@/collections/Orders/components/StatusCell'
 import { FolderTypeField as FolderTypeField_2b8867833a34864a02ddf429b0728a40 } from '@payloadcms/next/client'
 import { RowLabel as RowLabel_ec255a65fa6fa8d1faeb09cf35284224 } from '@/Header/RowLabel'
@@ -77,6 +78,7 @@ export const importMap = {
   "@payloadcms/next/rsc#FolderTableCell": FolderTableCell_f9c02e79a4aed9a3924487c0cd4cafb1,
   "@payloadcms/next/rsc#FolderField": FolderField_f9c02e79a4aed9a3924487c0cd4cafb1,
   "@/collections/Orders/components/ItemsCell#ItemsCell": ItemsCell_125ec7ea63339793644ce31129730529,
+  "@/collections/Orders/components/DeliveryMethodCell#DeliveryMethodCell": DeliveryMethodCell_c56d9a1a6ec4c0b9826282178acdd697,
   "@/collections/Orders/components/StatusCell#StatusCell": StatusCell_8f206b1664610466b0d12ec5acac877d,
   "@payloadcms/next/client#FolderTypeField": FolderTypeField_2b8867833a34864a02ddf429b0728a40,
   "@/Header/RowLabel#RowLabel": RowLabel_ec255a65fa6fa8d1faeb09cf35284224,
