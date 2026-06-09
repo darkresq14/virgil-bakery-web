@@ -4,30 +4,40 @@ import { ArrowLeft, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
-import { useCart } from '@/providers/Cart'
-import { getDeliveryDates } from '@/utilities/deliveryDates'
 
-function formatPrice(price: number) {
-  return new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'RON' }).format(price)
-}
+import { AddressForm, type AddressFields } from '@/components/AddressForm'
+import { useCart } from '@/providers/Cart'
+import { buildWhatsAppMessage } from '@/utilities/buildWhatsAppMessage'
+import { detectDeliveryMethod } from '@/utilities/detectDeliveryMethod'
+import { getDeliveryDates } from '@/utilities/deliveryDates'
+import { formatPrice } from '@/utilities/formatPrice'
 
 const STORAGE_KEY = 'vb-repeat-customer'
 
 export function CartPageClient() {
   const { items, updateQuantity, removeItem, clearCart, total, itemCount } = useCart()
-  const [form, setForm] = useState({ name: '', phone: '', address: '', deliveryDate: '' })
+  const emptyAddress: AddressFields = { judet: '', localitate: '', streetAddress: '', addressDetails: '' }
+  const [form, setForm] = useState({ name: '', phone: '', deliveryDate: '' })
+  const [address, setAddress] = useState<AddressFields>(emptyAddress)
   const [formError, setFormError] = useState('')
   const [isFirstOrder, setIsFirstOrder] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true
     return localStorage.getItem(STORAGE_KEY) !== 'true'
   })
-  const [fieldErrors, setFieldErrors] = useState({ name: '', phone: '', address: '' })
+  const [fieldErrors, setFieldErrors] = useState({ name: '', phone: '', judet: '', localitate: '', streetAddress: '' })
+  const [needsCourier, setNeedsCourier] = useState(false)
 
   const toggleFirstOrder = (value: boolean) => {
     setIsFirstOrder(value)
     localStorage.setItem(STORAGE_KEY, value ? 'false' : 'true')
-    setFieldErrors({ name: '', phone: '', address: '' })
+    setFieldErrors({ name: '', phone: '', judet: '', localitate: '', streetAddress: '' })
+    setNeedsCourier(false)
   }
+
+  const deliveryInfo = useMemo(
+    () => detectDeliveryMethod(address.judet, address.localitate),
+    [address.judet, address.localitate],
+  )
 
   const deliveryDates = useMemo(() => getDeliveryDates(), [])
 
@@ -38,6 +48,16 @@ export function CartPageClient() {
 
   const selectedDelivery = form.deliveryDate || defaultDeliveryLabel
 
+  const shippingCost = isFirstOrder
+    ? (address.judet && address.localitate ? deliveryInfo.shippingCost : 0)
+    : (needsCourier ? 25 : 0)
+
+  const deliveryMethod = isFirstOrder
+    ? (address.judet && address.localitate ? deliveryInfo.deliveryMethod : 'personal')
+    : (needsCourier ? 'curier' : 'personal')
+
+  const showTransport = shippingCost > 0
+
   const handleCheckout = async () => {
     if (!selectedDelivery) {
       setFormError('Selectează o dată de livrare')
@@ -45,37 +65,34 @@ export function CartPageClient() {
     }
     setFormError('')
 
-    const errors = { name: '', phone: '', address: '' }
+    const errors = { name: '', phone: '', judet: '', localitate: '', streetAddress: '' }
     if (isFirstOrder) {
       if (!form.name.trim()) errors.name = 'Numele este obligatoriu'
       if (!form.phone.trim()) errors.phone = 'Telefonul este obligatoriu'
-      if (!form.address.trim()) errors.address = 'Adresa este obligatorie'
+      if (!address.judet) errors.judet = 'Județul este obligatoriu'
+      if (!address.localitate.trim()) errors.localitate = 'Localitatea este obligatorie'
+      if (!address.streetAddress.trim()) errors.streetAddress = 'Strada este obligatorie'
     }
     setFieldErrors(errors)
-    if (errors.name || errors.phone || errors.address) return
-
-    const lines = items.map(
-      (item) => `• ${item.quantity}x ${item.name} - ${formatPrice(item.price * item.quantity)}`,
-    )
+    if (errors.name || errors.phone || errors.judet || errors.localitate || errors.streetAddress) return
 
     const selectedDate = deliveryDates.find((d) => d.label === selectedDelivery)
 
-    const messageParts = [
-      'Bună ziua! Doresc să comand:',
-      '',
-      ...lines,
-      '',
-      `Total: ${formatPrice(total)}`,
-      `Livrare: ${selectedDelivery}`,
-    ]
-
-    if (form.name.trim()) messageParts.push(`Nume: ${form.name}`)
-    if (form.phone.trim()) messageParts.push(`Telefon: ${form.phone}`)
-    if (form.address.trim()) messageParts.push(`Adresă: ${form.address}`)
-
-    messageParts.push('', 'Mulțumesc!')
-
-    const message = messageParts.join('\n')
+    const message = buildWhatsAppMessage({
+      items: items.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price })),
+      subtotal: total,
+      shippingCost,
+      deliveryDate: selectedDelivery,
+      deliveryMethod,
+      ...(isFirstOrder ? {
+        customerName: form.name || undefined,
+        customerPhone: form.phone || undefined,
+        judet: address.judet || undefined,
+        localitate: address.localitate || undefined,
+        streetAddress: address.streetAddress || undefined,
+        addressDetails: address.addressDetails || undefined,
+      } : {}),
+    })
 
     try {
       await fetch('/api/orders', {
@@ -88,11 +105,17 @@ export function CartPageClient() {
             quantity: item.quantity,
             price: item.price,
           })),
-          total,
+          total: total + shippingCost,
+          subtotal: total,
+          deliveryMethod,
+          shippingCost,
           deliveryDate: selectedDate?.date.toISOString(),
           customerName: form.name || undefined,
           customerPhone: form.phone || undefined,
-          customerAddress: form.address || undefined,
+          judet: address.judet || undefined,
+          localitate: address.localitate || undefined,
+          streetAddress: address.streetAddress || undefined,
+          addressDetails: address.addressDetails || undefined,
           whatsappMessage: message,
           status: 'nou',
         }),
@@ -162,6 +185,7 @@ export function CartPageClient() {
                     {/* Quantity controls */}
                     <div className="flex items-center gap-2">
                       <button
+                        type="button"
                         onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                         className="flex items-center justify-center w-8 h-8 rounded-full border border-border hover:bg-secondary transition-colors"
                         aria-label="Scade cantitatea"
@@ -170,6 +194,7 @@ export function CartPageClient() {
                       </button>
                       <span className="w-8 text-center font-sans font-medium">{item.quantity}</span>
                       <button
+                        type="button"
                         onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                         className="flex items-center justify-center w-8 h-8 rounded-full border border-border hover:bg-secondary transition-colors"
                         aria-label="Crește cantitatea"
@@ -185,6 +210,7 @@ export function CartPageClient() {
 
                     {/* Remove */}
                     <button
+                      type="button"
                       onClick={() => removeItem(item.productId)}
                       className="p-2 text-muted-foreground hover:text-destructive transition-colors"
                       aria-label={`Elimină ${item.name}`}
@@ -205,6 +231,7 @@ export function CartPageClient() {
                 Continuă cumpărăturile
               </Link>
               <button
+                type="button"
                 onClick={clearCart}
                 className="text-sm font-sans text-destructive hover:underline"
               >
@@ -218,18 +245,31 @@ export function CartPageClient() {
             <div className="rounded-xl border border-border bg-card p-6 sticky top-20">
               <h2 className="font-heading text-xl mb-4">Comandă</h2>
 
-              <div className="flex justify-between mb-6 pb-4 border-b border-border">
-                <span className="font-sans text-muted-foreground">Total ({itemCount} produse)</span>
-                <span className="font-sans text-xl font-bold text-primary">
-                  {formatPrice(total)}
-                </span>
+              <div className="mb-6 pb-4 border-b border-border space-y-2">
+                <div className="flex justify-between">
+                  <span className="font-sans text-muted-foreground">Subtotal ({itemCount} produse)</span>
+                  <span className="font-sans font-medium">{formatPrice(total)}</span>
+                </div>
+                {showTransport && (
+                  <div className="flex justify-between">
+                    <span className="font-sans text-muted-foreground">Transport (Curier Cargus)</span>
+                    <span className="font-sans font-medium">{formatPrice(shippingCost)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-2 border-t border-border">
+                  <span className="font-sans text-lg font-bold">Total</span>
+                  <span className="font-sans text-xl font-bold text-primary">
+                    {formatPrice(total + shippingCost)}
+                  </span>
+                </div>
               </div>
 
               <div className="space-y-4 mb-6">
                 {/* Delivery date — required */}
                 <div>
-                  <label className="block text-sm font-sans font-medium mb-1">Dată livrare *</label>
+                  <label htmlFor="delivery-date" className="block text-sm font-sans font-medium mb-1">Dată livrare *</label>
                   <select
+                    id="delivery-date"
                     value={selectedDelivery}
                     onChange={(e) => setForm({ ...form, deliveryDate: e.target.value })}
                     className="w-full rounded-lg border border-input px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring bg-background"
@@ -272,14 +312,30 @@ export function CartPageClient() {
                   </button>
                 </div>
 
+                {/* Courier checkbox for returning customers */}
+                {!isFirstOrder && (
+                  <div className="space-y-3 pt-1">
+                    <label className="flex items-center gap-2 text-sm font-sans cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={needsCourier}
+                        onChange={(e) => setNeedsCourier(e.target.checked)}
+                        className="rounded border-input"
+                      />
+                      Am nevoie de livrare prin curier (+25 lei)
+                    </label>
+                  </div>
+                )}
+
                 {/* Fields for first-time buyers */}
                 {isFirstOrder && (
                   <div className="space-y-3 pt-1">
                     <div>
-                      <label className="block text-sm font-sans font-medium mb-1">
+                      <label htmlFor="customer-name" className="block text-sm font-sans font-medium mb-1">
                         Nume <span className="text-destructive">*</span>
                       </label>
                       <input
+                        id="customer-name"
                         type="text"
                         value={form.name}
                         onChange={(e) => {
@@ -298,10 +354,11 @@ export function CartPageClient() {
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm font-sans font-medium mb-1">
+                      <label htmlFor="customer-phone" className="block text-sm font-sans font-medium mb-1">
                         Telefon <span className="text-destructive">*</span>
                       </label>
                       <input
+                        id="customer-phone"
                         type="tel"
                         value={form.phone}
                         onChange={(e) => {
@@ -320,32 +377,31 @@ export function CartPageClient() {
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm font-sans font-medium mb-1">
-                        Adresă de livrare <span className="text-destructive">*</span>
-                      </label>
-                      <textarea
-                        value={form.address}
-                        onChange={(e) => {
-                          setForm({ ...form, address: e.target.value })
-                          setFieldErrors({ ...fieldErrors, address: '' })
+                      <AddressForm
+                        values={address}
+                        onChange={setAddress}
+                        errors={{
+                          judet: fieldErrors.judet || undefined,
+                          localitate: fieldErrors.localitate || undefined,
+                          streetAddress: fieldErrors.streetAddress || undefined,
                         }}
-                        className={`w-full rounded-lg border px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring resize-none ${
-                          fieldErrors.address ? 'border-destructive' : 'border-input'
-                        }`}
-                        rows={3}
-                        placeholder="Adresa completă de livrare"
                       />
-                      {fieldErrors.address && (
-                        <p className="text-xs text-destructive font-sans mt-1">
-                          {fieldErrors.address}
-                        </p>
-                      )}
                     </div>
+                    {address.judet && address.localitate && (
+                      <div className="rounded-lg bg-secondary/50 px-3 py-2 text-sm font-sans">
+                        {deliveryInfo.deliveryMethod === 'personal' ? (
+                          <>🚗 Livrare personală — Gratuită</>
+                        ) : (
+                          <>📦 Livrare prin curier — 25 lei</>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
               <button
+                type="button"
                 onClick={handleCheckout}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] text-white px-8 py-3 font-sans font-medium hover:bg-[#20bd5a] transition-colors"
               >

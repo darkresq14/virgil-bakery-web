@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { type AddressFields, AddressForm } from '@/components/AddressForm'
@@ -52,7 +52,7 @@ describe('AddressForm', () => {
     expect(labels).toEqual(expectedLabels)
   })
 
-  it('shows no datalist options when no judet is selected', () => {
+  it('shows no dropdown when no judet is selected', () => {
     render(
       <AddressForm
         values={{ judet: '', localitate: '', streetAddress: '', addressDetails: '' }}
@@ -60,30 +60,40 @@ describe('AddressForm', () => {
       />,
     )
 
-    // jsdom does not populate HTMLDataListElement.options, use querySelectorAll
-    const datalist = document.getElementById('address-form-localitati')
-    const options = datalist?.querySelectorAll('option') ?? []
-    expect(options).toHaveLength(0)
+    // The locality input is disabled, so no dropdown should appear
+    const listbox = document.getElementById('address-form-localitati')
+    expect(listbox).toBeNull()
   })
 
-  it('shows only localities for the selected judet in the datalist', () => {
-    render(
+  it('shows matching localities for the selected judet when typing', () => {
+    const { rerender } = render(
       <AddressForm
         values={{ judet: 'Sibiu', localitate: '', streetAddress: '', addressDetails: '' }}
-        onChange={noop}
+        onChange={(v) =>
+          rerender(
+            <AddressForm values={v} onChange={noop} />,
+          )
+        }
       />,
     )
 
-    const datalist = document.getElementById('address-form-localitati')
-    const renderedOptions = datalist?.querySelectorAll('option') ?? []
-    const sibiuLocalities = LOCALITIES_BY_JUDET['Sibiu']
+    const input = screen.getByLabelText(/localitate/i) as HTMLInputElement
+    expect(input.disabled).toBe(false)
 
-    // Component deduplicates localities (some judete have duplicate entries)
-    const uniqueValues = [...new Set(sibiuLocalities.map((l) => l.value))]
-    expect(renderedOptions).toHaveLength(uniqueValues.length)
+    // Type a query that should match Sibiu localities
+    fireEvent.change(input, { target: { value: 'Sib' } })
+    fireEvent.focus(input)
 
-    const datalistValues = Array.from(renderedOptions).map((o) => o.getAttribute('value') ?? '')
-    expect(datalistValues).toEqual(uniqueValues)
+    // The dropdown should appear with matching localities
+    const listbox = document.getElementById('address-form-localitati')
+    expect(listbox).toBeTruthy()
+    const items = listbox!.querySelectorAll('[role="option"]')
+    expect(items.length).toBeGreaterThan(0)
+
+    // All items should contain "Sib" (ignoring diacritics) in their text
+    items.forEach((item) => {
+      expect(item.textContent?.toLowerCase()).toContain('sib')
+    })
   })
 
   it('shows "selectează mai întâi județul" placeholder when no judet is selected', () => {
@@ -97,7 +107,7 @@ describe('AddressForm', () => {
     expect(screen.getByPlaceholderText(/selectează mai întâi județul/i)).toBeTruthy()
   })
 
-  it('shows "selectează localitatea" placeholder when judet is selected', () => {
+  it('shows min-chars placeholder when judet is selected but input is empty', () => {
     render(
       <AddressForm
         values={{ judet: 'Sibiu', localitate: '', streetAddress: '', addressDetails: '' }}
@@ -105,7 +115,7 @@ describe('AddressForm', () => {
       />,
     )
 
-    expect(screen.getByPlaceholderText(/selectează localitatea/i)).toBeTruthy()
+    expect(screen.getByPlaceholderText(/cel puțin 2 caractere/i)).toBeTruthy()
   })
 
   it('calls onChange with reset localitate when judet changes', () => {
@@ -206,5 +216,34 @@ describe('AddressForm', () => {
     // Optional field does NOT have *
     const detailsLabel = document.querySelector('label[for="address-details"]')
     expect(detailsLabel?.textContent).not.toContain('*')
+  })
+
+  it('finds localities even when typing without diacritics', () => {
+    const { rerender } = render(
+      <AddressForm
+        values={{ judet: 'Sibiu', localitate: '', streetAddress: '', addressDetails: '' }}
+        onChange={(v) =>
+          rerender(
+            <AddressForm values={v} onChange={noop} />,
+          )
+        }
+      />,
+    )
+
+    const input = screen.getByLabelText(/localitate/i) as HTMLInputElement
+
+    // Type "cisna" (without diacritics) — should match "Cisnădie"
+    fireEvent.change(input, { target: { value: 'cisna' } })
+    fireEvent.focus(input)
+
+    const listbox = document.getElementById('address-form-localitati')
+    expect(listbox).toBeTruthy()
+    const items = listbox!.querySelectorAll('[role="option"]')
+    expect(items.length).toBeGreaterThan(0)
+
+    // At least one result should be Cisnădie or Cisnădioara
+    const texts = Array.from(items).map((i) => i.textContent ?? '')
+    const hasCisna = texts.some((t) => t.toLowerCase().includes('cisnăd'))
+    expect(hasCisna).toBe(true)
   })
 })

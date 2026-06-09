@@ -17,7 +17,13 @@
       "Bash(gh issue *)",
       "Bash(xargs grep -l \"zone\\\\|aria\\\\|raza\\\\|radius\")",
       "Bash(npx vitest *)",
-      "Bash(npx biome *)"
+      "Bash(npx biome *)",
+      "Bash(gh api *)",
+      "Bash(pnpm vitest *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'feat: add AddressForm component with Romanian address fields *)",
+      "Bash(git commit *)",
+      "Bash(pnpm run *)"
     ],
     "additionalDirectories": [
       "g:\\Code\\virgil-bakery-web\\src\\app\\(frontend)\\produse"
