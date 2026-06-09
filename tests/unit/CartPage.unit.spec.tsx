@@ -14,8 +14,6 @@ vi.mock('@/utilities/deliveryDates', () => ({
   getDeliveryDates: vi.fn(() => [
     { date: new Date('2025-06-13'), label: 'Vineri, 13 Iunie', isSelectable: true },
     { date: new Date('2025-06-17'), label: 'Marți, 17 Iunie', isSelectable: true },
-    { date: new Date('2025-06-20'), label: 'Vineri, 20 Iunie', isSelectable: true },
-    { date: new Date('2025-06-24'), label: 'Marți, 24 Iunie', isSelectable: true },
   ]),
 }))
 

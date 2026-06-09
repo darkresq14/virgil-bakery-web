@@ -35,13 +35,6 @@ function getRomaniaNow(): Date {
   return new Date(romaniaStr)
 }
 
-function _nextDayAfter(date: Date, targetDay: number): Date {
-  const d = new Date(date)
-  const diff = (targetDay - d.getDay() + 7) % 7 || 7
-  d.setDate(d.getDate() + diff)
-  return d
-}
-
 function nextDayOnOrAfter(date: Date, targetDay: number): Date {
   const d = new Date(date)
   const diff = (targetDay - d.getDay() + 7) % 7
@@ -70,40 +63,41 @@ function formatLabel(date: Date): string {
 export function getDeliveryDates(): DeliveryDateOption[] {
   const now = getRomaniaNow()
   const results: DeliveryDateOption[] = []
-  const seen = new Set<string>()
 
-  let searchFrom = new Date(now)
+  const deliveryDays = [2, 5] as const // Tuesday, Friday
 
-  while (results.length < 4) {
-    const nextTue = nextDayOnOrAfter(searchFrom, 2)
-    const nextFri = nextDayOnOrAfter(searchFrom, 5)
+  for (const targetDay of deliveryDays) {
+    const nearest = nextDayOnOrAfter(now, targetDay)
+    const cutoff = getCutoffDate(nearest)
+    const isSelectable = now < cutoff
 
-    const candidates = [
-      { date: nextTue, order: nextTue.getTime() },
-      { date: nextFri, order: nextFri.getTime() },
-    ].sort((a, b) => a.order - b.order)
+    if (isSelectable) {
+      results.push({
+        date: nearest,
+        label: formatLabel(nearest),
+        isSelectable: true,
+      })
+    } else {
+      // Show grayed-out occurrence + next week's selectable occurrence
+      results.push({
+        date: nearest,
+        label: formatLabel(nearest),
+        isSelectable: false,
+      })
 
-    for (const { date } of candidates) {
-      if (results.length >= 4) break
-
-      const key = date.toISOString().slice(0, 10)
-      if (seen.has(key)) continue
-      seen.add(key)
-
-      const cutoff = getCutoffDate(date)
-      const isSelectable = now < cutoff
+      const next = new Date(nearest)
+      next.setDate(next.getDate() + 7)
 
       results.push({
-        date,
-        label: formatLabel(date),
-        isSelectable,
+        date: next,
+        label: formatLabel(next),
+        isSelectable: true,
       })
     }
-
-    // Move search window forward
-    searchFrom = new Date(searchFrom)
-    searchFrom.setDate(searchFrom.getDate() + 7)
   }
+
+  // Sort chronologically
+  results.sort((a, b) => a.date.getTime() - b.date.getTime())
 
   return results
 }
