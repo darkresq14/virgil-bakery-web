@@ -23,7 +23,11 @@
       "Bash(git add *)",
       "Bash(git commit -m 'feat: add AddressForm component with Romanian address fields *)",
       "Bash(git commit *)",
-      "Bash(pnpm run *)"
+      "Bash(pnpm run *)",
+      "Bash(pnpm test:int -- --reporter=verbose -- tests/unit/redirects.unit.spec.ts)",
+      "Bash(pnpm test:int -- --reporter=verbose -- tests/unit/gsc-verification.unit.spec.ts)",
+      "Bash(pnpm test:int -- --reporter=verbose -- tests/unit/ga4.unit.spec.ts)",
+      "Bash(pnpm test:int -- --reporter=verbose -- tests/unit/ga4.unit.spec.ts tests/unit/gsc-verification.unit.spec.ts)"
     ],
     "additionalDirectories": [
       "g:\\Code\\virgil-bakery-web\\src\\app\\(frontend)\\produse"

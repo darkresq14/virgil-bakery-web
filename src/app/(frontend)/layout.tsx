@@ -1,3 +1,4 @@
+import { GoogleAnalytics } from '@next/third-parties/google'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import type { Metadata } from 'next'
@@ -72,6 +73,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </main>
             <Footer />
             <WhatsAppButton />
+            <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ''} />
             <SpeedInsights />
             <Analytics />
           </Providers>
@@ -89,5 +91,8 @@ export const metadata: Metadata = {
   openGraph: mergeOpenGraph(),
   twitter: {
     card: 'summary_large_image',
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GSC_VERIFICATION || '',
   },
 }

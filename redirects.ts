@@ -20,6 +20,7 @@ export const redirects: NextConfig['redirects'] = async () => {
     // Blog redirect
     { source: '/blog', destination: '/posts', permanent: true },
     { source: '/blog/:slug*', destination: '/posts/:slug*', permanent: true },
+    { source: '/blog-vechi', destination: '/posts', permanent: true },
 
     // Old WordPress page redirects
     { source: '/acasa', destination: '/', permanent: true },
@@ -38,12 +39,27 @@ export const redirects: NextConfig['redirects'] = async () => {
 
     // Old WordPress product redirects
     {
+      source: '/paine-cu-nuca',
+      destination: '/produse/paine-cu-nuca',
+      permanent: true,
+    },
+    {
       source: '/paine-mixta-cu-maia',
       destination: '/produse/paine-mixta',
       permanent: true,
     },
     {
+      source: '/paine-mixta',
+      destination: '/produse/paine-mixta',
+      permanent: true,
+    },
+    {
       source: '/paine-integrala-cu-maia',
+      destination: '/produse/paine-integrala',
+      permanent: true,
+    },
+    {
+      source: '/paine-integrala',
       destination: '/produse/paine-integrala',
       permanent: true,
     },
@@ -83,13 +99,35 @@ export const redirects: NextConfig['redirects'] = async () => {
       permanent: true,
     },
 
-    // Old WordPress blog post redirect
+    // Old WordPress blog post redirects
     {
       source:
         '/de-ce-am-facut-o-maia-de-la-zero-si-ce-a-gasit-un-studiu-european-in-ea-17-ani-mai-tarziu',
       destination: '/posts/17-ani-de-maia',
       permanent: true,
     },
+    {
+      source:
+        '/de-ce-am-facut-o-maia-de-la-zero-si-ce-a-gasit-un-studiu-european-in-ea-17-ani-mai-tarziu-2',
+      destination: '/posts/17-ani-de-maia',
+      permanent: true,
+    },
+    {
+      source: '/maia-de-17-ani-analizata-healthferm',
+      destination: '/posts/17-ani-de-maia',
+      permanent: true,
+    },
+    {
+      source:
+        '/despre-painea-cu-maia-repetitie-si-lucruri-care-nu-se-invata-din-retete',
+      destination: '/posts/17-ani-de-maia',
+      permanent: true,
+    },
+
+    // Old WordPress archive redirects
+    { source: '/tag/:slug*', destination: '/posts', permanent: true },
+    { source: '/category/:slug*', destination: '/posts', permanent: true },
+    { source: '/author/:slug*', destination: '/', permanent: true },
 
     // Testimonials
     { source: '/testimonial/:path*', destination: '/', permanent: true },
