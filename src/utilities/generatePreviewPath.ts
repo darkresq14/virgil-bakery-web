@@ -3,6 +3,7 @@ import type { PreviewSearchParams } from '@/app/(frontend)/next/preview/route'
 
 const collectionPrefixMap: Partial<Record<CollectionSlug, string>> = {
   posts: '/posts',
+  products: '/produse',
   pages: '',
 }
 
