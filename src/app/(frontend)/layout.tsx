@@ -4,6 +4,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import type { Metadata } from 'next'
 import { Inter, Merriweather, Playfair_Display } from 'next/font/google'
 import type React from 'react'
+import { CookieConsent } from '@/components/CookieConsent'
 import { WhatsAppButton } from '@/components/WhatsAppButton'
 
 import { Footer } from '@/Footer/Component'
@@ -54,6 +55,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       data-theme="light"
       suppressHydrationWarning
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{'analytics_storage':'denied'});`,
+          }}
+        />
+      </head>
       <body>
         <script
           type="application/ld+json"
@@ -73,6 +81,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </main>
             <Footer />
             <WhatsAppButton />
+            <CookieConsent />
             <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ''} />
             <SpeedInsights />
             <Analytics />

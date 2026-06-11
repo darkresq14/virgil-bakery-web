@@ -1,6 +1,7 @@
 import { Facebook, Instagram, Mail, MessageCircle, Phone } from 'lucide-react'
 import Link from 'next/link'
 
+import { CookieSettingsButton } from '@/components/CookieConsent/CookieSettingsButton'
 import { Logo } from '@/components/Logo/Logo'
 import { Media } from '@/components/Media'
 import { getCachedGlobal } from '@/utilities/getGlobals'
@@ -18,6 +19,7 @@ export async function Footer() {
     { href: '/maiaua-mea', label: 'Despre' },
     { href: '/posts', label: 'Blog' },
     { href: '/politica-de-confidentialitate', label: 'Politica de Confidențialitate' },
+    { href: '#', label: 'Setări Cookies', isCookieSettings: true },
   ]
 
   return (
@@ -46,15 +48,19 @@ export async function Footer() {
           <div>
             <h3 className="font-heading text-lg mb-4">Linkuri rapide</h3>
             <nav className="flex flex-col gap-2">
-              {footerLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="text-sm text-background/70 hover:text-background transition-colors font-sans"
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {footerLinks.map((link) =>
+                link.isCookieSettings ? (
+                  <CookieSettingsButton key={link.label} />
+                ) : (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="text-sm text-background/70 hover:text-background transition-colors font-sans"
+                  >
+                    {link.label}
+                  </Link>
+                ),
+              )}
             </nav>
           </div>
 
@@ -124,7 +130,8 @@ export async function Footer() {
         {/* Bottom bar */}
         <div className="mt-10 pt-6 border-t border-background/8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs font-sans text-background/35 tracking-wide">
-            &copy;{' '}{new Date().getFullYear()}{' '}P&acirc;ine cu Maia by Virgil. Toate drepturile rezervate.
+            &copy; {new Date().getFullYear()} P&acirc;ine cu Maia by Virgil. Toate drepturile
+            rezervate.
           </p>
           <p className="text-xs font-sans text-background/35 flex items-center gap-1">
             crafted with <span className="text-accent/60 text-[0.7rem]">♥</span> by{' '}

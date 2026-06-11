@@ -59,6 +59,14 @@ Sibiu, Șura Mare, Șura Mică, Cisnădie, Cisnădioara — the five localities 
 | Livrat | Order has been delivered |
 | Anulat | Order has been cancelled |
 
+## Compliance
+
+### Cookie Consent (Consimțământ Cookie)
+Binary opt-in for analytics cookies (Google Analytics 4). The user sees a floating banner on first visit and can Accept or Reject. Choice is stored in a strictly-necessary cookie (`virgil_cookie_consent`) for 6 months. A footer link allows changing the choice at any time. GA4 is gated via Google Consent Mode v2 — defaults to denied, updates to granted only on explicit Accept. Vercel Analytics and Speed Insights are server-side and cookieless — no consent required.
+
+### Privacy Policy (Politica de Confidențialitate)
+CMS-managed page at `/politica-de-confidentialitate`. Covers personal data handling (orders), cookie usage (GA4), and GDPR rights. Linked from the cookie consent banner and the footer.
+
 ## Channels
 
 ### WhatsApp
