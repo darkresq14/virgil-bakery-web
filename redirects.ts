@@ -23,6 +23,7 @@ export const redirects: NextConfig['redirects'] = async () => {
     { source: '/blog-vechi', destination: '/posts', permanent: true },
 
     // Old WordPress page redirects
+    { source: '/home', destination: '/', permanent: true },
     { source: '/acasa', destination: '/', permanent: true },
     {
       source: '/privacy-policy',

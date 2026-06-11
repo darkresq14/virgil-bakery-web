@@ -9,6 +9,24 @@ describe('redirects', () => {
     redirectEntries = await redirects()
   })
 
+  describe('WordPress homepage redirects', () => {
+    it('redirects /home to /', () => {
+      const match = redirectEntries.find((r) => r.source === '/home')
+
+      expect(match).toBeDefined()
+      expect(match!.destination).toBe('/')
+      expect(match!.permanent).toBe(true)
+    })
+
+    it('redirects /acasa to /', () => {
+      const match = redirectEntries.find((r) => r.source === '/acasa')
+
+      expect(match).toBeDefined()
+      expect(match!.destination).toBe('/')
+      expect(match!.permanent).toBe(true)
+    })
+  })
+
   describe('missing WordPress URL redirects', () => {
     it('redirects /paine-cu-nuca to /produse/paine-cu-nuca', () => {
       const match = redirectEntries.find((r) => r.source === '/paine-cu-nuca')
