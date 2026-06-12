@@ -3,7 +3,7 @@
  *
  * The personal delivery zone covers localities near Sibiu where
  * free personal delivery is available:
- *   - Sibiu, Șura Mare, Șura Mică, Cisnădie, Cisnădioara
+ *   - Sibiu, Șura Mare, Șura Mică, Cisnădie, Cisnădioara, Șelimbăr
  *
  * Comparison is diacritics-insensitive so that both "Cisnădie" and "Cisnadie"
  * are recognised as valid delivery zone localities.
@@ -18,6 +18,7 @@ const PERSONAL_DELIVERY_LOCALITIES: Set<string> = new Set([
   'sura mica',
   'cisnadie',
   'cisnadioara',
+  'selimbar',
 ])
 
 /** The judet where personal delivery is available */

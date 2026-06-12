@@ -6,7 +6,7 @@ describe('isPersonalDeliveryZone', () => {
     expect(isPersonalDeliveryZone('Sibiu', 'Sibiu')).toBe(true)
   })
 
-  it('returns true for all 5 personal delivery localities in Sibiu judet', () => {
+  it('returns true for all 6 personal delivery localities in Sibiu judet', () => {
     // Values match the ASCII form used in ro-localities.ts
     const personalDeliveryLocalities = [
       'Sibiu',
@@ -14,6 +14,7 @@ describe('isPersonalDeliveryZone', () => {
       'Sura Mica',
       'Cisnadie',
       'Cisnadioara',
+      'Selimbar',
     ]
 
     for (const locality of personalDeliveryLocalities) {

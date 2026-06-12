@@ -8,7 +8,7 @@ A customer's request for bakery products, submitted via WhatsApp. Each order has
 ### Delivery Method (Metodă de livrare)
 How the order reaches the customer. Exactly one of:
 
-- **Personal Delivery (Livrare personală)** — Free. Delivered by the baker in person on Tuesdays and Fridays, between 08:00–16:00. Available only in: Sibiu, Șura Mare, Șura Mică, Cisnădie, Cisnădioara.
+- **Personal Delivery (Livrare personală)** — Free. Delivered by the baker in person on Tuesdays and Fridays, between 08:00–16:00. Available only in: Sibiu, Șura Mare, Șura Mică, Cisnădie, Cisnădioara, Șelimbăr.
 - **Courier Delivery (Livrare prin curier)** — 25 lei flat fee. Shipped via Cargus nationwide. Package dispatched the day before the delivery date.
 
 Both methods share the same delivery dates (Tuesdays and Fridays) and the same cutoff schedule.
@@ -19,7 +19,7 @@ The date the customer receives their order. Always a Tuesday or Friday. Cutoff f
 - Friday delivery → order by Wednesday 17:00 (Romania time)
 
 ### Delivery Zone (Zonă de livrare)
-The geographic area eligible for free personal delivery. Defined as Judet=Sibiu AND Localitate ∈ {Sibiu, Șura Mare, Șura Mică, Cisnădie, Cisnădioara}. Orders outside this zone incur a 25 lei courier fee.
+The geographic area eligible for free personal delivery. Defined as Judet=Sibiu AND Localitate ∈ {Sibiu, Șura Mare, Șura Mică, Cisnădie, Cisnădioara, Șelimbăr}. Orders outside this zone incur a 25 lei courier fee.
 
 ### Subtotal
 Sum of all product line items (quantity × price). Does not include transport.
@@ -68,7 +68,7 @@ Consists of:
 - **Detalii suplimentare** (optional) — bloc, scară, apartament, interfon, etc.
 
 ### Personal Delivery Localities
-Sibiu, Șura Mare, Șura Mică, Cisnădie, Cisnădioara — the five localities in Judet Sibiu where personal (free) delivery is available.
+Sibiu, Șura Mare, Șura Mică, Cisnădie, Cisnădioara, Șelimbăr — the six localities in Judet Sibiu where personal (free) delivery is available.
 
 ## Order States
 
