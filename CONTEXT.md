@@ -30,6 +30,26 @@ Sum of all product line items (quantity × price). Does not include transport.
 ### Total (Grand Total)
 Subtotal + Shipping Cost. The amount the customer pays.
 
+## Bakery Availability
+
+### Holiday Period (Perioadă de concediu)
+A date range during which the bakery is closed — no baking, no deliveries. Defined by a start date and end date (both inclusive). At most one holiday period is active at any time. Any delivery date that falls within the holiday range is shown as disabled ("— concediu") in the delivery date dropdown, identical in treatment to "lista închisă" dates. Visitors can still browse all pages and products, add items to cart, and place orders for the first available delivery date after the holiday.
+
+### Holiday Notice (Notificare concediu)
+The two-part UI that communicates the holiday to visitors. Activates based on a **delivery-date trigger**: the moment the first holiday-overlapping delivery date enters the delivery date dropdown (i.e., after the cutoff of the previous delivery round). This is earlier than the holiday start date — it begins when customers would first see a disrupted delivery schedule.
+- **Holiday Banner** — a persistent, minimal top bar visible on every page while the holiday notice is active. Hardcoded layout. Automatically displays the last available delivery date before the holiday and the first after. Not dismissible.
+- **Holiday Modal** — a richer, warmer popup shown on the first page load of each session (gated via sessionStorage). CMS-editable: heading, image, and body message (all optional with warm defaults). Dismissed once per session.
+
+### Holiday Settings (Configurare concediu)
+A tab in the SiteConfig global with the following fields:
+- **Data început** (required date) — holiday start date, inclusive.
+- **Data sfârșit** (required date) — holiday end date, inclusive.
+- **Titlu modal** (optional text) — modal heading. Defaults to a generic warm heading if empty.
+- **Imagine modal** (optional upload) — modal image. Falls back to a default if empty.
+- **Mesaj modal** (optional text) — modal body text. Falls back to a default warm message if empty.
+
+No toggle — the holiday is active purely based on dates. Auto-clears when today passes the end date.
+
 ## Customer Types
 
 ### First-Time Buyer (Prima comandă)
