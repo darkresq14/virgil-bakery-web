@@ -1,8 +1,8 @@
 import { ChevronDown } from 'lucide-react'
-import Image from 'next/image'
 import Link from 'next/link'
 import type React from 'react'
 
+import { ImageMedia } from '@/components/Media/ImageMedia'
 import type { Media } from '@/payload-types'
 
 interface HeroProps {
@@ -18,13 +18,14 @@ export const Hero: React.FC<HeroProps> = ({ heading, subheading, backgroundImage
       style={{ marginTop: 'calc(-1 * var(--header-height, 4rem))' }}
     >
       {backgroundImage?.url && (
-        <Image
-          src={backgroundImage.url}
+        <ImageMedia
+          resource={backgroundImage}
           alt={backgroundImage.alt ?? heading}
+          slot="hero"
           fill
-          className="object-cover"
+          imgClassName="object-cover"
           priority
-          sizes="100vw"
+          size="100vw"
         />
       )}
       <div className="absolute inset-0 bg-black/40" />

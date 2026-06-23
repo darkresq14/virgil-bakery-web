@@ -5,18 +5,23 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
-import { AddressForm, type AddressFields } from '@/components/AddressForm'
+import { type AddressFields, AddressForm } from '@/components/AddressForm'
 import { useCart } from '@/providers/Cart'
 import { buildWhatsAppMessage } from '@/utilities/buildWhatsAppMessage'
-import { detectDeliveryMethod } from '@/utilities/detectDeliveryMethod'
 import { getDeliveryDates } from '@/utilities/deliveryDates'
+import { detectDeliveryMethod } from '@/utilities/detectDeliveryMethod'
 import { formatPrice } from '@/utilities/formatPrice'
 
 const STORAGE_KEY = 'vb-repeat-customer'
 
 export function CartPageClient() {
   const { items, updateQuantity, removeItem, clearCart, total, itemCount } = useCart()
-  const emptyAddress: AddressFields = { judet: '', localitate: '', streetAddress: '', addressDetails: '' }
+  const emptyAddress: AddressFields = {
+    judet: '',
+    localitate: '',
+    streetAddress: '',
+    addressDetails: '',
+  }
   const [form, setForm] = useState({ name: '', phone: '', deliveryDate: '' })
   const [address, setAddress] = useState<AddressFields>(emptyAddress)
   const [formError, setFormError] = useState('')
@@ -24,7 +29,13 @@ export function CartPageClient() {
     if (typeof window === 'undefined') return true
     return localStorage.getItem(STORAGE_KEY) !== 'true'
   })
-  const [fieldErrors, setFieldErrors] = useState({ name: '', phone: '', judet: '', localitate: '', streetAddress: '' })
+  const [fieldErrors, setFieldErrors] = useState({
+    name: '',
+    phone: '',
+    judet: '',
+    localitate: '',
+    streetAddress: '',
+  })
   const [needsCourier, setNeedsCourier] = useState(false)
 
   const toggleFirstOrder = (value: boolean) => {
@@ -49,12 +60,20 @@ export function CartPageClient() {
   const selectedDelivery = form.deliveryDate || defaultDeliveryLabel
 
   const shippingCost = isFirstOrder
-    ? (address.judet && address.localitate ? deliveryInfo.shippingCost : 0)
-    : (needsCourier ? 25 : 0)
+    ? address.judet && address.localitate
+      ? deliveryInfo.shippingCost
+      : 0
+    : needsCourier
+      ? 25
+      : 0
 
   const deliveryMethod = isFirstOrder
-    ? (address.judet && address.localitate ? deliveryInfo.deliveryMethod : 'personal')
-    : (needsCourier ? 'curier' : 'personal')
+    ? address.judet && address.localitate
+      ? deliveryInfo.deliveryMethod
+      : 'personal'
+    : needsCourier
+      ? 'curier'
+      : 'personal'
 
   const showTransport = shippingCost > 0
 
@@ -74,7 +93,8 @@ export function CartPageClient() {
       if (!address.streetAddress.trim()) errors.streetAddress = 'Strada este obligatorie'
     }
     setFieldErrors(errors)
-    if (errors.name || errors.phone || errors.judet || errors.localitate || errors.streetAddress) return
+    if (errors.name || errors.phone || errors.judet || errors.localitate || errors.streetAddress)
+      return
 
     const selectedDate = deliveryDates.find((d) => d.label === selectedDelivery)
 
@@ -84,14 +104,16 @@ export function CartPageClient() {
       shippingCost,
       deliveryDate: selectedDelivery,
       deliveryMethod,
-      ...(isFirstOrder ? {
-        customerName: form.name || undefined,
-        customerPhone: form.phone || undefined,
-        judet: address.judet || undefined,
-        localitate: address.localitate || undefined,
-        streetAddress: address.streetAddress || undefined,
-        addressDetails: address.addressDetails || undefined,
-      } : {}),
+      ...(isFirstOrder
+        ? {
+            customerName: form.name || undefined,
+            customerPhone: form.phone || undefined,
+            judet: address.judet || undefined,
+            localitate: address.localitate || undefined,
+            streetAddress: address.streetAddress || undefined,
+            addressDetails: address.addressDetails || undefined,
+          }
+        : {}),
     })
 
     try {
@@ -247,12 +269,16 @@ export function CartPageClient() {
 
               <div className="mb-6 pb-4 border-b border-border space-y-2">
                 <div className="flex justify-between">
-                  <span className="font-sans text-muted-foreground">Subtotal ({itemCount} produse)</span>
+                  <span className="font-sans text-muted-foreground">
+                    Subtotal ({itemCount} produse)
+                  </span>
                   <span className="font-sans font-medium">{formatPrice(total)}</span>
                 </div>
                 {showTransport && (
                   <div className="flex justify-between">
-                    <span className="font-sans text-muted-foreground">Transport (Curier Cargus)</span>
+                    <span className="font-sans text-muted-foreground">
+                      Transport (Curier Cargus)
+                    </span>
                     <span className="font-sans font-medium">{formatPrice(shippingCost)}</span>
                   </div>
                 )}
@@ -267,7 +293,12 @@ export function CartPageClient() {
               <div className="space-y-4 mb-6">
                 {/* Delivery date — required */}
                 <div>
-                  <label htmlFor="delivery-date" className="block text-sm font-sans font-medium mb-1">Dată livrare *</label>
+                  <label
+                    htmlFor="delivery-date"
+                    className="block text-sm font-sans font-medium mb-1"
+                  >
+                    Dată livrare *
+                  </label>
                   <select
                     id="delivery-date"
                     value={selectedDelivery}
@@ -331,7 +362,10 @@ export function CartPageClient() {
                 {isFirstOrder && (
                   <div className="space-y-3 pt-1">
                     <div>
-                      <label htmlFor="customer-name" className="block text-sm font-sans font-medium mb-1">
+                      <label
+                        htmlFor="customer-name"
+                        className="block text-sm font-sans font-medium mb-1"
+                      >
                         Nume <span className="text-destructive">*</span>
                       </label>
                       <input
@@ -354,7 +388,10 @@ export function CartPageClient() {
                       )}
                     </div>
                     <div>
-                      <label htmlFor="customer-phone" className="block text-sm font-sans font-medium mb-1">
+                      <label
+                        htmlFor="customer-phone"
+                        className="block text-sm font-sans font-medium mb-1"
+                      >
                         Telefon <span className="text-destructive">*</span>
                       </label>
                       <input
@@ -405,7 +442,13 @@ export function CartPageClient() {
                 onClick={handleCheckout}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] text-white px-8 py-3 font-sans font-medium hover:bg-[#20bd5a] transition-colors"
               >
-                <Image src="/WhatsApp_White.svg" alt="WhatsApp" width={24} height={24} />
+                <Image
+                  unoptimized
+                  src="/WhatsApp_White.svg"
+                  alt="WhatsApp"
+                  width={24}
+                  height={24}
+                />
                 Comandă prin WhatsApp
               </button>
             </div>

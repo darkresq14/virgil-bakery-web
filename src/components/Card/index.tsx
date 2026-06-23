@@ -39,7 +39,7 @@ export const Card: React.FC<{
       <div className="relative w-full ">
         {!metaImage && <div className="">No image</div>}
         {metaImage && typeof metaImage !== 'string' && (
-          <Media resource={metaImage} sizeName="card" size="33vw" />
+          <Media resource={metaImage} slot="card" size="33vw" />
         )}
       </div>
       <div className="p-4">
@@ -54,7 +54,7 @@ export const Card: React.FC<{
                 const isLast = index === categories.length - 1
 
                 return (
-                  <Fragment key={index}>
+                  <Fragment key={category.id ?? titleFromCategory}>
                     {categoryTitle}
                     {!isLast && <Fragment>, &nbsp;</Fragment>}
                   </Fragment>

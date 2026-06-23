@@ -24,7 +24,14 @@ const nextConfig: NextConfig = {
         pathname: '/api/media/file/**',
       },
     ],
-    qualities: [100],
+    // See docs/adr/0003-image-optimization-strategy.md
+    qualities: [75],
+    // 31 days. Bounds transform count to catalog size, not traffic — the optimizer's
+    // output cache must survive long enough for repeat visits to become Cache Reads.
+    minimumCacheTTL: 60 * 60 * 24 * 31,
+    // Capped at the max breakpoint (1920). Drops 828/2048/3840 from the default —
+    // nothing renders wider than 1920, so those variants were pure waste.
+    deviceSizes: [640, 750, 1080, 1200, 1920],
     remotePatterns: [
       ...[NEXT_PUBLIC_SERVER_URL /* 'https://example.com' */].map((item) => {
         const url = new URL(item)

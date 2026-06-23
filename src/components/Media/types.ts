@@ -3,6 +3,13 @@ import type { ElementType, Ref } from 'react'
 
 import type { Media as MediaType } from '@/payload-types'
 
+/**
+ * Display context for an image. Determines which Payload upload size is used as the
+ * optimizer's *source cap* (see ImageMedia). Decoupled from storage internals so
+ * callers describe the slot, not the Payload size.
+ */
+export type ImageSlot = 'hero' | 'detail' | 'card' | 'thumbnail'
+
 export interface Props {
   alt?: string
   className?: string
@@ -17,7 +24,8 @@ export interface Props {
   ref?: Ref<HTMLImageElement | HTMLVideoElement | null>
   resource?: MediaType | string | number | null // for Payload media
   size?: string // for NextImage only
-  sizeName?: 'thumbnail' | 'card' | 'og' // Payload image size to use instead of original
+  /** Display context. Selects the Payload source size fed to the optimizer. Defaults to 'detail'. */
+  slot?: ImageSlot
   src?: StaticImageData // for static media
   videoClassName?: string
 }

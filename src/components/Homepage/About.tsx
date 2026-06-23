@@ -1,6 +1,6 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import type React from 'react'
+import { ImageMedia } from '@/components/Media/ImageMedia'
 import RichText from '@/components/RichText'
 
 import type { Media } from '@/payload-types'
@@ -40,23 +40,25 @@ export const About: React.FC<AboutProps> = ({ heading, description, image1, imag
           <div className="grid grid-cols-2 gap-4">
             {image1?.url && (
               <div className="relative aspect-3/4 rounded-lg overflow-hidden">
-                <Image
-                  src={image1.url}
+                <ImageMedia
+                  resource={image1}
                   alt={image1.alt || 'Despre Virgil'}
+                  slot="detail"
                   fill
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 50vw, 25vw"
+                  imgClassName="object-cover"
+                  size="(max-width: 1024px) 50vw, 25vw"
                 />
               </div>
             )}
             {image2?.url && (
               <div className="relative aspect-3/4 rounded-lg overflow-hidden mt-8">
-                <Image
-                  src={image2.url}
+                <ImageMedia
+                  resource={image2}
                   alt={image2.alt || 'Despre Virgil'}
+                  slot="detail"
                   fill
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 50vw, 25vw"
+                  imgClassName="object-cover"
+                  size="(max-width: 1024px) 50vw, 25vw"
                 />
               </div>
             )}

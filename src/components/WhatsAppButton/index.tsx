@@ -39,7 +39,7 @@ export const WhatsAppButton = () => {
         reducedMotion ? '' : 'animate-[pulse_2s_ease-in-out_infinite]'
       }`}
     >
-      <Image src="/WhatsApp_White.svg" alt="WhatsApp" width={56} height={56} />
+      <Image unoptimized src="/WhatsApp_White.svg" alt="WhatsApp" width={56} height={56} />
     </a>
   )
 }

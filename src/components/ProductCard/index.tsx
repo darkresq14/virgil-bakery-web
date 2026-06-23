@@ -1,9 +1,9 @@
 'use client'
 
 import { ShoppingBag } from 'lucide-react'
-import Image from 'next/image'
 import Link from 'next/link'
 import type React from 'react'
+import { ImageMedia } from '@/components/Media/ImageMedia'
 import { useToast } from '@/components/Toast'
 import type { Media } from '@/payload-types'
 import { useCart } from '@/providers/Cart'
@@ -49,12 +49,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     >
       <div className="relative aspect-4/3 overflow-hidden">
         {product.featuredImage?.url ? (
-          <Image
-            src={product.featuredImage.sizes?.card?.url || product.featuredImage.url}
+          <ImageMedia
+            resource={product.featuredImage}
             alt={product.featuredImage.alt || product.name}
+            slot="card"
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
-            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            imgClassName="object-cover group-hover:scale-105 transition-transform duration-300"
+            size="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
         ) : (
           <div
@@ -96,6 +97,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </div>
           {product.available !== false && (
             <button
+              type="button"
               onClick={handleAddToCart}
               className="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               aria-label={`Adaugă ${product.name} în coș`}

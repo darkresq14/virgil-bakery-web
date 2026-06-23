@@ -1,15 +1,15 @@
 'use client'
 
 import { AlertCircle, ArrowLeft, Check, ShoppingBag } from 'lucide-react'
-import Image from 'next/image'
 import Link from 'next/link'
 import type React from 'react'
 import { useMemo, useState } from 'react'
 import { Breadcrumbs } from '@/components/Breadcrumbs'
+import { ImageMedia } from '@/components/Media/ImageMedia'
 import RichText from '@/components/RichText'
 import { ScrollReveal } from '@/components/ScrollReveal'
 import { useToast } from '@/components/Toast'
-import type { Product } from '@/payload-types'
+import type { Media, Product } from '@/payload-types'
 import { useCart } from '@/providers/Cart'
 import { isExpandedDoc } from '@/utilities/type-guards'
 
@@ -31,15 +31,15 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
   const [selectedImage, setSelectedImage] = useState(0)
 
   const allImages = useMemo(() => {
-    const images: Array<{ url: string; alt?: string | null }> = []
+    const images: Array<Media> = []
 
     if (isExpandedDoc(product.featuredImage) && product.featuredImage.url) {
-      images.push({ url: product.featuredImage.url!, alt: product.featuredImage.alt })
+      images.push(product.featuredImage)
     }
 
     product.gallery?.forEach((item) => {
       if (isExpandedDoc(item.image) && item.image.url) {
-        images.push({ url: item.image.url!, alt: item.image.alt })
+        images.push(item.image)
       }
     })
 
@@ -73,13 +73,14 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
         <ScrollReveal>
           <div>
             <div className="relative aspect-square rounded-xl overflow-hidden bg-secondary">
-              {allImages[selectedImage]?.url ? (
-                <Image
-                  src={allImages[selectedImage].url}
+              {allImages[selectedImage] ? (
+                <ImageMedia
+                  resource={allImages[selectedImage]}
                   alt={allImages[selectedImage].alt || product.name}
+                  slot="detail"
                   fill
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  imgClassName="object-cover"
+                  size="(max-width: 1024px) 100vw, 50vw"
                   priority
                 />
               ) : (
@@ -92,18 +93,20 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
               <div className="flex gap-2 mt-4">
                 {allImages.map((img, i) => (
                   <button
-                    key={i}
+                    type="button"
+                    key={img.id}
                     onClick={() => setSelectedImage(i)}
                     className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
                       i === selectedImage ? 'border-primary' : 'border-border'
                     }`}
                   >
-                    <Image
-                      src={img.url}
+                    <ImageMedia
+                      resource={img}
                       alt={img.alt || `${product.name} ${i + 1}`}
+                      slot="thumbnail"
                       fill
-                      className="object-cover"
-                      sizes="80px"
+                      imgClassName="object-cover"
+                      size="80px"
                     />
                   </button>
                 ))}
@@ -156,6 +159,7 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
             {/* Add to cart */}
             {product.available !== false && (
               <button
+                type="button"
                 onClick={handleAddToCart}
                 className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-8 py-3 font-sans font-medium hover:bg-primary/90 transition-colors mb-8"
               >
@@ -181,8 +185,8 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
               <div className="mb-6">
                 <h3 className="font-heading text-lg mb-3">Caracteristici</h3>
                 <ul className="space-y-1 font-sans text-sm">
-                  {product.characteristics.map((c, i) => (
-                    <li key={i} className="flex items-start gap-2">
+                  {product.characteristics.map((c) => (
+                    <li key={c.id ?? c.value} className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                       {c.value}
                     </li>
