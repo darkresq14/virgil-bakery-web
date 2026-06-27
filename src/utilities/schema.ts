@@ -1,5 +1,50 @@
 import type { Post, Product } from '@/payload-types'
+import { COURIER_SHIPPING_COST } from './detectDeliveryMethod'
 import { getServerSideURL } from './getURL'
+
+const BRAND_NAME = 'Pâine cu Maia by Virgil'
+const CURRENCY = 'RON'
+const COUNTRY = 'RO'
+
+/** Single physical location (mirrors Homepage → Contact → Adresă). */
+const LOCALITY = 'Sibiu'
+const POSTAL_CODE = '557260'
+
+/** Honest product price band for the LocalBusiness priceRange hint. */
+const PRICE_RANGE = '25–40 RON'
+
+/** Representative image reused from Open Graph (kept in /public). */
+const OG_IMAGE_PATH = '/og-image.jpg'
+
+/** Where the written policies & conditions live. */
+const POLICIES_PATH = '/cum-comand'
+
+/** A day-range value for handling/transit times in shipping details. */
+const quantitativeDays = (min: number, max: number) => ({
+  '@type': 'QuantitativeValue',
+  minValue: min,
+  maxValue: max,
+  unitCode: 'DAY',
+})
+
+/**
+ * Shared delivery window for both shipping methods, reflecting the fixed
+ * Tuesday/Friday bake schedule (see CONTEXT.md → Delivery Date).
+ *
+ * Packages are dispatched the day before the delivery date (Mon→Tue / Thu→Fri),
+ * so transit is ~1 day. Handling is the variable wait from order to the next
+ * dispatch day, bounded by the cutoffs (Sun 17:00 for Tue, Wed 17:00 for Fri,
+ * Romania time): ~1 day when ordered just before a cutoff, ~5 days when ordered
+ * just after one. Total order-to-delivery ≈ 2–6 days.
+ *
+ * Note: schema.org cannot express weekdays or cutoff times, so this min/max
+ * range is the honest proxy for the actual fixed-day schedule.
+ */
+const SCHEDULED_DELIVERY_TIME = {
+  '@type': 'ShippingDeliveryTime',
+  handlingTime: quantitativeDays(1, 5),
+  transitTime: quantitativeDays(1, 1),
+}
 
 export function localBusinessSchema(args: {
   name: string
@@ -15,15 +60,25 @@ export function localBusinessSchema(args: {
     '@type': 'Bakery',
     name: args.name,
     url,
+    image: `${url}${OG_IMAGE_PATH}`,
+    priceRange: PRICE_RANGE,
+    servesCuisine: ['Bakery'],
     ...(args.phone && { telephone: args.phone }),
     ...(args.email && { email: args.email }),
-    ...(args.address && {
-      address: {
-        '@type': 'PostalAddress',
-        streetAddress: args.address,
-        addressCountry: 'RO',
-      },
-    }),
+    address: {
+      '@type': 'PostalAddress',
+      ...(args.address && { streetAddress: args.address }),
+      addressLocality: LOCALITY,
+      postalCode: POSTAL_CODE,
+      addressCountry: COUNTRY,
+    },
+    // Organization-level return policy (perishable food → not returnable).
+    hasMerchantReturnPolicy: {
+      '@type': 'MerchantReturnPolicy',
+      applicableCountry: COUNTRY,
+      returnPolicyCategory: 'https://schema.org/MerchantReturnNotPermitted',
+      merchantReturnLink: `${url}${POLICIES_PATH}`,
+    },
   }
 }
 
@@ -44,14 +99,51 @@ export function productSchema(args: { product: Product; url: string }) {
     description: product.shortDescription || undefined,
     ...(image && { image }),
     url,
+    brand: {
+      '@type': 'Brand',
+      name: BRAND_NAME,
+    },
     ...(product.price != null && {
       offers: {
         '@type': 'Offer',
+        url,
         price: product.price,
-        priceCurrency: 'RON',
+        priceCurrency: CURRENCY,
         availability: product.available
           ? 'https://schema.org/InStock'
           : 'https://schema.org/OutOfStock',
+        // Perishable food is not returnable for food-safety reasons.
+        hasMerchantReturnPolicy: {
+          '@type': 'MerchantReturnPolicy',
+          returnPolicyCategory: 'https://schema.org/MerchantReturnNotPermitted',
+        },
+        shippingDetails: [
+          // Free personal delivery in the Sibiu area.
+          {
+            '@type': 'OfferShippingDetails',
+            shippingRate: { '@type': 'MonetaryAmount', value: 0, currency: CURRENCY },
+            shippingDestination: {
+              '@type': 'DefinedRegion',
+              addressCountry: COUNTRY,
+              addressRegion: 'Sibiu',
+            },
+            deliveryTime: SCHEDULED_DELIVERY_TIME,
+          },
+          // National courier delivery.
+          {
+            '@type': 'OfferShippingDetails',
+            shippingRate: {
+              '@type': 'MonetaryAmount',
+              value: COURIER_SHIPPING_COST,
+              currency: CURRENCY,
+            },
+            shippingDestination: {
+              '@type': 'DefinedRegion',
+              addressCountry: COUNTRY,
+            },
+            deliveryTime: SCHEDULED_DELIVERY_TIME,
+          },
+        ],
       },
     }),
   }
