@@ -1,17 +1,18 @@
 import type { Metadata } from 'next'
 
+import { SITE_DESCRIPTION, SITE_TITLE } from './seoDefaults'
+
 const defaultOpenGraph: Metadata['openGraph'] = {
   type: 'website',
-  description:
-    'Pâine artizanală, fermentată lent, coaptă pe vatră. Comandă pâine cu maia naturală de la Pâine cu Maia by Virgil.',
+  description: SITE_DESCRIPTION,
   siteName: 'Pâine cu Maia by Virgil',
-  title: 'Pâine cu Maia by Virgil — Pâine Artizanală cu Maia Naturală',
+  title: SITE_TITLE,
   images: [
     {
       url: '/og-image.jpg',
       width: 1200,
       height: 630,
-      alt: 'Pâine cu Maia by Virgil — Pâine Artizanală cu Maia Naturală',
+      alt: SITE_TITLE,
     },
   ],
 }

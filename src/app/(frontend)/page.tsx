@@ -1,5 +1,6 @@
 import configPromise from '@payload-config'
 import { CreditCard, Mail, MapPin, MessageCircle, Phone, ShoppingCart, Truck } from 'lucide-react'
+import type { Metadata } from 'next'
 import { draftMode } from 'next/headers'
 import Link from 'next/link'
 import { getPayload } from 'payload'
@@ -8,10 +9,40 @@ import { Hero } from '@/components/Homepage/Hero'
 import { Testimonials } from '@/components/Homepage/Testimonials'
 import { ProductCard } from '@/components/ProductCard'
 import { ScrollReveal } from '@/components/ScrollReveal'
+import { getImageURL } from '@/utilities/generateMeta'
 import { getCachedGlobal } from '@/utilities/getGlobals'
+import { getServerSideURL } from '@/utilities/getURL'
+import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
+import { SITE_DESCRIPTION, SITE_TITLE } from '@/utilities/seoDefaults'
 import { isExpandedDoc } from '@/utilities/type-guards'
 
 export const revalidate = 600
+
+export async function generateMetadata(): Promise<Metadata> {
+  const homepage = await getCachedGlobal('homepage', 1)()
+  const meta = homepage?.meta
+
+  const title = meta?.title || SITE_TITLE
+  const description = meta?.description || SITE_DESCRIPTION
+  const serverUrl = getServerSideURL()
+
+  const ogImage =
+    meta?.image && typeof meta.image === 'object' ? getImageURL(meta.image) : undefined
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: '/',
+    },
+    openGraph: mergeOpenGraph({
+      title,
+      description,
+      url: serverUrl,
+      images: ogImage ? [{ url: ogImage, width: 1200, height: 630 }] : undefined,
+    }),
+  }
+}
 
 export default async function HomePage() {
   const { isEnabled: draft } = await draftMode()
@@ -69,7 +100,7 @@ export default async function HomePage() {
       {/* Featured Products */}
       {featuredProducts.docs.length > 0 && (
         <ScrollReveal>
-          <section className="py-20">
+          <section className="py-20" data-nosnippet>
             <div className="container">
               <h2 className="text-3xl font-heading text-center mb-12">Produse recomandate</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -137,7 +168,8 @@ export default async function HomePage() {
                 </div>
                 <h3 className="font-heading text-lg mb-2">Comandă Online</h3>
                 <p className="text-sm text-muted-foreground font-sans">
-                  {siteConfig?.teaserOrdering || 'Alege produsele dorite direct din magazinul online.'}
+                  {siteConfig?.teaserOrdering ||
+                    'Alege produsele dorite direct din magazinul online.'}
                 </p>
               </Link>
 
@@ -151,7 +183,8 @@ export default async function HomePage() {
                 </div>
                 <h3 className="font-heading text-lg mb-2">Livrare</h3>
                 <p className="text-sm text-muted-foreground font-sans">
-                  {siteConfig?.teaserDelivery || 'Livrăm în Brașov, Sibiu, București și în toată țara.'}
+                  {siteConfig?.teaserDelivery ||
+                    'Livrăm în Brașov, Sibiu, București și în toată țara.'}
                 </p>
               </Link>
 
@@ -171,7 +204,10 @@ export default async function HomePage() {
 
               {/* Card: WhatsApp */}
               <a
-                href={siteConfig?.whatsappGroupUrl || `https://wa.me/${siteConfig?.whatsappNumber?.replace(/[^0-9]/g, '') || '40746245391'}`}
+                href={
+                  siteConfig?.whatsappGroupUrl ||
+                  `https://wa.me/${siteConfig?.whatsappNumber?.replace(/[^0-9]/g, '') || '40746245391'}`
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group flex flex-col items-center text-center p-6 rounded-xl bg-secondary/50 hover:bg-secondary hover:shadow-md hover:-translate-y-0.5 transition-all"
@@ -181,7 +217,8 @@ export default async function HomePage() {
                 </div>
                 <h3 className="font-heading text-lg mb-2">WhatsApp</h3>
                 <p className="text-sm text-muted-foreground font-sans">
-                  {siteConfig?.teaserWhatsapp || 'Alătură-te grupului nostru pentru oferte și comenzi rapide.'}
+                  {siteConfig?.teaserWhatsapp ||
+                    'Alătură-te grupului nostru pentru oferte și comenzi rapide.'}
                 </p>
               </a>
             </div>

@@ -3,8 +3,9 @@ import type { Metadata } from 'next'
 import type { Config, Media, Page, Post, Product } from '../payload-types'
 import { getServerSideURL } from './getURL'
 import { mergeOpenGraph } from './mergeOpenGraph'
+import { SITE_DESCRIPTION } from './seoDefaults'
 
-const getImageURL = (image?: Media | Config['db']['defaultIDType'] | null) => {
+export const getImageURL = (image?: Media | Config['db']['defaultIDType'] | null) => {
   const serverUrl = getServerSideURL()
 
   let url = `${serverUrl}/icon-512.png`
@@ -34,9 +35,7 @@ export const generateMeta = async (args: {
     ? `${doc?.meta?.title} | Pâine cu Maia by Virgil`
     : 'Pâine cu Maia by Virgil'
 
-  const description =
-    doc?.meta?.description ||
-    'Pâine artizanală, fermentată lent, coaptă pe vatră. Comandă pâine cu maia naturală de la Pâine cu Maia by Virgil.'
+  const description = doc?.meta?.description || SITE_DESCRIPTION
 
   const slug = Array.isArray(doc?.slug) ? doc.slug.join('/') : doc?.slug || ''
   const path = `${pathPrefix}/${slug}`.replace(/\/+/g, '/').replace(/\/$/, '') || '/'

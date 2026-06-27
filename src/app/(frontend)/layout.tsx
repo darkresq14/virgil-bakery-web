@@ -13,6 +13,7 @@ import { Providers } from '@/providers'
 import { getCachedGlobal } from '@/utilities/getGlobals'
 import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
 import { localBusinessSchema } from '@/utilities/schema'
+import { SITE_DESCRIPTION, SITE_TITLE } from '@/utilities/seoDefaults'
 import { cn } from '@/utilities/ui'
 
 import './globals.css'
@@ -94,9 +95,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
 export const metadata: Metadata = {
   metadataBase: new URL(getServerSideURL()),
-  title: 'Pâine cu Maia by Virgil — Pâine Artizanală cu Maia Naturală',
-  description:
-    'Pâine artizanală, fermentată lent, coaptă pe vatră. Comandă pâine cu maia naturală de la Pâine cu Maia by Virgil.',
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
   openGraph: mergeOpenGraph(),
   twitter: {
     card: 'summary_large_image',

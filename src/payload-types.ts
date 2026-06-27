@@ -1965,6 +1965,14 @@ export interface Homepage {
     address?: string | null;
     deliverySchedule?: string | null;
   };
+  meta?: {
+    title?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (number | null) | Media;
+    description?: string | null;
+  };
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -2063,6 +2071,13 @@ export interface HomepageSelect<T extends boolean = true> {
     | {
         address?: T;
         deliverySchedule?: T;
+      };
+  meta?:
+    | T
+    | {
+        title?: T;
+        image?: T;
+        description?: T;
       };
   updatedAt?: T;
   createdAt?: T;
