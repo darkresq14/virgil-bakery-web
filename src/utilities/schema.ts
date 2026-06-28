@@ -1,23 +1,23 @@
-import type { Post, Product } from '@/payload-types'
-import { COURIER_SHIPPING_COST } from './detectDeliveryMethod'
-import { getServerSideURL } from './getURL'
+import type { Post, Product } from '@/payload-types';
+import { COURIER_SHIPPING_COST } from './detectDeliveryMethod';
+import { getServerSideURL } from './getURL';
+import { BRAND_NAME } from './seoDefaults';
 
-const BRAND_NAME = 'Pâine cu Maia by Virgil'
-const CURRENCY = 'RON'
-const COUNTRY = 'RO'
+const CURRENCY = 'RON';
+const COUNTRY = 'RO';
 
 /** Single physical location (mirrors Homepage → Contact → Adresă). */
-const LOCALITY = 'Sibiu'
-const POSTAL_CODE = '557260'
+const LOCALITY = 'Sibiu';
+const POSTAL_CODE = '557260';
 
 /** Honest product price band for the LocalBusiness priceRange hint. */
-const PRICE_RANGE = '25–40 RON'
+const PRICE_RANGE = '25–40 RON';
 
 /** Representative image reused from Open Graph (kept in /public). */
-const OG_IMAGE_PATH = '/og-image.jpg'
+const OG_IMAGE_PATH = '/og-image.jpg';
 
 /** Where the written policies & conditions live. */
-const POLICIES_PATH = '/cum-comand'
+const POLICIES_PATH = '/cum-comand';
 
 /** A day-range value for handling/transit times in shipping details. */
 const quantitativeDays = (min: number, max: number) => ({
@@ -25,7 +25,7 @@ const quantitativeDays = (min: number, max: number) => ({
   minValue: min,
   maxValue: max,
   unitCode: 'DAY',
-})
+});
 
 /**
  * Shared delivery window for both shipping methods, reflecting the fixed
@@ -44,16 +44,16 @@ const SCHEDULED_DELIVERY_TIME = {
   '@type': 'ShippingDeliveryTime',
   handlingTime: quantitativeDays(1, 5),
   transitTime: quantitativeDays(1, 1),
-}
+};
 
 export function localBusinessSchema(args: {
-  name: string
-  phone?: string | null
-  email?: string | null
-  address?: string | null
-  url?: string
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  url?: string;
 }) {
-  const url = args.url || getServerSideURL()
+  const url = args.url || getServerSideURL();
 
   return {
     '@context': 'https://schema.org',
@@ -79,18 +79,18 @@ export function localBusinessSchema(args: {
       returnPolicyCategory: 'https://schema.org/MerchantReturnNotPermitted',
       merchantReturnLink: `${url}${POLICIES_PATH}`,
     },
-  }
+  };
 }
 
 export function productSchema(args: { product: Product; url: string }) {
-  const { product, url } = args
+  const { product, url } = args;
 
   const image =
     typeof product.featuredImage === 'object' && product.featuredImage?.url
       ? product.featuredImage.url.startsWith('http')
         ? product.featuredImage.url
         : getServerSideURL() + product.featuredImage.url
-      : undefined
+      : undefined;
 
   return {
     '@context': 'https://schema.org',
@@ -146,7 +146,7 @@ export function productSchema(args: { product: Product; url: string }) {
         ],
       },
     }),
-  }
+  };
 }
 
 export function breadcrumbSchema(items: { name: string; url: string }[]) {
@@ -159,21 +159,21 @@ export function breadcrumbSchema(items: { name: string; url: string }[]) {
       name: item.name,
       item: item.url,
     })),
-  }
+  };
 }
 
 export function blogPostSchema(args: { post: Post; url: string }) {
-  const { post, url } = args
-  const baseUrl = getServerSideURL()
+  const { post, url } = args;
+  const baseUrl = getServerSideURL();
 
   const image =
     typeof post.heroImage === 'object' && post.heroImage?.url
       ? post.heroImage.url.startsWith('http')
         ? post.heroImage.url
         : baseUrl + post.heroImage.url
-      : undefined
+      : undefined;
 
-  const authorName = post.populatedAuthors?.[0]?.name || undefined
+  const authorName = post.populatedAuthors?.[0]?.name || undefined;
 
   return {
     '@context': 'https://schema.org',
@@ -191,8 +191,23 @@ export function blogPostSchema(args: { post: Post; url: string }) {
     }),
     publisher: {
       '@type': 'Organization',
-      name: 'Pâine cu Maia by Virgil',
+      name: BRAND_NAME,
       url: baseUrl,
     },
-  }
+  };
+}
+
+export function webPageSchema(args: { title: string; url: string; description?: string }) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: args.title,
+    url: args.url,
+    ...(args.description && { description: args.description }),
+    isPartOf: {
+      '@type': 'WebSite',
+      name: BRAND_NAME,
+      url: getServerSideURL(),
+    },
+  };
 }

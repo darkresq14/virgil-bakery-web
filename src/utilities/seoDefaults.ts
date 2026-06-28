@@ -8,7 +8,14 @@
  * `generateMeta` utility.
  */
 
-export const SITE_TITLE = 'Pâine cu Maia by Virgil — Pâine Artizanală cu Maia Naturală'
+/**
+ * Brand name. The single source of truth — every SEO surface (title suffix,
+ * schema publisher/brand, fallback title) should import this instead of
+ * re-typing the string, which drifts and causes duplicated-brand title bugs.
+ */
+export const BRAND_NAME = 'Pâine cu Maia by Virgil';
+
+export const SITE_TITLE = `${BRAND_NAME} — Pâine Artizanală cu Maia Naturală`;
 
 export const SITE_DESCRIPTION =
-  'Pâine artizanală cu maia naturală, fermentată lent și coaptă pe vatră. Comandă online cu livrare în Sibiu și în toată țara — Pâine cu Maia by Virgil.'
+  'Pâine artizanală cu maia naturală, fermentată lent și coaptă pe vatră. Comandă online cu livrare în Sibiu și în toată țara — Pâine cu Maia by Virgil.';

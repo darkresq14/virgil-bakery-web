@@ -1,9 +1,10 @@
-import type { Metadata } from 'next'
+import type { Metadata } from 'next';
 
-import { SITE_DESCRIPTION, SITE_TITLE } from './seoDefaults'
+import { SITE_DESCRIPTION, SITE_TITLE } from './seoDefaults';
 
 const defaultOpenGraph: Metadata['openGraph'] = {
   type: 'website',
+  locale: 'ro_RO',
   description: SITE_DESCRIPTION,
   siteName: 'Pâine cu Maia by Virgil',
   title: SITE_TITLE,
@@ -15,12 +16,12 @@ const defaultOpenGraph: Metadata['openGraph'] = {
       alt: SITE_TITLE,
     },
   ],
-}
+};
 
 export const mergeOpenGraph = (og?: Metadata['openGraph']): Metadata['openGraph'] => {
   return {
     ...defaultOpenGraph,
     ...og,
     images: og?.images ? og.images : defaultOpenGraph.images,
-  }
-}
+  };
+};

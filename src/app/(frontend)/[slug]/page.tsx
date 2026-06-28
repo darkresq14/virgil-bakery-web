@@ -8,6 +8,8 @@ import { LivePreviewListener } from '@/components/LivePreviewListener';
 import { PayloadRedirects } from '@/components/PayloadRedirects';
 import { RenderHero } from '@/heros/RenderHero';
 import { generateMeta } from '@/utilities/generateMeta';
+import { getServerSideURL } from '@/utilities/getURL';
+import { breadcrumbSchema, webPageSchema } from '@/utilities/schema';
 import PageClient from './page.client';
 
 export async function generateStaticParams() {
@@ -47,10 +49,9 @@ export default async function Page({ params: paramsPromise }: Args) {
   const decodedSlug = decodeURIComponent(slug);
   const url = `/${decodedSlug}`;
 
-  const page: RequiredDataFromCollectionSlug<'pages'> | null =
-    await queryPageBySlug({
-      slug: decodedSlug,
-    });
+  const page: RequiredDataFromCollectionSlug<'pages'> | null = await queryPageBySlug({
+    slug: decodedSlug,
+  });
 
   if (!page) {
     return <PayloadRedirects url={url} />;
@@ -58,11 +59,34 @@ export default async function Page({ params: paramsPromise }: Args) {
 
   const { hero, layout } = page;
 
+  const baseUrl = getServerSideURL();
+  const pageUrl = `${baseUrl}/${decodedSlug}`;
+  const bSchema = breadcrumbSchema([
+    { name: 'Acasă', url: baseUrl },
+    { name: page.title, url: pageUrl },
+  ]);
+  const wpSchema = webPageSchema({
+    title: page.meta?.title || page.title,
+    url: pageUrl,
+    description: page.meta?.description || undefined,
+  });
+
   return (
     <article className="pt-16 pb-24">
       <PageClient />
       {/* Allows redirects for valid pages too */}
       <PayloadRedirects disableNotFound url={url} />
+
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(bSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(wpSchema) }}
+      />
 
       {draft && <LivePreviewListener />}
 
@@ -72,9 +96,7 @@ export default async function Page({ params: paramsPromise }: Args) {
   );
 }
 
-export async function generateMetadata({
-  params: paramsPromise,
-}: Args): Promise<Metadata> {
+export async function generateMetadata({ params: paramsPromise }: Args): Promise<Metadata> {
   const { slug = 'home' } = await paramsPromise;
   // Decode to support slugs with special characters
   const decodedSlug = decodeURIComponent(slug);

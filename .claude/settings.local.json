@@ -1,14 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mkdir -p \"g:/Code/virgil-bakery-web/src/components/Homepage\" \"g:/Code/virgil-bakery-web/src/components/ProductCard\" \"g:/Code/virgil-bakery-web/src/app/\\(frontend\\)/produse/[slug]\" \"g:/Code/virgil-bakery-web/src/app/\\(frontend\\)/cos\")",
       "mcp__plugin_context7_context7__resolve-library-id",
       "mcp__plugin_context7_context7__query-docs",
-      "Bash(curl -sL https://virgil-bakery-web.vercel.app/produse)",
-      "Bash(curl -sL https://virgil-bakery-web.vercel.app/produse/paine-de-secara)",
-      "Bash(curl -sL https://virgil-bakery-web.vercel.app/posts/despre-pinea-cu-maia)",
-      "Bash(curl -sL https://virgil-bakery-web.vercel.app/maiaua-mea)",
-      "Bash(curl -sL https://virgil-bakery-web.vercel.app/)",
       "Bash(curl -s -o /dev/null -w '%{http_code}' -H 'RSC: 1' -H 'Next-Url: /' -H 'Next-Router-State-Tree: __TRACKED_VAR__' http://localhost:3000/cum-comand)",
       "Bash(curl -s \"http://localhost:3000/api/pages?where[slug][equals]=cum-comand&limit=1\")",
       "Bash(curl -sv \"http://localhost:3000/api/pages?limit=5&select%5Bslug%5D=true\")",
@@ -32,7 +26,20 @@
       "Bash(pnpm test:int)",
       "Bash(pnpm exec *)",
       "Bash(pnpm test:int schema.unit)",
-      "Bash(gh repo *)"
+      "Bash(gh repo *)",
+      "Bash(cat next-sitemap.config.cjs)",
+      "Bash(git check-ignore *)",
+      "Bash(curl -s -A \"Mozilla/5.0\" https://painecumaiabyvirgil.ro/produse/paine-de-secara)",
+      "Bash(curl -s -A \"Mozilla/5.0\" https://painecumaiabyvirgil.ro/produse)",
+      "Bash(curl -s -A \"Mozilla/5.0\" https://painecumaiabyvirgil.ro/cum-comand)",
+      "Bash(curl -s -A \"Mozilla/5.0\" https://painecumaiabyvirgil.ro/posts)",
+      "Bash(curl -s -A \"Mozilla/5.0\" https://painecumaiabyvirgil.ro/maiaua-mea)",
+      "Bash(grep -iA3 \"danger\\\\|rules\\\\|correctness\\\\|a11y\")",
+      "Bash(pnpm lint *)",
+      "Bash(git diff *)",
+      "Bash(grep -z -E '\\\\.\\(ts|tsx|js|jsx\\)$')",
+      "Bash(xargs -0 pnpm exec biome format --write)",
+      "Bash(grep -E '^\\\\+.*;\\\\s*$')"
     ],
     "additionalDirectories": [
       "g:\\Code\\virgil-bakery-web\\src\\app\\(frontend)\\produse"
