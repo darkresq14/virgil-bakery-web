@@ -10,6 +10,17 @@ next-env.d.ts
 # Payload default media upload directory
 public/media/
 
+# Local dev database + SQLite sidecars (ADR 0004): dev.db, throwaway
+# verification DBs, and WAL/SHM companions. Local only — never commit.
+*.db
+*.db-shm
+*.db-wal
+
+# One-off production SQL dumps (db:pull, ADR 0004). Scoped to repo root so
+# nested .sql files are unaffected.
+/*.dump
+/*.sql
+
 public/robots.txt
 public/sitemap*.xml
 
@@ -25,4 +36,5 @@ wordpress-media/
 TEMP/
 
 .vercel
+# Production-env override file (e.g. .env.production) is local only.
 .env*

@@ -9,6 +9,7 @@ import type { Plugin } from 'payload'
 import { revalidateRedirects } from '@/hooks/revalidateRedirects'
 
 import type { Page, Post, Product } from '@/payload-types'
+import { isBlobStorageEnabled } from '@/utilities/blobStorage'
 import { getServerSideURL } from '@/utilities/getURL'
 
 const generateTitle: GenerateTitle<Post | Page | Product> = ({ doc }) => {
@@ -87,7 +88,7 @@ export const plugins: Plugin[] = [
     },
   }),
   vercelBlobStorage({
-    enabled: process.env.BLOB_READ_WRITE_TOKEN !== undefined,
+    enabled: isBlobStorageEnabled(),
     collections: { media: true },
     token: process.env.BLOB_READ_WRITE_TOKEN,
   }),
