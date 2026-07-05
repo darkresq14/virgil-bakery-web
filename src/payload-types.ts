@@ -1917,6 +1917,26 @@ export interface SiteConfig {
    * Text scurt pentru cardul de pe pagina principală (~120 caractere)
    */
   teaserWhatsapp?: string | null;
+  /**
+   * Prima zi de concediu (inclusiv). Lasă ambele date goale pentru a dezactiva.
+   */
+  holidayStartDate?: string | null;
+  /**
+   * Ultima zi de concediu (inclusiv). Se dezactivează automat după această dată.
+   */
+  holidayEndDate?: string | null;
+  /**
+   * Titlul ferestrei popup de concediu. Lăsat gol, folosește un titlu implicit cald.
+   */
+  holidayModalTitle?: string | null;
+  /**
+   * Imaginea ferestrei popup. Lăsat gol, folosește o imagine implicită.
+   */
+  holidayModalImage?: (number | null) | Media;
+  /**
+   * Textul ferestrei popup. Lăsat gol, folosește un mesaj implicit cald.
+   */
+  holidayModalMessage?: string | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -2050,6 +2070,11 @@ export interface SiteConfigSelect<T extends boolean = true> {
   teaserDelivery?: T;
   teaserPayment?: T;
   teaserWhatsapp?: T;
+  holidayStartDate?: T;
+  holidayEndDate?: T;
+  holidayModalTitle?: T;
+  holidayModalImage?: T;
+  holidayModalMessage?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;
