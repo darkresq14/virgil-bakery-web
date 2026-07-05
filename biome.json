@@ -14,7 +14,8 @@
       "!**/docs",
       "!**/globals.css",
       "!**/.agents",
-      "!**/.claude"
+      "!**/.claude",
+      "!**/migrations"
     ]
   },
   "formatter": {
