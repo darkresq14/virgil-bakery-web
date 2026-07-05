@@ -21,4 +21,4 @@ export async function runMigrateGuard(): Promise<void> {
   }
 }
 
-runMigrateGuard();
+await runMigrateGuard();

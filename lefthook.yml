@@ -4,3 +4,6 @@ pre-commit:
       glob: "*.{js,ts,jsx,tsx,json,css,md}"
       run: pnpm exec biome check --write --no-errors-on-unmatched {staged_files}
       stage_fixed: true
+    schema-reminder:
+      glob: "src/**/*.{ts,tsx}"
+      run: pnpm tsx scripts/schema-change-reminder.ts {staged_files}
