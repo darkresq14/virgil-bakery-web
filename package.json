@@ -24,6 +24,7 @@
     "db:baseline": "tsx scripts/db-baseline.ts",
     "db:migrate:guarded": "tsx scripts/migrate-guard.ts",
     "db:pull": "tsx scripts/db-pull-entry.ts",
+    "media:pull": "tsx scripts/media-pull-entry.ts",
     "reinstall": "cross-env NODE_OPTIONS=--no-deprecation rm -rf node_modules && rm pnpm-lock.yaml && pnpm --ignore-workspace install",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "test": "pnpm run test:int && pnpm run test:e2e",
