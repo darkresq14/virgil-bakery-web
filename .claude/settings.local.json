@@ -39,7 +39,11 @@
       "Bash(git diff *)",
       "Bash(grep -z -E '\\\\.\\(ts|tsx|js|jsx\\)$')",
       "Bash(xargs -0 pnpm exec biome format --write)",
-      "Bash(grep -E '^\\\\+.*;\\\\s*$')"
+      "Bash(grep -E '^\\\\+.*;\\\\s*$')",
+      "Bash(echo \"exit:$?\")",
+      "Bash(grep -o 'migrate:create\\\\|migrate:status\\\\|migrate:fresh\\\\|'\\\\''migrate'\\\\''\\\\|\"migrate\"\\\\|migrate:rollback' __TRACKED_VAR__/bin/index.js)",
+      "Bash(gh auth *)",
+      "Bash(turso --version)"
     ],
     "additionalDirectories": [
       "g:\\Code\\virgil-bakery-web\\src\\app\\(frontend)\\produse"
