@@ -1,63 +1,78 @@
-'use client'
+'use client';
 
-import { ArrowLeft, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
-import Image from 'next/image'
-import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { ArrowLeft, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
 
-import { type AddressFields, AddressForm } from '@/components/AddressForm'
-import { useCart } from '@/providers/Cart'
-import { buildWhatsAppMessage } from '@/utilities/buildWhatsAppMessage'
-import { getDeliveryDates } from '@/utilities/deliveryDates'
-import { detectDeliveryMethod } from '@/utilities/detectDeliveryMethod'
-import { formatPrice } from '@/utilities/formatPrice'
+import { type AddressFields, AddressForm } from '@/components/AddressForm';
+import { useCart } from '@/providers/Cart';
+import { buildWhatsAppMessage } from '@/utilities/buildWhatsAppMessage';
+import { type DeliveryDateOption, getDeliveryDates } from '@/utilities/deliveryDates';
+import { detectDeliveryMethod } from '@/utilities/detectDeliveryMethod';
+import { formatPrice } from '@/utilities/formatPrice';
 
-const STORAGE_KEY = 'vb-repeat-customer'
+const STORAGE_KEY = 'vb-repeat-customer';
 
-export function CartPageClient() {
-  const { items, updateQuantity, removeItem, clearCart, total, itemCount } = useCart()
+interface CartPageClientProps {
+  holidayStartDate?: Date | null;
+  holidayEndDate?: Date | null;
+}
+
+/** Holiday takes visual precedence over the cutoff ("listă închisă") label. */
+function formatDeliveryOptionLabel(option: DeliveryDateOption): string {
+  if (option.isHoliday) return `${option.label} — concediu`;
+  if (!option.isSelectable) return `${option.label} — listă închisă`;
+  return option.label;
+}
+
+export function CartPageClient({ holidayStartDate, holidayEndDate }: CartPageClientProps = {}) {
+  const { items, updateQuantity, removeItem, clearCart, total, itemCount } = useCart();
   const emptyAddress: AddressFields = {
     judet: '',
     localitate: '',
     streetAddress: '',
     addressDetails: '',
-  }
-  const [form, setForm] = useState({ name: '', phone: '', deliveryDate: '' })
-  const [address, setAddress] = useState<AddressFields>(emptyAddress)
-  const [formError, setFormError] = useState('')
+  };
+  const [form, setForm] = useState({ name: '', phone: '', deliveryDate: '' });
+  const [address, setAddress] = useState<AddressFields>(emptyAddress);
+  const [formError, setFormError] = useState('');
   const [isFirstOrder, setIsFirstOrder] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true
-    return localStorage.getItem(STORAGE_KEY) !== 'true'
-  })
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem(STORAGE_KEY) !== 'true';
+  });
   const [fieldErrors, setFieldErrors] = useState({
     name: '',
     phone: '',
     judet: '',
     localitate: '',
     streetAddress: '',
-  })
-  const [needsCourier, setNeedsCourier] = useState(false)
+  });
+  const [needsCourier, setNeedsCourier] = useState(false);
 
   const toggleFirstOrder = (value: boolean) => {
-    setIsFirstOrder(value)
-    localStorage.setItem(STORAGE_KEY, value ? 'false' : 'true')
-    setFieldErrors({ name: '', phone: '', judet: '', localitate: '', streetAddress: '' })
-    setNeedsCourier(false)
-  }
+    setIsFirstOrder(value);
+    localStorage.setItem(STORAGE_KEY, value ? 'false' : 'true');
+    setFieldErrors({ name: '', phone: '', judet: '', localitate: '', streetAddress: '' });
+    setNeedsCourier(false);
+  };
 
   const deliveryInfo = useMemo(
     () => detectDeliveryMethod(address.judet, address.localitate),
     [address.judet, address.localitate],
-  )
+  );
 
-  const deliveryDates = useMemo(() => getDeliveryDates(), [])
+  const deliveryDates = useMemo(
+    () => getDeliveryDates({ holidayStartDate, holidayEndDate }),
+    [holidayStartDate, holidayEndDate],
+  );
 
   const defaultDeliveryLabel = useMemo(() => {
-    const selectable = deliveryDates.find((d) => d.isSelectable)
-    return selectable?.label ?? ''
-  }, [deliveryDates])
+    const selectable = deliveryDates.find((d) => d.isSelectable);
+    return selectable?.label ?? '';
+  }, [deliveryDates]);
 
-  const selectedDelivery = form.deliveryDate || defaultDeliveryLabel
+  const selectedDelivery = form.deliveryDate || defaultDeliveryLabel;
 
   const shippingCost = isFirstOrder
     ? address.judet && address.localitate
@@ -65,7 +80,7 @@ export function CartPageClient() {
       : 0
     : needsCourier
       ? 25
-      : 0
+      : 0;
 
   const deliveryMethod = isFirstOrder
     ? address.judet && address.localitate
@@ -73,30 +88,30 @@ export function CartPageClient() {
       : 'personal'
     : needsCourier
       ? 'curier'
-      : 'personal'
+      : 'personal';
 
-  const showTransport = shippingCost > 0
+  const showTransport = shippingCost > 0;
 
   const handleCheckout = async () => {
     if (!selectedDelivery) {
-      setFormError('Selectează o dată de livrare')
-      return
+      setFormError('Selectează o dată de livrare');
+      return;
     }
-    setFormError('')
+    setFormError('');
 
-    const errors = { name: '', phone: '', judet: '', localitate: '', streetAddress: '' }
+    const errors = { name: '', phone: '', judet: '', localitate: '', streetAddress: '' };
     if (isFirstOrder) {
-      if (!form.name.trim()) errors.name = 'Numele este obligatoriu'
-      if (!form.phone.trim()) errors.phone = 'Telefonul este obligatoriu'
-      if (!address.judet) errors.judet = 'Județul este obligatoriu'
-      if (!address.localitate.trim()) errors.localitate = 'Localitatea este obligatorie'
-      if (!address.streetAddress.trim()) errors.streetAddress = 'Strada este obligatorie'
+      if (!form.name.trim()) errors.name = 'Numele este obligatoriu';
+      if (!form.phone.trim()) errors.phone = 'Telefonul este obligatoriu';
+      if (!address.judet) errors.judet = 'Județul este obligatoriu';
+      if (!address.localitate.trim()) errors.localitate = 'Localitatea este obligatorie';
+      if (!address.streetAddress.trim()) errors.streetAddress = 'Strada este obligatorie';
     }
-    setFieldErrors(errors)
+    setFieldErrors(errors);
     if (errors.name || errors.phone || errors.judet || errors.localitate || errors.streetAddress)
-      return
+      return;
 
-    const selectedDate = deliveryDates.find((d) => d.label === selectedDelivery)
+    const selectedDate = deliveryDates.find((d) => d.label === selectedDelivery);
 
     const message = buildWhatsAppMessage({
       items: items.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price })),
@@ -114,7 +129,7 @@ export function CartPageClient() {
             addressDetails: address.addressDetails || undefined,
           }
         : {}),
-    })
+    });
 
     try {
       await fetch('/api/orders', {
@@ -141,18 +156,18 @@ export function CartPageClient() {
           whatsappMessage: message,
           status: 'nou',
         }),
-      })
+      });
     } catch {
       // Still open WhatsApp even if DB save fails
     }
 
-    const url = `https://wa.me/40746245391?text=${encodeURIComponent(message)}`
-    window.open(url, '_blank')
+    const url = `https://wa.me/40746245391?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
     if (!isFirstOrder) {
-      localStorage.setItem(STORAGE_KEY, 'true')
+      localStorage.setItem(STORAGE_KEY, 'true');
     }
-    clearCart()
-  }
+    clearCart();
+  };
 
   if (items.length === 0) {
     return (
@@ -171,7 +186,7 @@ export function CartPageClient() {
           </Link>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -307,8 +322,7 @@ export function CartPageClient() {
                   >
                     {deliveryDates.map((d) => (
                       <option key={d.label} value={d.label} disabled={!d.isSelectable}>
-                        {d.label}
-                        {!d.isSelectable ? ' — listă închisă' : ''}
+                        {formatDeliveryOptionLabel(d)}
                       </option>
                     ))}
                   </select>
@@ -373,8 +387,8 @@ export function CartPageClient() {
                         type="text"
                         value={form.name}
                         onChange={(e) => {
-                          setForm({ ...form, name: e.target.value })
-                          setFieldErrors({ ...fieldErrors, name: '' })
+                          setForm({ ...form, name: e.target.value });
+                          setFieldErrors({ ...fieldErrors, name: '' });
                         }}
                         className={`w-full rounded-lg border px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring ${
                           fieldErrors.name ? 'border-destructive' : 'border-input'
@@ -399,8 +413,8 @@ export function CartPageClient() {
                         type="tel"
                         value={form.phone}
                         onChange={(e) => {
-                          setForm({ ...form, phone: e.target.value })
-                          setFieldErrors({ ...fieldErrors, phone: '' })
+                          setForm({ ...form, phone: e.target.value });
+                          setFieldErrors({ ...fieldErrors, phone: '' });
                         }}
                         className={`w-full rounded-lg border px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring ${
                           fieldErrors.phone ? 'border-destructive' : 'border-input'
@@ -456,5 +470,5 @@ export function CartPageClient() {
         </div>
       </div>
     </div>
-  )
+  );
 }

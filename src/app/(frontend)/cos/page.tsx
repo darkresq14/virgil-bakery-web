@@ -1,8 +1,19 @@
-import type { Metadata } from 'next'
+import type { Metadata } from 'next';
+import { getCachedGlobal } from '@/utilities/getGlobals';
+import { CartPageClient } from './page.client';
 
 export const metadata: Metadata = {
   title: 'Coșul tău | Pâine cu Maia by Virgil',
   robots: { index: false, follow: true },
-}
+};
 
-export { CartPageClient as default } from './page.client'
+export default async function CartPage() {
+  const siteConfig = await getCachedGlobal('siteConfig', 1)();
+
+  const holidayStartDate =
+    siteConfig?.holidayStartDate != null ? new Date(siteConfig.holidayStartDate) : null;
+  const holidayEndDate =
+    siteConfig?.holidayEndDate != null ? new Date(siteConfig.holidayEndDate) : null;
+
+  return <CartPageClient holidayStartDate={holidayStartDate} holidayEndDate={holidayEndDate} />;
+}
