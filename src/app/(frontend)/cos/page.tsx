@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getCachedGlobal } from '@/utilities/getGlobals';
+import { holidayDates } from '@/utilities/holidayDates';
 import { CartPageClient } from './page.client';
 
 export const metadata: Metadata = {
@@ -15,5 +16,16 @@ export default async function CartPage() {
   const holidayEndDate =
     siteConfig?.holidayEndDate != null ? new Date(siteConfig.holidayEndDate) : null;
 
-  return <CartPageClient holidayStartDate={holidayStartDate} holidayEndDate={holidayEndDate} />;
+  const { isNoticeActive } = holidayDates({
+    holidayStartDate,
+    holidayEndDate,
+  });
+
+  return (
+    <CartPageClient
+      holidayStartDate={holidayStartDate}
+      holidayEndDate={holidayEndDate}
+      isNoticeActive={isNoticeActive}
+    />
+  );
 }

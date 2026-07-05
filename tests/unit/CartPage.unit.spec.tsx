@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CartPageClient } from '@/app/(frontend)/cos/page.client';
 import { useCart } from '@/providers/Cart';
@@ -11,12 +11,18 @@ vi.mock('@/providers/Cart', () => ({
 }));
 
 // Mock getDeliveryDates to return predictable dates
-vi.mock('@/utilities/deliveryDates', () => ({
-  getDeliveryDates: vi.fn(() => [
-    { date: new Date('2025-06-13'), label: 'Vineri, 13 Iunie', isSelectable: true },
-    { date: new Date('2025-06-17'), label: 'Marți, 17 Iunie', isSelectable: true },
-  ]),
-}));
+vi.mock('@/utilities/deliveryDates', async () => {
+  const actual = await vi.importActual<typeof import('@/utilities/deliveryDates')>(
+    '@/utilities/deliveryDates',
+  );
+  return {
+    ...actual,
+    getDeliveryDates: vi.fn(() => [
+      { date: new Date('2025-06-13'), label: 'Vineri, 13 Iunie', isSelectable: true },
+      { date: new Date('2025-06-17'), label: 'Marți, 17 Iunie', isSelectable: true },
+    ]),
+  };
+});
 
 // Mock Next.js Image component
 vi.mock('next/image', () => ({
@@ -364,5 +370,68 @@ describe('CartPageClient — holiday-aware delivery dropdown', () => {
     // 7/14 past cutoff AND holiday -> "concediu" wins
     expect(bothFlags.textContent).toContain('concediu');
     expect(bothFlags.textContent).not.toContain('listă închisă');
+  });
+});
+
+describe('CartPageClient — holiday info message', () => {
+  beforeEach(() => {
+    // Reset dropdown mock to non-holiday dates so the only holiday signal is
+    // the info banner under test.
+    vi.mocked(getDeliveryDates).mockReturnValue([
+      {
+        date: new Date('2025-06-13'),
+        label: 'Vineri, 13 Iunie',
+        isSelectable: true,
+        isHoliday: false,
+      },
+      {
+        date: new Date('2025-06-17'),
+        label: 'Marți, 17 Iunie',
+        isSelectable: true,
+        isHoliday: false,
+      },
+    ]);
+  });
+
+  it('shows a holiday info banner when isNoticeActive is true', () => {
+    vi.mocked(useCart).mockReturnValue({ ...mockCartContext });
+    const store: Record<string, string> = {};
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation((key) => store[key] ?? null);
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key, value) => {
+      store[key] = value;
+    });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }));
+    vi.spyOn(window, 'open').mockReturnValue(null);
+
+    render(
+      <CartPageClient
+        holidayStartDate={new Date('2026-07-13')}
+        holidayEndDate={new Date('2026-07-19')}
+        isNoticeActive
+      />,
+    );
+
+    expect(screen.getByText(/program concediu/i)).toBeTruthy();
+  });
+
+  it('does not show a holiday info banner when isNoticeActive is false', () => {
+    vi.mocked(useCart).mockReturnValue({ ...mockCartContext });
+    const store: Record<string, string> = {};
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation((key) => store[key] ?? null);
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key, value) => {
+      store[key] = value;
+    });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }));
+    vi.spyOn(window, 'open').mockReturnValue(null);
+
+    render(
+      <CartPageClient
+        holidayStartDate={new Date('2026-07-13')}
+        holidayEndDate={new Date('2026-07-19')}
+        isNoticeActive={false}
+      />,
+    );
+
+    expect(screen.queryByText(/program concediu|reluăm livrările/i)).toBeNull();
   });
 });

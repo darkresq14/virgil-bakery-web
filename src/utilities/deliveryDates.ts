@@ -63,7 +63,8 @@ function startOfDay(date: Date): Date {
   return d;
 }
 
-function formatLabel(date: Date): string {
+/** Formats a date as "Luni, 13 Iunie" (Romanian long form). */
+export function formatRomanianDate(date: Date): string {
   const dayName = DAY_NAMES[date.getDay()];
   const day = date.getDate();
   const month = MONTH_NAMES[date.getMonth()];
@@ -89,7 +90,7 @@ export function getDeliveryDates(input?: GetDeliveryDatesInput): DeliveryDateOpt
     const holiday = inHoliday(date);
     return {
       date,
-      label: formatLabel(date),
+      label: formatRomanianDate(date),
       isSelectable: !holiday,
       isHoliday: holiday,
     };

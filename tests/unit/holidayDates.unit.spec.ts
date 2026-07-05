@@ -24,6 +24,7 @@ describe('holidayDates', () => {
 
     expect(result).toEqual({
       isNoticeActive: false,
+      isHolidayActive: false,
       lastDeliveryBefore: null,
       firstDeliveryAfter: null,
     });
@@ -77,27 +78,26 @@ describe('holidayDates', () => {
     });
   });
 
-  describe('isNoticeActive', () => {
-    // Holiday Mon 7/13 -> Mon 7/20.
-    // Overlapping delivery days: Tue 7/14, Fri 7/17.
-    // lastDeliveryBefore = Fri 7/10 -> trigger = its cutoff = Wed 7/8 17:00.
+  describe('isNoticeActive (preview + active)', () => {
+    // Holiday Mon 7/13 -> Mon 7/20. Overlapping delivery days: Tue 7/14, Fri 7/17.
+    // lastDeliveryBefore = Fri 7/10. firstDeliveryAfter = Tue 7/21.
     const holiday = {
       holidayStartDate: at('2026-07-13'),
       holidayEndDate: at('2026-07-20'),
     };
 
-    it('is inactive before the trigger (previous round cutoff not yet passed)', () => {
-      const result = holidayDates({ ...holiday, referenceDate: at('2026-07-08', 16) });
-      expect(result.isNoticeActive).toBe(false);
-    });
-
-    it('activates at the trigger — the cutoff of the last delivery round before the holiday', () => {
-      const result = holidayDates({ ...holiday, referenceDate: at('2026-07-08', 17) });
+    it('is active in preview — before the holiday start, once a delivery day overlaps', () => {
+      const result = holidayDates({ ...holiday, referenceDate: at('2026-07-05') });
       expect(result.isNoticeActive).toBe(true);
     });
 
-    it('stays active during the holiday', () => {
-      const result = holidayDates({ ...holiday, referenceDate: at('2026-07-19') });
+    it('is active the day before the holiday starts', () => {
+      const result = holidayDates({ ...holiday, referenceDate: at('2026-07-12') });
+      expect(result.isNoticeActive).toBe(true);
+    });
+
+    it('is active on the holiday start date', () => {
+      const result = holidayDates({ ...holiday, referenceDate: at('2026-07-13') });
       expect(result.isNoticeActive).toBe(true);
     });
 
@@ -111,16 +111,6 @@ describe('holidayDates', () => {
       expect(result.isNoticeActive).toBe(false);
     });
 
-    it('activates at the trigger even when the holiday starts on a delivery day', () => {
-      // Holiday Tue 7/14 -> Mon 7/20. Last delivery before = Fri 7/10 -> trigger Wed 7/8 17:00.
-      const result = holidayDates({
-        holidayStartDate: at('2026-07-14'),
-        holidayEndDate: at('2026-07-20'),
-        referenceDate: at('2026-07-08', 17),
-      });
-      expect(result.isNoticeActive).toBe(true);
-    });
-
     it('is inactive for a short holiday that overlaps no delivery day', () => {
       // Holiday Wed 7/15 -> Thu 7/16: no Tue/Fri inside, nothing to disrupt.
       const result = holidayDates({
@@ -129,6 +119,55 @@ describe('holidayDates', () => {
         referenceDate: at('2026-07-15'),
       });
       expect(result.isNoticeActive).toBe(false);
+    });
+  });
+
+  describe('isHolidayActive (active phase only)', () => {
+    // Holiday Mon 7/13 -> Mon 7/20.
+    // lastDeliveryBefore = Fri 7/10 -> its ordering cutoff = Wed 7/8 17:00.
+    // The modal fires once no pre-holiday slot remains orderable.
+    const holiday = {
+      holidayStartDate: at('2026-07-13'),
+      holidayEndDate: at('2026-07-20'),
+    };
+
+    it('is false before the last pre-holiday delivery cutoff passes', () => {
+      const result = holidayDates({ ...holiday, referenceDate: at('2026-07-08', 16) });
+      expect(result.isHolidayActive).toBe(false);
+    });
+
+    it('is true at the last pre-holiday delivery cutoff', () => {
+      const result = holidayDates({ ...holiday, referenceDate: at('2026-07-08', 17) });
+      expect(result.isHolidayActive).toBe(true);
+    });
+
+    it('is true in the ordering gap — after cutoff, before calendar holiday start', () => {
+      const result = holidayDates({ ...holiday, referenceDate: at('2026-07-12') });
+      expect(result.isHolidayActive).toBe(true);
+    });
+
+    it('is true mid-holiday', () => {
+      const result = holidayDates({ ...holiday, referenceDate: at('2026-07-16') });
+      expect(result.isHolidayActive).toBe(true);
+    });
+
+    it('is true on the end date (inclusive)', () => {
+      const result = holidayDates({ ...holiday, referenceDate: at('2026-07-20') });
+      expect(result.isHolidayActive).toBe(true);
+    });
+
+    it('is false the day after the holiday ends', () => {
+      const result = holidayDates({ ...holiday, referenceDate: at('2026-07-21') });
+      expect(result.isHolidayActive).toBe(false);
+    });
+
+    it('is false for a short holiday that overlaps no delivery day', () => {
+      const result = holidayDates({
+        holidayStartDate: at('2026-07-15'),
+        holidayEndDate: at('2026-07-16'),
+        referenceDate: at('2026-07-15'),
+      });
+      expect(result.isHolidayActive).toBe(false);
     });
   });
 });

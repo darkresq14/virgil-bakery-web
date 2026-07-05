@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
+import { ArrowLeft, CalendarOff, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
@@ -8,15 +8,49 @@ import { useMemo, useState } from 'react';
 import { type AddressFields, AddressForm } from '@/components/AddressForm';
 import { useCart } from '@/providers/Cart';
 import { buildWhatsAppMessage } from '@/utilities/buildWhatsAppMessage';
-import { type DeliveryDateOption, getDeliveryDates } from '@/utilities/deliveryDates';
+import {
+  type DeliveryDateOption,
+  formatRomanianDate,
+  getDeliveryDates,
+} from '@/utilities/deliveryDates';
 import { detectDeliveryMethod } from '@/utilities/detectDeliveryMethod';
 import { formatPrice } from '@/utilities/formatPrice';
+import { holidayDates } from '@/utilities/holidayDates';
 
 const STORAGE_KEY = 'vb-repeat-customer';
+
+interface HolidayCartNoticeProps {
+  holidayStartDate: Date;
+  holidayEndDate: Date;
+}
+
+/** Persistent holiday info box on the cart page (survives modal dismissal). */
+function HolidayCartNotice({ holidayStartDate, holidayEndDate }: HolidayCartNoticeProps) {
+  const { lastDeliveryBefore, firstDeliveryAfter } = holidayDates({
+    holidayStartDate,
+    holidayEndDate,
+  });
+  if (!lastDeliveryBefore || !firstDeliveryAfter) return null;
+  return (
+    <div className="mb-8 flex items-start gap-3 rounded-xl border border-[oklch(89%_0.06_70deg)] bg-[oklch(96%_0.04_75deg)] p-4">
+      <CalendarOff className="mt-0.5 h-5 w-5 shrink-0 text-[oklch(55%_0.15_65deg)]" />
+      <div className="font-sans text-sm leading-relaxed text-[oklch(30%_0.02_60deg)]">
+        <p className="font-semibold text-[oklch(20%_0.02_60deg)]">Program concediu</p>
+        <p className="mt-1">
+          Vom lua o pauză scurtă. Ultima livrare înainte de concediu:{' '}
+          <strong className="font-semibold">{formatRomanianDate(lastDeliveryBefore)}</strong>.
+          Reluăm livrările:{' '}
+          <strong className="font-semibold">{formatRomanianDate(firstDeliveryAfter)}</strong>.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 interface CartPageClientProps {
   holidayStartDate?: Date | null;
   holidayEndDate?: Date | null;
+  isNoticeActive?: boolean;
 }
 
 /** Holiday takes visual precedence over the cutoff ("listă închisă") label. */
@@ -26,7 +60,11 @@ function formatDeliveryOptionLabel(option: DeliveryDateOption): string {
   return option.label;
 }
 
-export function CartPageClient({ holidayStartDate, holidayEndDate }: CartPageClientProps = {}) {
+export function CartPageClient({
+  holidayStartDate,
+  holidayEndDate,
+  isNoticeActive = false,
+}: CartPageClientProps = {}) {
   const { items, updateQuantity, removeItem, clearCart, total, itemCount } = useCart();
   const emptyAddress: AddressFields = {
     judet: '',
@@ -193,6 +231,10 @@ export function CartPageClient({ holidayStartDate, holidayEndDate }: CartPageCli
     <div className="py-12">
       <div className="container">
         <h1 className="text-3xl font-heading mb-8">Coșul tău</h1>
+
+        {isNoticeActive && holidayStartDate && holidayEndDate && (
+          <HolidayCartNotice holidayStartDate={holidayStartDate} holidayEndDate={holidayEndDate} />
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Cart items */}

@@ -7,7 +7,10 @@ export interface HolidayDatesInput {
 }
 
 export interface HolidayDatesResult {
+  /** Preview OR active holiday — banner + cart notice shown. */
   isNoticeActive: boolean;
+  /** Holiday in progress right now — modal shown. */
+  isHolidayActive: boolean;
   lastDeliveryBefore: Date | null;
   firstDeliveryAfter: Date | null;
 }
@@ -59,25 +62,40 @@ export function holidayDates(input: HolidayDatesInput): HolidayDatesResult {
   const { holidayStartDate, holidayEndDate, referenceDate } = input;
 
   if (holidayStartDate == null || holidayEndDate == null) {
-    return { isNoticeActive: false, lastDeliveryBefore: null, firstDeliveryAfter: null };
+    return {
+      isNoticeActive: false,
+      isHolidayActive: false,
+      lastDeliveryBefore: null,
+      firstDeliveryAfter: null,
+    };
   }
 
-  const lastDeliveryBefore = lastDeliveryOnOrBefore(addDays(holidayStartDate, -1));
-  const firstDeliveryAfter = firstDeliveryOnOrAfter(addDays(holidayEndDate, 1));
+  const start = startOfDay(holidayStartDate);
+  const end = startOfDay(holidayEndDate);
+  const lastDeliveryBefore = lastDeliveryOnOrBefore(addDays(start, -1));
+  const firstDeliveryAfter = firstDeliveryOnOrAfter(addDays(end, 1));
 
-  // The notice fires once the first holiday-overlapping delivery date enters the
-  // dropdown window, defined as the cutoff of the last delivery round before the
-  // holiday start. It stays live through the end date (inclusive).
-  const firstOverlapping = firstDeliveryOnOrAfter(holidayStartDate);
-  const hasOverlap = ymd(firstOverlapping) <= ymd(holidayEndDate);
-  const triggerTime = getDeliveryCutoff(lastDeliveryBefore);
+  // A delivery day falls inside the holiday range -> the holiday disrupts at
+  // least one round and will appear as a disabled "concediu" date in the
+  // dropdown. That's the signal to start informing customers.
+  const firstOverlapping = firstDeliveryOnOrAfter(start);
+  const hasOverlap = ymd(firstOverlapping) <= ymd(end);
 
   const ref = referenceDate ?? getRomaniaNow();
-  const withinHoliday = ymd(ref) <= ymd(holidayEndDate);
-  const isNoticeActive = hasOverlap && ref.getTime() >= triggerTime.getTime() && withinHoliday;
+  const refDay = ymd(ref);
+
+  // Notice covers preview (holiday visible ahead) through the end date.
+  const isNoticeActive = hasOverlap && refDay <= ymd(end);
+  // Modal fires once no pre-holiday slot remains orderable — the cutoff of
+  // the last delivery round before the holiday — and stays through the end.
+  const isHolidayActive =
+    hasOverlap &&
+    ref.getTime() >= getDeliveryCutoff(lastDeliveryBefore).getTime() &&
+    refDay <= ymd(end);
 
   return {
     isNoticeActive,
+    isHolidayActive,
     lastDeliveryBefore,
     firstDeliveryAfter,
   };
