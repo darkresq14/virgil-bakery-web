@@ -67,9 +67,7 @@ export const ImageMedia: React.FC<MediaProps> = (props) => {
     height = fullHeight ?? undefined;
     alt = altFromProps || altFromResource || '';
 
-    const cacheTag = resource.updatedAt;
-
-    src = getMediaUrl(sized?.url || url, cacheTag);
+    src = getMediaUrl(sized?.url || url);
 
     if (sized) {
       width = sized.width ?? width;
