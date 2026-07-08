@@ -1,21 +1,21 @@
-import configPromise from '@payload-config'
-import type { Metadata } from 'next'
-import { draftMode } from 'next/headers'
-import { getPayload } from 'payload'
-import { isExpandedDoc } from '@/utilities/type-guards'
-import { ProductsPageClient } from './page.client'
+import configPromise from '@payload-config';
+import type { Metadata } from 'next';
+import { draftMode } from 'next/headers';
+import { getPayload } from 'payload';
+import { isExpandedDoc } from '@/utilities/type-guards';
+import { ProductsPageClient } from './page.client';
 
 export const metadata: Metadata = {
   title: 'Produse | Pâine cu Maia by Virgil',
   description:
     'Descoperă gama noastră de pâine artizanală cu maia: pâine curentă, dulci și produse ocazionale.',
-}
+};
 
-export const revalidate = 600
+export const revalidate = 86400;
 
 export default async function ProductsPage() {
-  const { isEnabled: draft } = await draftMode()
-  const payload = await getPayload({ config: configPromise })
+  const { isEnabled: draft } = await draftMode();
+  const payload = await getPayload({ config: configPromise });
 
   const products = await payload.find({
     collection: 'products',
@@ -26,7 +26,7 @@ export default async function ProductsPage() {
       _status: { equals: 'published' },
     },
     sort: '-available,sortOrder,name',
-  })
+  });
 
   return (
     <ProductsPageClient
@@ -44,5 +44,5 @@ export default async function ProductsPage() {
         featuredImage: isExpandedDoc(p.featuredImage) ? p.featuredImage : null,
       }))}
     />
-  )
+  );
 }

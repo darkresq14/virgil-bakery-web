@@ -1,22 +1,22 @@
-import { CreditCard, MessageCircle, Truck, Users } from 'lucide-react'
-import type { Metadata } from 'next'
-import Link from 'next/link'
+import { CreditCard, MessageCircle, Truck, Users } from 'lucide-react';
+import type { Metadata } from 'next';
+import Link from 'next/link';
 
-import RichText from '@/components/RichText'
-import { ScrollReveal } from '@/components/ScrollReveal'
-import { getCachedGlobal } from '@/utilities/getGlobals'
-import PageClient from './page.client'
+import RichText from '@/components/RichText';
+import { ScrollReveal } from '@/components/ScrollReveal';
+import { getCachedGlobal } from '@/utilities/getGlobals';
+import PageClient from './page.client';
 
 export const metadata: Metadata = {
   title: 'Cum Comanzi | Pâine cu Maia by Virgil',
   description:
     'Ghid complet pentru a comanda pâine artizanală: pași simpli, livrare rapidă, plata cum vrei tu.',
-}
+};
 
-export const revalidate = 600
+export const revalidate = 86400;
 
 export default async function CumComandPage() {
-  const siteConfig = await getCachedGlobal('siteConfig', 1)()
+  const siteConfig = await getCachedGlobal('siteConfig', 1)();
 
   const {
     orderingSteps,
@@ -26,7 +26,7 @@ export default async function CumComandPage() {
     whatsappGroupUrl,
     policies,
     whatsappNumber,
-  } = siteConfig || {}
+  } = siteConfig || {};
 
   return (
     <div>
@@ -52,25 +52,21 @@ export default async function CumComandPage() {
         <ScrollReveal>
           <section className="py-20">
             <div className="container">
-              <h2 className="text-3xl font-heading text-center mb-16">
-                Pașii pentru a comanda
-              </h2>
+              <h2 className="text-3xl font-heading text-center mb-16">Pașii pentru a comanda</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                {orderingSteps.map(
-                  (step: { title?: string; description?: string }, i: number) => (
-                    <div
-                      key={step.title ?? i}
-                      className="flex flex-col items-center text-center bg-card rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
-                    >
-                      {/* Step number — uses font-sans (Inter) for reliable centering */}
-                      <div className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-sans font-bold mb-4 shadow-sm">
-                        {i + 1}
-                      </div>
-                      <h3 className="font-heading text-lg mb-2">{step.title}</h3>
-                      <p className="text-sm text-muted-foreground font-sans">{step.description}</p>
+                {orderingSteps.map((step: { title?: string; description?: string }, i: number) => (
+                  <div
+                    key={step.title ?? i}
+                    className="flex flex-col items-center text-center bg-card rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    {/* Step number — uses font-sans (Inter) for reliable centering */}
+                    <div className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-sans font-bold mb-4 shadow-sm">
+                      {i + 1}
                     </div>
-                  ),
-                )}
+                    <h3 className="font-heading text-lg mb-2">{step.title}</h3>
+                    <p className="text-sm text-muted-foreground font-sans">{step.description}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </section>
@@ -213,5 +209,5 @@ export default async function CumComandPage() {
         </section>
       </ScrollReveal>
     </div>
-  )
+  );
 }

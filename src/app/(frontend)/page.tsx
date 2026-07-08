@@ -1,33 +1,36 @@
-import configPromise from '@payload-config'
-import { CreditCard, Mail, MapPin, MessageCircle, Phone, ShoppingCart, Truck } from 'lucide-react'
-import type { Metadata } from 'next'
-import { draftMode } from 'next/headers'
-import Link from 'next/link'
-import { getPayload } from 'payload'
-import { About } from '@/components/Homepage/About'
-import { Hero } from '@/components/Homepage/Hero'
-import { Testimonials } from '@/components/Homepage/Testimonials'
-import { ProductCard } from '@/components/ProductCard'
-import { ScrollReveal } from '@/components/ScrollReveal'
-import { getImageURL } from '@/utilities/generateMeta'
-import { getCachedGlobal } from '@/utilities/getGlobals'
-import { getServerSideURL } from '@/utilities/getURL'
-import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
-import { SITE_DESCRIPTION, SITE_TITLE } from '@/utilities/seoDefaults'
-import { isExpandedDoc } from '@/utilities/type-guards'
+import configPromise from '@payload-config';
+import { CreditCard, Mail, MapPin, MessageCircle, Phone, ShoppingCart, Truck } from 'lucide-react';
+import type { Metadata } from 'next';
+import { draftMode } from 'next/headers';
+import Link from 'next/link';
+import { getPayload } from 'payload';
+import { About } from '@/components/Homepage/About';
+import { Hero } from '@/components/Homepage/Hero';
+import { Testimonials } from '@/components/Homepage/Testimonials';
+import { ProductCard } from '@/components/ProductCard';
+import { ScrollReveal } from '@/components/ScrollReveal';
+import { getImageURL } from '@/utilities/generateMeta';
+import { getCachedGlobal } from '@/utilities/getGlobals';
+import { getServerSideURL } from '@/utilities/getURL';
+import { mergeOpenGraph } from '@/utilities/mergeOpenGraph';
+import { SITE_DESCRIPTION, SITE_TITLE } from '@/utilities/seoDefaults';
+import { isExpandedDoc } from '@/utilities/type-guards';
 
-export const revalidate = 600
+// 24h ISR floor. On-demand revalidation hooks (product/post/testimonial saves)
+// keep content fresh; this just bounds baseline regen churn. Was 600s (10m), which
+// drove ~144 regenerations/page/day of stable bakery content for no benefit.
+export const revalidate = 86400;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const homepage = await getCachedGlobal('homepage', 1)()
-  const meta = homepage?.meta
+  const homepage = await getCachedGlobal('homepage', 1)();
+  const meta = homepage?.meta;
 
-  const title = meta?.title || SITE_TITLE
-  const description = meta?.description || SITE_DESCRIPTION
-  const serverUrl = getServerSideURL()
+  const title = meta?.title || SITE_TITLE;
+  const description = meta?.description || SITE_DESCRIPTION;
+  const serverUrl = getServerSideURL();
 
   const ogImage =
-    meta?.image && typeof meta.image === 'object' ? getImageURL(meta.image) : undefined
+    meta?.image && typeof meta.image === 'object' ? getImageURL(meta.image) : undefined;
 
   return {
     title,
@@ -41,15 +44,15 @@ export async function generateMetadata(): Promise<Metadata> {
       url: serverUrl,
       images: ogImage ? [{ url: ogImage, width: 1200, height: 630 }] : undefined,
     }),
-  }
+  };
 }
 
 export default async function HomePage() {
-  const { isEnabled: draft } = await draftMode()
-  const payload = await getPayload({ config: configPromise })
+  const { isEnabled: draft } = await draftMode();
+  const payload = await getPayload({ config: configPromise });
 
-  const homepage = await getCachedGlobal('homepage', 2)()
-  const siteConfig = await getCachedGlobal('siteConfig', 1)()
+  const homepage = await getCachedGlobal('homepage', 2)();
+  const siteConfig = await getCachedGlobal('siteConfig', 1)();
 
   const featuredProducts = await payload.find({
     collection: 'products',
@@ -60,7 +63,7 @@ export default async function HomePage() {
       and: [{ featured: { equals: true } }, { _status: { equals: 'published' } }],
     },
     sort: '-available,sortOrder,name',
-  })
+  });
 
   const testimonials = await payload.find({
     collection: 'testimonials',
@@ -70,11 +73,11 @@ export default async function HomePage() {
     where: {
       published: { equals: true },
     },
-  })
+  });
 
-  const heroBg = homepage?.heroBackgroundImage
-  const aboutImg1 = homepage?.aboutImage1
-  const aboutImg2 = homepage?.aboutImage2
+  const heroBg = homepage?.heroBackgroundImage;
+  const aboutImg1 = homepage?.aboutImage1;
+  const aboutImg2 = homepage?.aboutImage2;
 
   return (
     <div>
@@ -285,5 +288,5 @@ export default async function HomePage() {
         </section>
       </ScrollReveal>
     </div>
-  )
+  );
 }
