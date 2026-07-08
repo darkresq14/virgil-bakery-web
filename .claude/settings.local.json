@@ -43,10 +43,21 @@
       "Bash(echo \"exit:$?\")",
       "Bash(grep -o 'migrate:create\\\\|migrate:status\\\\|migrate:fresh\\\\|'\\\\''migrate'\\\\''\\\\|\"migrate\"\\\\|migrate:rollback' __TRACKED_VAR__/bin/index.js)",
       "Bash(gh auth *)",
-      "Bash(turso --version)"
+      "Bash(turso --version)",
+      "mcp__vercel__list_teams",
+      "mcp__vercel__list_projects",
+      "mcp__vercel__get_runtime_logs",
+      "mcp__vercel__list_deployments",
+      "mcp__vercel__get_runtime_errors",
+      "mcp__vercel__search_vercel_documentation",
+      "mcp__vercel__get_project",
+      "mcp__vercel__get_deployment_build_logs"
     ],
     "additionalDirectories": [
       "g:\\Code\\virgil-bakery-web\\src\\app\\(frontend)\\produse"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "vercel"
+  ]
 }
