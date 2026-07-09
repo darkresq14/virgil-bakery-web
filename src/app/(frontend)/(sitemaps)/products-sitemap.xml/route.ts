@@ -1,15 +1,13 @@
-import config from '@payload-config'
-import { unstable_cache } from 'next/cache'
-import { getServerSideSitemap } from 'next-sitemap'
-import { getPayload } from 'payload'
+import config from '@payload-config';
+import { unstable_cache } from 'next/cache';
+import { getServerSideSitemap } from 'next-sitemap';
+import { getPayload } from 'payload';
+import { getServerSideURL } from '@/utilities/getURL';
 
 const getProductsSitemap = unstable_cache(
   async () => {
-    const payload = await getPayload({ config })
-    const SITE_URL =
-      process.env.NEXT_PUBLIC_SERVER_URL ||
-      process.env.VERCEL_PROJECT_PRODUCTION_URL ||
-      'https://example.com'
+    const payload = await getPayload({ config });
+    const SITE_URL = getServerSideURL();
 
     const [products, dateFallback] = await Promise.all([
       payload.find({
@@ -30,14 +28,14 @@ const getProductsSitemap = unstable_cache(
         },
       }),
       new Date().toISOString(),
-    ])
+    ]);
 
     const defaultSitemap = [
       {
         loc: `${SITE_URL}/produse`,
         lastmod: dateFallback,
       },
-    ]
+    ];
 
     const sitemap = products.docs
       ? products.docs
@@ -46,18 +44,18 @@ const getProductsSitemap = unstable_cache(
             loc: `${SITE_URL}/produse/${product?.slug}`,
             lastmod: product.updatedAt || dateFallback,
           }))
-      : []
+      : [];
 
-    return [...defaultSitemap, ...sitemap]
+    return [...defaultSitemap, ...sitemap];
   },
   ['products-sitemap'],
   {
     tags: ['products-sitemap'],
   },
-)
+);
 
 export async function GET() {
-  const sitemap = await getProductsSitemap()
+  const sitemap = await getProductsSitemap();
 
-  return getServerSideSitemap(sitemap)
+  return getServerSideSitemap(sitemap);
 }

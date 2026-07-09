@@ -2,14 +2,12 @@ import config from '@payload-config';
 import { unstable_cache } from 'next/cache';
 import { getServerSideSitemap } from 'next-sitemap';
 import { getPayload } from 'payload';
+import { getServerSideURL } from '@/utilities/getURL';
 
 const getPagesSitemap = unstable_cache(
   async () => {
     const payload = await getPayload({ config });
-    const SITE_URL =
-      process.env.NEXT_PUBLIC_SERVER_URL ||
-      process.env.VERCEL_PROJECT_PRODUCTION_URL ||
-      'https://example.com';
+    const SITE_URL = getServerSideURL();
 
     const results = await payload.find({
       collection: 'pages',
@@ -33,10 +31,14 @@ const getPagesSitemap = unstable_cache(
 
     // `/produse` is emitted by products-sitemap.xml (the products listing), so we
     // don't duplicate it here. `/posts` has no index entry anywhere else, so it's
-    // declared here. lastmod is omitted for these listing routes — there's no
-    // honest modified-date for them, and stamping the build time would make them
-    // look perpetually fresh to crawlers.
+    // declared here. The homepage is served from the Homepage global (no
+    // collection doc), so it must be declared here too. lastmod is omitted for
+    // these entries — there's no honest modified-date for them, and stamping the
+    // build time would make them look perpetually fresh to crawlers. See ADR 0005.
     const defaultSitemap = [
+      {
+        loc: `${SITE_URL}/`,
+      },
       {
         loc: `${SITE_URL}/posts`,
       },

@@ -22,6 +22,12 @@ export const redirects: NextConfig['redirects'] = async () => {
     { source: '/blog/:slug*', destination: '/posts/:slug*', permanent: true },
     { source: '/blog-vechi', destination: '/posts', permanent: true },
 
+    // `/posts/page/1` is a duplicate of the `/posts` listing. The pagination
+    // route's generateStaticParams starts at page 2, so page 1 is never
+    // generated; this redirect collapses any inbound link or stale crawl to the
+    // canonical listing. See ADR 0005.
+    { source: '/posts/page/1', destination: '/posts', permanent: true },
+
     // Old WordPress page redirects
     { source: '/home', destination: '/', permanent: true },
     { source: '/acasa', destination: '/', permanent: true },
@@ -119,8 +125,7 @@ export const redirects: NextConfig['redirects'] = async () => {
       permanent: true,
     },
     {
-      source:
-        '/despre-painea-cu-maia-repetitie-si-lucruri-care-nu-se-invata-din-retete',
+      source: '/despre-painea-cu-maia-repetitie-si-lucruri-care-nu-se-invata-din-retete',
       destination: '/posts/17-ani-de-maia',
       permanent: true,
     },

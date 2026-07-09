@@ -23,6 +23,11 @@ export default async function Page({ params: paramsPromise }: Args) {
 
   if (!Number.isInteger(sanitizedPageNumber)) notFound();
 
+  // Page 1 is the `/posts` listing. Belt-and-suspenders for the redirect in
+  // redirects.ts: even if that redirect is ever removed, this route must never
+  // serve a page-1 duplicate. See ADR 0005.
+  if (sanitizedPageNumber === 1) notFound();
+
   const posts = await payload.find({
     collection: 'posts',
     depth: 1,
@@ -66,6 +71,9 @@ export async function generateMetadata({ params: paramsPromise }: Args): Promise
     title: `Blog — Pagina ${pageNumber} | Pâine cu Maia by Virgil`,
     description:
       'Articole despre pâinea cu maia, fermentația lentă și secretele brutăriei artizanale.',
+    alternates: {
+      canonical: `/posts/page/${pageNumber}`,
+    },
   };
 }
 
@@ -78,9 +86,12 @@ export async function generateStaticParams() {
 
   const totalPages = Math.ceil(totalDocs / 12);
 
+  // Page 1 is the `/posts` listing itself — generating it here would produce a
+  // duplicate URL (see ADR 0005). Start at page 2; `/posts/page/1` is
+  // permanently redirected to `/posts` in the redirects config.
   const pages: { pageNumber: string }[] = [];
 
-  for (let i = 1; i <= totalPages; i++) {
+  for (let i = 2; i <= totalPages; i++) {
     pages.push({ pageNumber: String(i) });
   }
 

@@ -59,5 +59,8 @@ export function generateMetadata(): Metadata {
     title: 'Blog | Pâine cu Maia by Virgil',
     description:
       'Articole despre pâinea cu maia, fermentația lentă și secretele brutăriei artizanale.',
+    alternates: {
+      canonical: '/posts',
+    },
   };
 }

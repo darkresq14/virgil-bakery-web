@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   title: 'Produse | Pâine cu Maia by Virgil',
   description:
     'Descoperă gama noastră de pâine artizanală cu maia: pâine curentă, dulci și produse ocazionale.',
+  alternates: {
+    canonical: '/produse',
+  },
 };
 
 export const revalidate = 86400;
