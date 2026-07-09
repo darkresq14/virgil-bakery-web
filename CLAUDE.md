@@ -17,6 +17,10 @@ Using default label vocabulary (needs-triage, needs-info, ready-for-agent, ready
 
 Single-context layout — one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
+## Commit messages
+
+Use the caveman-commit skill at `.agents/skills/caveman-commit/SKILL.md` for every commit message — Conventional Commits format, subject ≤50 chars (hard cap 72), imperative mood, body only when the *why* is non-obvious. No AI attribution. Best-effort: read the skill before writing a commit message.
+
 ## Schema change workflow
 
 Production evolves through versioned Payload migrations (see [ADR 0004](docs/adr/0004-database-topology-and-migrations.md)). Dev uses push mode against a local SQLite file; prod runs migrations at build time via `scripts/migrate-guard.ts` (only when `VERCEL_ENV=production`).
