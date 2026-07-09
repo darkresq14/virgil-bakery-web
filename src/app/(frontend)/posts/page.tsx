@@ -4,6 +4,7 @@ import { getPayload } from 'payload';
 import { CollectionArchive } from '@/components/CollectionArchive';
 import { PageRange } from '@/components/PageRange';
 import { Pagination } from '@/components/Pagination';
+import { POSTS_PER_PAGE } from '@/utilities/pagination';
 import PageClient from './page.client';
 
 export const dynamic = 'force-static';
@@ -15,7 +16,7 @@ export default async function Page() {
   const posts = await payload.find({
     collection: 'posts',
     depth: 1,
-    limit: 12,
+    limit: POSTS_PER_PAGE,
     overrideAccess: false,
     select: {
       title: true,
@@ -38,7 +39,7 @@ export default async function Page() {
         <PageRange
           collection="posts"
           currentPage={posts.page}
-          limit={12}
+          limit={POSTS_PER_PAGE}
           totalDocs={posts.totalDocs}
         />
       </div>

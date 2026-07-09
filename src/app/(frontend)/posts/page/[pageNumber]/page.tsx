@@ -5,6 +5,7 @@ import { getPayload } from 'payload';
 import { CollectionArchive } from '@/components/CollectionArchive';
 import { PageRange } from '@/components/PageRange';
 import { Pagination } from '@/components/Pagination';
+import { POSTS_PER_PAGE } from '@/utilities/pagination';
 import PageClient from './page.client';
 
 export const revalidate = 86400;
@@ -31,7 +32,7 @@ export default async function Page({ params: paramsPromise }: Args) {
   const posts = await payload.find({
     collection: 'posts',
     depth: 1,
-    limit: 12,
+    limit: POSTS_PER_PAGE,
     page: sanitizedPageNumber,
     overrideAccess: false,
   });
@@ -49,7 +50,7 @@ export default async function Page({ params: paramsPromise }: Args) {
         <PageRange
           collection="posts"
           currentPage={posts.page}
-          limit={12}
+          limit={POSTS_PER_PAGE}
           totalDocs={posts.totalDocs}
         />
       </div>
@@ -84,7 +85,7 @@ export async function generateStaticParams() {
     overrideAccess: false,
   });
 
-  const totalPages = Math.ceil(totalDocs / 12);
+  const totalPages = Math.ceil(totalDocs / POSTS_PER_PAGE);
 
   // Page 1 is the `/posts` listing itself — generating it here would produce a
   // duplicate URL (see ADR 0005). Start at page 2; `/posts/page/1` is
