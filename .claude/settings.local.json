@@ -51,7 +51,9 @@
       "mcp__vercel__get_runtime_errors",
       "mcp__vercel__search_vercel_documentation",
       "mcp__vercel__get_project",
-      "mcp__vercel__get_deployment_build_logs"
+      "mcp__vercel__get_deployment_build_logs",
+      "mcp__vercel__get_deployment",
+      "Bash(curl -s \"https://painecumaiabyvirgil.ro/\")"
     ],
     "additionalDirectories": [
       "g:\\Code\\virgil-bakery-web\\src\\app\\(frontend)\\produse"
