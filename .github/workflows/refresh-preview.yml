@@ -12,10 +12,12 @@ name: Refresh preview database
 # Safety is structural, not test-based (the mock-execa integration-test seam
 # from #29's original AC is dropped along with the script — ADR 0005 / spec
 # #25 explicitly waive a YAML test seam):
-#   - Every READ targets production with a --read-only per-DB token.
-#   - Every WRITE targets PREVIEW_DSN only; the production URL/token never
-#     appears in a write step.
-#   - `turso db shell .dump` is a GET; it cannot mutate production.
+#   - The prod token (TURSO_PROD_READ_TOKEN, --read-only) is injected ONLY
+#     into the export step. Every write step sees the preview token only.
+#   - `turso db shell .dump` is a GET, so production cannot be mutated even
+#     if a later step were miswired.
+#   - Every write targets PREVIEW_URL only; the production URL/token never
+#     appears in a write step's env.
 
 on:
   pull_request:
@@ -37,13 +39,11 @@ jobs:
     # same-repo branches; contributors are out of scope (ADR 0004/0005).
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     env:
-      # DB hosts are not secret (token-gated); only the tokens are. Converted
-      # libsql:// -> https:// because `turso db shell .dump` issues an HTTP GET
-      # and libsql:// is not a valid scheme for the dump request. The token is
-      # passed via the ?auth_token= query param, which turso's shell parses
-      # out of a URL-form argument (no platform API token / login needed).
-      PROD_DSN: https://virgil-bakery-web-prod-darkresq14.aws-eu-west-1.turso.io?auth_token=${{ secrets.TURSO_PROD_READ_TOKEN }}
-      PREVIEW_DSN: https://virgil-bakery-web-preview-darkresq14.aws-eu-west-1.turso.io?auth_token=${{ secrets.TURSO_PREVIEW_WRITE_TOKEN }}
+      # DB hosts are not secret (token-gated). https:// because `turso db shell
+      # .dump` issues an HTTP GET and the wipe queries the HTTP API; libsql://
+      # is not a valid HTTP scheme for either path.
+      PROD_URL: https://virgil-bakery-web-prod-darkresq14.aws-eu-west-1.turso.io
+      PREVIEW_URL: https://virgil-bakery-web-preview-darkresq14.aws-eu-west-1.turso.io
     steps:
       - name: Install Turso CLI
         run: |
@@ -58,38 +58,75 @@ jobs:
           echo "$HOME/.turso" >> "$GITHUB_PATH"
 
       - name: Export production database (read-only)
+        env:
+          PROD_TOKEN: ${{ secrets.TURSO_PROD_READ_TOKEN }}
         run: |
           set -euo pipefail
           # .dump hits libSQL's GET /dump endpoint — read-only by construction,
           # and the prod token is --read-only, so production cannot be mutated
           # here even if a later step were miswired.
+          PROD_DSN="${PROD_URL}?auth_token=${PROD_TOKEN}"
           turso db shell "$PROD_DSN" ".dump" > /tmp/prod.sql
           echo "Exported $(wc -l < /tmp/prod.sql) lines from production."
 
       - name: Wipe preview database
+        env:
+          PREVIEW_TOKEN: ${{ secrets.TURSO_PREVIEW_WRITE_TOKEN }}
         run: |
           set -euo pipefail
-          # The libSQL dump has no DROP TABLE statements, so replaying into a
-          # non-empty preview fails on `CREATE TABLE` (already exists). We must
-          # wipe first. To make the workflow_dispatch recovery path (ADR 0005)
-          # actually reset to the prod baseline, the wipe drops EVERY table
-          # currently in preview — including drift / half-applied-migration
-          # tables that production doesn't have — which means enumerating
-          # preview's own tables, not prod's. We synthesize the DROPs from
-          # preview's own CREATE TABLE statements.
-          turso db shell "$PREVIEW_DSN" ".dump" > /tmp/preview.sql
+          # The libSQL dump has no DROP TABLE, so replaying into a non-empty
+          # preview fails on `CREATE TABLE`/`CREATE INDEX` (already exists).
+          # We must wipe first. To make the workflow_dispatch recovery path
+          # (ADR 0005) actually reset to the prod baseline, the wipe drops
+          # EVERY table currently in preview — including drift / half-applied
+          # migration tables that production doesn't have.
+          #
+          # Table list comes from the libSQL HTTP API (POST /v2/pipeline) as
+          # clean JSON, not by parsing the dump text — the earlier dump-grep
+          # approach silently missed tables and the replay then failed on
+          # existing indexes.
+          LIST_SQL="SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_litestream_%' AND name != 'libsql_wasm_func_table'"
+          list_tables() {
+            curl -sSf -X POST "$PREVIEW_URL/v2/pipeline" \
+              -H "Authorization: Bearer $PREVIEW_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "$(jq -n --arg sql "$LIST_SQL" '{requests:[{type:"execute",stmt:{sql:$sql}},{type:"close"}]}')" \
+            | jq -r '
+                if (.results[0].type // "ok") == "error"
+                then error("list tables: " + (.results[0].error.message // "unknown"))
+                else
+                  (.results[0].response.result.rows // .results[0].rows // [])[]
+                  | (.[0] | if type == "object" then (.value // empty) else . end)
+                end'
+          }
+
+          TABLES=$(list_tables)
+
           {
             printf 'PRAGMA foreign_keys=OFF;\nBEGIN TRANSACTION;\n'
-            { grep -oiE '^CREATE TABLE (IF NOT EXISTS )?"?[^ ;(]+' /tmp/preview.sql \
-                | sed -E 's/^CREATE TABLE (IF NOT EXISTS )?//I; s/^"//; s/"$//' \
-                | grep -vE '^(sqlite_|_litestream_|libsql_wasm_func_table)' \
-                | while IFS= read -r t; do [ -n "$t" ] && printf 'DROP TABLE IF EXISTS "%s";\n' "$t"; done; } || true
+            if [ -n "$TABLES" ]; then
+              printf '%s\n' "$TABLES" | while IFS= read -r t; do [ -n "$t" ] && printf 'DROP TABLE IF EXISTS "%s";\n' "$t"; done
+            fi
             printf 'COMMIT;\n'
           } > /tmp/wipe.sql
+
+          PREVIEW_DSN="${PREVIEW_URL}?auth_token=${PREVIEW_TOKEN}"
           turso db shell "$PREVIEW_DSN" ".read /tmp/wipe.sql"
+
+          # Verify the wipe actually dropped everything — catches a silent
+          # .read no-op (the failure mode that broke the first run) before the
+          # replay turns it into a confusing "already exists" error.
+          REMAINING=$(list_tables)
+          if [ -n "$REMAINING" ]; then
+            echo "Wipe failed — tables remain:" >&2
+            printf '%s\n' "$REMAINING" >&2
+            exit 1
+          fi
           echo "Preview wiped."
 
       - name: Replay production into preview (verbatim)
+        env:
+          PREVIEW_TOKEN: ${{ secrets.TURSO_PREVIEW_WRITE_TOKEN }}
         run: |
           set -euo pipefail
           # .read executes the dump file's statements (CREATE TABLE + INSERT,
@@ -97,6 +134,7 @@ jobs:
           # Verbatim: Media rows carry prod blob URLs, Orders carry customer
           # PII, and payload_migrations is reset to prod's state so the next
           # build's `payload migrate` re-applies pending migrations cleanly.
+          PREVIEW_DSN="${PREVIEW_URL}?auth_token=${PREVIEW_TOKEN}"
           turso db shell "$PREVIEW_DSN" ".read /tmp/prod.sql"
           echo "Replay complete."
 
@@ -137,4 +175,4 @@ jobs:
 
       - name: Shred dump artifacts
         if: always()
-        run: rm -f /tmp/prod.sql /tmp/preview.sql /tmp/wipe.sql
+        run: rm -f /tmp/prod.sql /tmp/wipe.sql
