@@ -1,0 +1,140 @@
+name: Refresh preview database
+
+# Replays a verbatim copy of the production Turso database into the shared
+# preview Turso database, then triggers a Vercel redeploy so the build's
+# migrate step runs against the freshly-restored data.
+#
+# Merges #29 (refresh) + #30 (triggers + redeploy) into one workflow: turso
+# has no Windows binary, so the db:pull-style tsx script + WSL wrapper was
+# dropped in favour of running the refresh natively on a Linux CI runner.
+# See ADR 0005 (docs/adr/0005-preview-deployments-shared-turso-db.md).
+#
+# Safety is structural, not test-based (the mock-execa integration-test seam
+# from #29's original AC is dropped along with the script — ADR 0005 / spec
+# #25 explicitly waive a YAML test seam):
+#   - Every READ targets production with a --read-only per-DB token.
+#   - Every WRITE targets PREVIEW_DSN only; the production URL/token never
+#     appears in a write step.
+#   - `turso db shell .dump` is a GET; it cannot mutate production.
+
+on:
+  pull_request:
+    types: [opened, reopened]
+  workflow_dispatch:
+
+# One shared preview DB serves all PRs (ADR 0005). Serialize refreshes so a
+# wipe/replay never interleaves with another; never cancel a mid-replay run
+# (a half-wiped DB would break that PR's preview until the next refresh).
+concurrency:
+  group: refresh-preview
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    # Skip fork PRs: secrets are unavailable for fork-triggered pull_request
+    # runs, so the refresh could never authenticate. Solo-maintainer flow uses
+    # same-repo branches; contributors are out of scope (ADR 0004/0005).
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    env:
+      # DB hosts are not secret (token-gated); only the tokens are. Converted
+      # libsql:// -> https:// because `turso db shell .dump` issues an HTTP GET
+      # and libsql:// is not a valid scheme for the dump request. The token is
+      # passed via the ?auth_token= query param, which turso's shell parses
+      # out of a URL-form argument (no platform API token / login needed).
+      PROD_DSN: https://virgil-bakery-web-prod-darkresq14.aws-eu-west-1.turso.io?auth_token=${{ secrets.TURSO_PROD_READ_TOKEN }}
+      PREVIEW_DSN: https://virgil-bakery-web-preview-darkresq14.aws-eu-west-1.turso.io?auth_token=${{ secrets.TURSO_PREVIEW_WRITE_TOKEN }}
+    steps:
+      - name: Install Turso CLI
+        run: |
+          set -euo pipefail
+          # CLI binary only — we talk to remote Turso DBs via URL+token, so the
+          # local sqld server the full installer pulls down is dead weight.
+          # ubuntu-latest is x86_64 Linux; asset name matches turso's install
+          # script. Installs to $HOME/.turso/turso (same path get.turso uses).
+          curl -sSfL https://github.com/tursodatabase/homebrew-tap/releases/latest/download/homebrew-tap_Linux_x86_64.tar.gz -o /tmp/turso.tar.gz
+          mkdir -p "$HOME/.turso"
+          tar -C "$HOME/.turso" -xzf /tmp/turso.tar.gz turso
+          echo "$HOME/.turso" >> "$GITHUB_PATH"
+
+      - name: Export production database (read-only)
+        run: |
+          set -euo pipefail
+          # .dump hits libSQL's GET /dump endpoint — read-only by construction,
+          # and the prod token is --read-only, so production cannot be mutated
+          # here even if a later step were miswired.
+          turso db shell "$PROD_DSN" ".dump" > /tmp/prod.sql
+          echo "Exported $(wc -l < /tmp/prod.sql) lines from production."
+
+      - name: Wipe preview database
+        run: |
+          set -euo pipefail
+          # The libSQL dump has no DROP TABLE statements, so replaying into a
+          # non-empty preview fails on `CREATE TABLE` (already exists). We must
+          # wipe first. To make the workflow_dispatch recovery path (ADR 0005)
+          # actually reset to the prod baseline, the wipe drops EVERY table
+          # currently in preview — including drift / half-applied-migration
+          # tables that production doesn't have — which means enumerating
+          # preview's own tables, not prod's. We synthesize the DROPs from
+          # preview's own CREATE TABLE statements.
+          turso db shell "$PREVIEW_DSN" ".dump" > /tmp/preview.sql
+          {
+            printf 'PRAGMA foreign_keys=OFF;\nBEGIN TRANSACTION;\n'
+            { grep -oiE '^CREATE TABLE (IF NOT EXISTS )?"?[^ ;(]+' /tmp/preview.sql \
+                | sed -E 's/^CREATE TABLE (IF NOT EXISTS )?//I; s/^"//; s/"$//' \
+                | grep -vE '^(sqlite_|_litestream_|libsql_wasm_func_table)' \
+                | while IFS= read -r t; do [ -n "$t" ] && printf 'DROP TABLE IF EXISTS "%s";\n' "$t"; done; } || true
+            printf 'COMMIT;\n'
+          } > /tmp/wipe.sql
+          turso db shell "$PREVIEW_DSN" ".read /tmp/wipe.sql"
+          echo "Preview wiped."
+
+      - name: Replay production into preview (verbatim)
+        run: |
+          set -euo pipefail
+          # .read executes the dump file's statements (CREATE TABLE + INSERT,
+          # wrapped in the dump's own BEGIN/COMMIT with foreign_keys=OFF).
+          # Verbatim: Media rows carry prod blob URLs, Orders carry customer
+          # PII, and payload_migrations is reset to prod's state so the next
+          # build's `payload migrate` re-applies pending migrations cleanly.
+          turso db shell "$PREVIEW_DSN" ".read /tmp/prod.sql"
+          echo "Replay complete."
+
+      - name: Trigger Vercel redeploy
+        if: github.event_name == 'pull_request'
+        env:
+          # Pass untrusted PR values through env vars, never inline via ${{ }}
+          # in the script body — a malicious branch name could otherwise inject
+          # shell. jq --arg then treats them as literal strings.
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          PR_REF: ${{ github.event.pull_request.head.ref }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO_ID: ${{ github.event.repository.id }}
+        run: |
+          set -euo pipefail
+          # Vercel's auto-build on PR open races the refresh (it fires before
+          # the DB is ready). After the replay completes, trigger a fresh
+          # preview deployment of the PR's HEAD so `pnpm ci` re-runs
+          # `payload migrate` against the restored database. The raced build is
+          # accepted as waste and superseded by this one.
+          #
+          # create-deployment uses `name` (project slug), not the id, so
+          # resolve the slug from VERCEL_PROJECT_ID first (the endpoint accepts
+          # id or slug).
+          slug=$(curl -sSf -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID" | jq -r '.name')
+          curl -sSf -X POST "https://api.vercel.com/v13/deployments" \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg name "$slug" \
+              --arg repoId "$REPO_ID" \
+              --arg ref "$PR_REF" \
+              --arg sha "$PR_SHA" \
+              '{name:$name, target:"preview", gitSource:{type:"github", repoId:$repoId, ref:$ref, sha:$sha}}')"
+          echo "Redeploy triggered for $PR_REF @ $PR_SHA."
+
+      - name: Shred dump artifacts
+        if: always()
+        run: rm -f /tmp/prod.sql /tmp/preview.sql /tmp/wipe.sql
