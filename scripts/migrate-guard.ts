@@ -1,7 +1,7 @@
 import { execaCommand } from 'execa';
 
 export function shouldRunMigrate(): boolean {
-  return process.env.VERCEL_ENV === 'production';
+  return process.env.VERCEL_ENV === 'production' || process.env.VERCEL_ENV === 'preview';
 }
 
 export async function runMigrateGuard(): Promise<void> {

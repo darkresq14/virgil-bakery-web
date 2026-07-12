@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
 import { execaCommand } from 'execa';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const execaCommandMock = vi.mocked(execaCommand);
 
@@ -25,8 +25,28 @@ describe('migrate-guard', () => {
     });
   });
 
-  it('does nothing when VERCEL_ENV is not production', async () => {
+  it('runs payload migrate when VERCEL_ENV=preview', async () => {
     process.env.VERCEL_ENV = 'preview';
+
+    const { runMigrateGuard } = await import('../../scripts/migrate-guard');
+    await runMigrateGuard();
+
+    expect(execaCommandMock).toHaveBeenCalledWith('pnpm payload migrate', {
+      stdio: 'inherit',
+    });
+  });
+
+  it('skips migrate when VERCEL_ENV=development', async () => {
+    process.env.VERCEL_ENV = 'development';
+
+    const { runMigrateGuard } = await import('../../scripts/migrate-guard');
+    await runMigrateGuard();
+
+    expect(execaCommandMock).not.toHaveBeenCalled();
+  });
+
+  it('skips migrate when VERCEL_ENV is unset', async () => {
+    delete process.env.VERCEL_ENV;
 
     const { runMigrateGuard } = await import('../../scripts/migrate-guard');
     await runMigrateGuard();
@@ -47,7 +67,7 @@ describe('migrate-guard', () => {
     consoleLogSpy.mockRestore();
   });
 
-  it('outputs dry-run message for non-production with DRY_RUN=1', async () => {
+  it('outputs dry-run message for preview with DRY_RUN=1 without invoking migrate', async () => {
     process.env.VERCEL_ENV = 'preview';
     process.env.DRY_RUN = '1';
     const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -56,7 +76,22 @@ describe('migrate-guard', () => {
     await runMigrateGuard();
 
     expect(execaCommandMock).not.toHaveBeenCalled();
-    expect(consoleLogSpy).toHaveBeenCalledWith('[DRY RUN] Skipping migrate (non-production environment)');
+    expect(consoleLogSpy).toHaveBeenCalledWith('[DRY RUN] Would run: pnpm payload migrate');
+    consoleLogSpy.mockRestore();
+  });
+
+  it('outputs dry-run message for non-production with DRY_RUN=1', async () => {
+    process.env.VERCEL_ENV = 'development';
+    process.env.DRY_RUN = '1';
+    const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const { runMigrateGuard } = await import('../../scripts/migrate-guard');
+    await runMigrateGuard();
+
+    expect(execaCommandMock).not.toHaveBeenCalled();
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      '[DRY RUN] Skipping migrate (non-production environment)',
+    );
     consoleLogSpy.mockRestore();
   });
 });
