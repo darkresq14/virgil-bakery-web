@@ -17,5 +17,5 @@
  * presence is intentionally NOT part of it.
  */
 export function isBlobStorageEnabled(env: { VERCEL_ENV?: string } = process.env): boolean {
-  return env.VERCEL_ENV === 'production';
+  return env.VERCEL_ENV === 'production' || env.VERCEL_ENV === 'preview';
 }
