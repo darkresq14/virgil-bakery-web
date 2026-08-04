@@ -7,10 +7,10 @@ name: Refresh preview database
 # Merges #29 (refresh) + #30 (triggers + redeploy) into one workflow: turso
 # has no Windows binary, so the db:pull-style tsx script + WSL wrapper was
 # dropped in favour of running the refresh natively on a Linux CI runner.
-# See ADR 0005 (docs/adr/0005-preview-deployments-shared-turso-db.md).
+# See ADR 0006 (docs/adr/0006-preview-deployments-shared-turso-db.md).
 #
 # Safety is structural, not test-based (the mock-execa integration-test seam
-# from #29's original AC is dropped along with the script — ADR 0005 / spec
+# from #29's original AC is dropped along with the script — ADR 0006 / spec
 # #25 explicitly waive a YAML test seam):
 #   - The prod token (TURSO_PROD_READ_TOKEN, --read-only) is injected ONLY
 #     into the export step. Every write step sees the preview token only.
@@ -24,7 +24,7 @@ on:
     types: [opened, reopened]
   workflow_dispatch:
 
-# One shared preview DB serves all PRs (ADR 0005). Serialize refreshes so a
+# One shared preview DB serves all PRs (ADR 0006). Serialize refreshes so a
 # wipe/replay never interleaves with another; never cancel a mid-replay run
 # (a half-wiped DB would break that PR's preview until the next refresh).
 concurrency:
@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     # Skip fork PRs: secrets are unavailable for fork-triggered pull_request
     # runs, so the refresh could never authenticate. Solo-maintainer flow uses
-    # same-repo branches; contributors are out of scope (ADR 0004/0005).
+    # same-repo branches; contributors are out of scope (ADR 0004/0006).
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     env:
       # DB hosts are not secret (token-gated). https:// because `turso db shell
@@ -77,7 +77,7 @@ jobs:
           # The libSQL dump has no DROP TABLE, so replaying into a non-empty
           # preview fails on `CREATE TABLE`/`CREATE INDEX` (already exists).
           # We must wipe first. To make the workflow_dispatch recovery path
-          # (ADR 0005) actually reset to the prod baseline, the wipe drops
+          # (ADR 0006) actually reset to the prod baseline, the wipe drops
           # EVERY table currently in preview — including drift / half-applied
           # migration tables that production doesn't have.
           #

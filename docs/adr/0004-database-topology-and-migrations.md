@@ -32,7 +32,7 @@ Split the environments and put production on migrations.
 
 ## Considered alternatives
 
-- **Second Turso DB for dev (instead of a local file).** Rejected — only worth it if Vercel Preview Deployments need a live backend, which this project does not use. A local file is free, instant, offline, and fully isolated. *(The preview-backend question is revisited in ADR 0005, which adopts a shared preview Turso DB; the dev-file decision here stands.)*
+- **Second Turso DB for dev (instead of a local file).** Rejected — only worth it if Vercel Preview Deployments need a live backend, which this project does not use. A local file is free, instant, offline, and fully isolated. *(The preview-backend question is revisited in ADR 0006, which adopts a shared preview Turso DB; the dev-file decision here stands.)*
 - **Shared prod blob store in dev.** Rejected — once `db:pull` restores prod media rows (which point at prod blob URLs), deleting or replacing a media item in dev would issue a real `DELETE` against prod blobs, destroying live imagery. Local dev storage removes that hazard.
 - **Runtime migrations (`prodMigrations`).** Rejected — slows every serverless cold start; the Payload docs warn against it on Vercel.
 - **Schema-diff verification of the baseline** (apply the initial migration to a throwaway DB and diff `.schema` against prod). Rejected in favour of a final push, because the schema tree was clean and prod had been push-synced recently; lower rigor accepted given the stable schema.

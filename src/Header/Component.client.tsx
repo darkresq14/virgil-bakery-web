@@ -1,20 +1,21 @@
-'use client'
+'use client';
 
-import { Menu, MessageCircle, ShoppingBag, X } from 'lucide-react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import type React from 'react'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { AdminBar } from '@/components/AdminBar'
+import { Menu, MessageCircle, ShoppingBag, X } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import type React from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AdminBar } from '@/components/AdminBar';
 
-import { Logo } from '@/components/Logo/Logo'
-import { Media } from '@/components/Media'
-import type { Header as HeaderType } from '@/payload-types'
-import { useCart } from '@/providers/Cart'
+import { Logo } from '@/components/Logo/Logo';
+import { Media } from '@/components/Media';
+import type { Header as HeaderType } from '@/payload-types';
+import { useCart } from '@/providers/Cart';
 
 interface HeaderClientProps {
-  data: HeaderType
-  adminBarProps?: { preview: boolean }
+  data: HeaderType;
+  adminBarProps?: { preview: boolean };
+  holidayBanner?: React.ReactNode;
 }
 
 const navLinks = [
@@ -24,71 +25,79 @@ const navLinks = [
   { href: '/maiaua-mea', label: 'Despre' },
   { href: '/posts', label: 'Blog' },
   { href: '/#contact', label: 'Contact' },
-]
+];
 
-export const HeaderClient: React.FC<HeaderClientProps> = ({ data, adminBarProps }) => {
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const { itemCount } = useCart()
-  const pathname = usePathname()
-  const overlayRef = useRef<HTMLDivElement>(null)
-  const closeRef = useRef<HTMLButtonElement>(null)
+export const HeaderClient: React.FC<HeaderClientProps> = ({
+  data,
+  adminBarProps,
+  holidayBanner,
+}) => {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const { itemCount } = useCart();
+  const pathname = usePathname();
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    const header = document.querySelector('header')
-    if (!header) return
+    const header = document.querySelector('header');
+    if (!header) return;
     const observer = new ResizeObserver(([entry]) => {
-      document.documentElement.style.setProperty('--header-height', `${entry.contentRect.height}px`)
-    })
-    observer.observe(header)
-    return () => observer.disconnect()
-  }, [])
+      document.documentElement.style.setProperty(
+        '--header-height',
+        `${entry.contentRect.height}px`,
+      );
+    });
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
 
   // Lock body scroll & handle focus trapping when mobile menu is open
   useEffect(() => {
     if (mobileOpen) {
-      document.body.style.overflow = 'hidden'
+      document.body.style.overflow = 'hidden';
 
       // Focus the close button after opening
-      requestAnimationFrame(() => closeRef.current?.focus())
+      requestAnimationFrame(() => closeRef.current?.focus());
 
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
-          setMobileOpen(false)
-          return
+          setMobileOpen(false);
+          return;
         }
 
         if (e.key === 'Tab' && overlayRef.current) {
           const focusable = overlayRef.current.querySelectorAll<HTMLElement>(
             'a[href], button, [tabindex]:not([tabindex="-1"])',
-          )
-          const first = focusable[0]
-          const last = focusable[focusable.length - 1]
+          );
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
 
           if (e.shiftKey && document.activeElement === first) {
-            e.preventDefault()
-            last.focus()
+            e.preventDefault();
+            last.focus();
           } else if (!e.shiftKey && document.activeElement === last) {
-            e.preventDefault()
-            first.focus()
+            e.preventDefault();
+            first.focus();
           }
         }
-      }
+      };
 
-      document.addEventListener('keydown', handleKeyDown)
+      document.addEventListener('keydown', handleKeyDown);
       return () => {
-        document.removeEventListener('keydown', handleKeyDown)
-        document.body.style.overflow = ''
-      }
+        document.removeEventListener('keydown', handleKeyDown);
+        document.body.style.overflow = '';
+      };
     } else {
-      document.body.style.overflow = ''
+      document.body.style.overflow = '';
     }
-  }, [mobileOpen])
+  }, [mobileOpen]);
 
-  const closeMobile = useCallback(() => setMobileOpen(false), [])
+  const closeMobile = useCallback(() => setMobileOpen(false), []);
 
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-border">
+        {holidayBanner}
         <AdminBar adminBarProps={adminBarProps} />
         <div className="container flex items-center justify-between h-16">
           {/* Logo */}
@@ -233,5 +242,5 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ data, adminBarProps 
         </div>
       )}
     </>
-  )
-}
+  );
+};

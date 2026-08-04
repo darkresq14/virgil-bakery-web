@@ -6,7 +6,7 @@
  * Used to make Media write operations read-only on preview so test uploads
  * cannot pollute the preview database — the blob plugin is production-gated
  * and Media's local upload directory only exists in dev, so uploads would have
- * nowhere to land. Per ADR 0005, `read` stays public so the frontend renders
+ * nowhere to land. Per ADR 0006, `read` stays public so the frontend renders
  * the restored production blob URLs.
  */
 export function isPreviewDeployment(env: { VERCEL_ENV?: string } = process.env): boolean {

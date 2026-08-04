@@ -13,7 +13,7 @@ type isAuthenticated = (args: AccessArgs<User>) => boolean;
  * Media write operations (create / update / delete) are denied on preview
  * regardless of authentication, so test uploads cannot pollute the preview
  * database — the blob plugin is production-gated and Media's local upload
- * directory only exists in dev, so uploads would have nowhere to land (ADR 0005).
+ * directory only exists in dev, so uploads would have nowhere to land (ADR 0006).
  * On production and dev (`VERCEL_ENV` unset or `'production'`) access is
  * unchanged, deferring to `authenticated`.
  */
