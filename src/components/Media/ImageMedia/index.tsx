@@ -86,19 +86,7 @@ export const ImageMedia: React.FC<MediaProps> = (props) => {
 
   return (
     <picture className={cn(fill && 'absolute inset-0', pictureClassName)}>
-      {/*
-        TEMPORARY — see #23. The Vercel Image Optimizer is erroring in
-        production: `/_next/image` returns 402 (transform cap exhausted) and
-        falls through to a serverless handler missing
-        `./.next/server/pages/_next/image.js` (a Next 16 + Turbopack build
-        issue). Serving straight from the edge-cached `/api/media/file` route
-        restores images without consuming the optimizer quota. Blob-safe: that
-        route returns max-age=31536000 and serves repeats from the edge, so Blob
-        is read once per image to warm, not per pageview. Revert and restore
-        native optimization per #23.
-      */}
       <NextImage
-        unoptimized
         alt={alt || ''}
         className={cn(imgClassName)}
         fill={fill}

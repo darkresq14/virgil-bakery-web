@@ -2,19 +2,31 @@
 
 ## Status
 
-Proposed
+Proposed — pending verification of Image Optimization Cache Reads > 0 on
+Vercel post-revert, per #23 step 4. Flips to `Accepted` once the 48h /
+100-distinct-request tripwire passes.
 
 ## Context
 
 The site renders all imagery through Next.js `<Image>` (`/_next/image`), optimized at runtime by Vercel. The free tier hit its 5,000/month Image Optimization Transformations cap mid-period, after which additional transforms error — breaking images. Root cause, read from the usage dashboard:
 
-- **`minimumCacheTTL` was at its 60s default.** The optimizer's output cache expired before reuse — *Image Optimization Cache Reads = 0* against 5K transforms and 76K cache writes. Every pageview re-transformed instead of serving from cache, so transforms scaled with traffic rather than catalog size.
+- **`minimumCacheTTL` was at its 60s default** (necessary, not sufficient). The optimizer's output cache expired before reuse — *Image Optimization Cache Reads = 0* against 5K transforms and 76K cache writes — so every pageview re-transformed. Raising the TTL to 31d was required, but **did not alone restore cache reads** (see Post-implementation findings).
 - **`qualities: [100]` + `quality={100}`** made every transform maximum-size — no compression benefit, maximal bytes, maximal cache writes.
 - **Latent bug:** the `qualities: [100]` allowlist permitted only q=100, but 4 of 5 image call sites rendered `<Image>` with no `quality` prop (default 75) — those requests were being rejected or clamped by the optimizer.
 
 Image rendering was also fragmented across 5 separate `<Image>` call sites (Hero, About, ProductCard, ProductDetail, and the central `ImageMedia`), each with its own quality, `sizes`, and source-selection logic — so there was no single place to enforce a fix or prevent future drift.
 
 Key reframe: **once caching works, transformations scale with catalog size, not traffic.** Fixing the TTL bounds the transform count to (distinct images × requested widths × formats) to warm the cache, then ~0 — a few hundred for ~50 products, regardless of visit volume.
+
+### Post-implementation findings (revised root cause — #23)
+
+The original root-cause attribution above (`minimumCacheTTL: 60s`) was **necessary but not the prime cause.** After raising the TTL and shipping the centralized component, images were still broken in production. Investigation revised the picture:
+
+1. **Transform cap exhausted → 402.** A well-formed `/_next/image?url=...&w=&q=` returned `402 Payment Required` from `Server: Vercel` — the Image Optimization monthly budget was spent. Errored attempts still count toward the cap and never populate the cache.
+2. **`?<updatedAt>` cache-buster corrupted the optimizer request (prime suspect for 0 cache reads).** `getMediaUrl` appended `?<updatedAt>` to every media URL; on Vercel this produced `/_next/image?<updatedAt>&nxtPslug=...` instead of `?url=&w=&q=`, shunting requests to a serverless fallback that errored. **Dropped** in `527eb35`; no replacement invalidation yet (edits stay stale up to 31d — tracked in #31).
+3. **Bundler is NOT a factor.** A local `next build --webpack` produced byte-identical image-optimization config (`unoptimized:false`, `minimumCacheTTL:2678400`, correct patterns) to Turbopack — that config is derived from `next.config.ts` and is bundler-independent. `pages/_next/image.js` is absent under both; it is a Next 16 App-Router artifact that Vercel's runtime still references (`Cannot find module './.next/server/pages/_next/image.js'`) — a Vercel ↔ Next-16 integration symptom, not a missing build file.
+
+A **temporary `unoptimized` bypass** (#23, commit `b2ae531`) served media straight from the edge-cached `/api/media/file` route to unblock images while the cap reset. The bypass is reverted once the cap resets and cache reads are confirmed > 0.
 
 Options considered:
 
@@ -45,7 +57,7 @@ Keep Next.js/Vercel Image Optimization as the image pipeline, and fix it through
 ### Negative
 - **No automated billing tripwire.** A future regression (someone re-breaks caching, or adds a format) could silently grow the bill again. The owner accepted this; centralization is the structural safeguard.
 - **Big slots (hero, detail) feed the optimizer the original**, so a cache-miss fetches a multi-megabyte file from Blob. Negligible at 31-day TTL (~300MB/mo), but a real origin-fetch cost that adding upload sizes would eliminate — revisit if Blob Data Transfer approaches its cap.
-- **Site stays degraded through the current billing period.** The chosen stopgap is to deploy the fix and accept that cache-miss transforms error until the cycle resets (rather than flipping `unoptimized` temporarily).
+- **Site stayed degraded through the billing period.** Stopgap actually used (contrary to the original plan above): a temporary `unoptimized` bypass (`b2ae531`, reverted per #23) served media from the edge-cached `/api/media/file` route until the transform cap reset.
 
 ### Risks
 - **Catalog growth.** Adding many products widens the warm-cost math, but it remains O(catalog), not O(traffic). Only a 10×+ catalog increase would warrant revisiting (at which point option 3 or 4 above become relevant).
