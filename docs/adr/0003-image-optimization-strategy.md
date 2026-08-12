@@ -2,9 +2,12 @@
 
 ## Status
 
-Proposed — pending verification of Image Optimization Cache Reads > 0 on
-Vercel post-revert, per #23 step 4. Flips to `Accepted` once the 48h /
-100-distinct-request tripwire passes.
+Accepted — verified 2026-08-12. Post-revert (`ee866ef`), a live
+`/_next/image?url=&w=640&q=75` request returns 200 (not 402) with
+`X-Vercel-Cache: MISS` then `HIT` on repeat; transforms resize correctly
+(768KB raw → 45KB@640 / 150KB@1200). See #23. (The Usage-dashboard Cache
+Reads counter lags and is not broken out on Hobby tier; the live MISS→HIT
+behavior is the verification signal.)
 
 ## Context
 
