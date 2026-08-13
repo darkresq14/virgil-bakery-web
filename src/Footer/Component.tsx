@@ -131,7 +131,7 @@ export async function Footer() {
         {/* Bottom bar */}
         <div className="mt-10 pt-6 border-t border-background/8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs font-sans text-background/35 tracking-wide">
-            &copy; {new Date().getFullYear()} P&acirc;ine cu Maia by Virgil. Toate drepturile
+            &copy; {new Date().getFullYear()}&nbsp;P&acirc;ine cu Maia by Virgil. Toate drepturile
             rezervate.
           </p>
           <p className="text-xs font-sans text-background/35 flex items-center gap-1">
