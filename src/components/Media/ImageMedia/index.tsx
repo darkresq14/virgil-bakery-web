@@ -50,6 +50,7 @@ export const ImageMedia: React.FC<MediaProps> = (props) => {
     slot = 'detail',
     src: srcFromProps,
     loading: loadingFromProps,
+    unoptimized,
   } = props;
 
   let width: number | undefined;
@@ -95,6 +96,7 @@ export const ImageMedia: React.FC<MediaProps> = (props) => {
         blurDataURL={placeholderBlur}
         priority={priority}
         quality={75}
+        unoptimized={unoptimized}
         loading={loading}
         sizes={sizes}
         src={src}

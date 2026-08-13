@@ -108,7 +108,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({
           >
             {data?.logo ? (
               <>
-                <Media resource={data.logo} imgClassName="h-10 w-auto" />
+                <Media resource={data.logo} imgClassName="h-10 w-auto" unoptimized />
                 <div className="flex flex-col leading-none">
                   <span className="font-heading text-lg font-bold tracking-tight">
                     Pâine cu Maia
@@ -187,7 +187,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({
             >
               {data?.logo ? (
                 <>
-                  <Media resource={data.logo} imgClassName="h-10 w-auto" />
+                  <Media resource={data.logo} imgClassName="h-10 w-auto" unoptimized />
                   <div className="flex flex-col leading-none">
                     <span className="font-heading text-lg font-bold tracking-tight">
                       Pâine cu Maia

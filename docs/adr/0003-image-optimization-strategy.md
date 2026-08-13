@@ -65,3 +65,31 @@ Keep Next.js/Vercel Image Optimization as the image pipeline, and fix it through
 ### Risks
 - **Catalog growth.** Adding many products widens the warm-cost math, but it remains O(catalog), not O(traffic). Only a 10×+ catalog increase would warrant revisiting (at which point option 3 or 4 above become relevant).
 - **`deviceSizes` capped at 1920** slightly softens hero imagery on 2× DPR / 4K screens. Acceptable for a photographic background; revisit if visual quality complaints arise.
+
+## Sustainability addendum (#32)
+
+The Decision's core reframe — "transforms scale with catalog, not traffic" —
+was **incomplete.** In production, transforms scale with
+`catalog × widths × formats × POPs`, and the `widths` term was the hidden
+multiplier: each image fanned out to `deviceSizes` (5) **plus the default
+`imageSizes`** (8) × 2 formats = up to ~26 keys. Logos (header + footer, every
+pageview) were the worst offender — a 320px source displayed at ~76px still
+generated 12 widths because Next appends `imageSizes` for small/icon-sized
+sources, and a wrong 2×-DPR `sizes` attribute pushed browsers to the largest
+candidates.
+
+Result: ~220 transforms/day → ~6.6K/mo against a 5K cap, with Image
+Optimization Cache Reads = 0 (every variant `MISS`ed once, wrote, then was
+never re-requested identically). Edge caching itself works (verified
+`MISS`→`HIT`), but key dispersion + low traffic meant no variant earned a
+repeat.
+
+Revised limits (`next.config.ts`):
+
+- `deviceSizes: [640, 1080, 1920]` — dropped 750/1200 (visually redundant).
+- `imageSizes: [32, 128]` — from the 8-wide default.
+- Header/footer logos render `unoptimized` — the source is already a small
+  optimized webp, so the optimizer added no value and only multiplied keys.
+  Threaded via an `unoptimized` prop on `<Media>`/`<ImageMedia>`.
+
+Expected steady state: content images ~6 keys, logos 0 → well under the cap.

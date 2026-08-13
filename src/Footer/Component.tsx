@@ -1,16 +1,16 @@
-import { Facebook, Instagram, Mail, MessageCircle, Phone } from 'lucide-react'
-import Link from 'next/link'
+import { Facebook, Instagram, Mail, MessageCircle, Phone } from 'lucide-react';
+import Link from 'next/link';
 
-import { CookieSettingsButton } from '@/components/CookieConsent/CookieSettingsButton'
-import { Logo } from '@/components/Logo/Logo'
-import { Media } from '@/components/Media'
-import { getCachedGlobal } from '@/utilities/getGlobals'
+import { CookieSettingsButton } from '@/components/CookieConsent/CookieSettingsButton';
+import { Logo } from '@/components/Logo/Logo';
+import { Media } from '@/components/Media';
+import { getCachedGlobal } from '@/utilities/getGlobals';
 
 export async function Footer() {
-  const footerData = await getCachedGlobal('footer', 1)()
-  const siteConfig = await getCachedGlobal('siteConfig', 1)()
+  const footerData = await getCachedGlobal('footer', 1)();
+  const siteConfig = await getCachedGlobal('siteConfig', 1)();
 
-  const _navItems = footerData?.navItems || []
+  const _navItems = footerData?.navItems || [];
 
   const footerLinks = [
     { href: '/', label: 'Acasă' },
@@ -20,7 +20,7 @@ export async function Footer() {
     { href: '/posts', label: 'Blog' },
     { href: '/politica-de-confidentialitate', label: 'Politica de Confidențialitate' },
     { href: '#', label: 'Setări Cookies', isCookieSettings: true },
-  ]
+  ];
 
   return (
     <footer className="bg-foreground text-background">
@@ -34,6 +34,7 @@ export async function Footer() {
                   resource={footerData.footerLogo}
                   pictureClassName="rounded-md overflow-hidden shadow-sm group-hover:shadow-md transition-shadow"
                   imgClassName="h-32 w-auto"
+                  unoptimized
                 />
               ) : (
                 <Logo />
@@ -130,7 +131,8 @@ export async function Footer() {
         {/* Bottom bar */}
         <div className="mt-10 pt-6 border-t border-background/8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs font-sans text-background/35 tracking-wide">
-            &copy; {new Date().getFullYear()}{' '}P&acirc;ine cu Maia by Virgil. Toate drepturile rezervate.
+            &copy; {new Date().getFullYear()} P&acirc;ine cu Maia by Virgil. Toate drepturile
+            rezervate.
           </p>
           <p className="text-xs font-sans text-background/35 flex items-center gap-1">
             crafted with <span className="text-accent/60 text-[0.7rem]">♥</span> by{' '}
@@ -146,5 +148,5 @@ export async function Footer() {
         </div>
       </div>
     </footer>
-  )
+  );
 }
