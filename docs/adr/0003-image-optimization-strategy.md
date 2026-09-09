@@ -93,3 +93,31 @@ Revised limits (`next.config.ts`):
   Threaded via an `unoptimized` prop on `<Media>`/`<ImageMedia>`.
 
 Expected steady state: content images ~6 keys, logos 0 → well under the cap.
+
+### Second correction (Sep 2026, post-#32)
+
+The fan-out fix was necessary but insufficient. 30 days of production data
+(Aug 10 – Sep 9: 3,787 transformations, 75% of the monthly cap, ~126/day):
+
+- **Billing unit is per cache MISS/STALE per POP**, not per unique variant.
+  Collapsing fan-out ~5× cut unique keys, but transforms tracked request
+  volume: ~25 pageviews/day × ~9 optimizer images/pageview. Variant hygiene
+  cannot fix request-scaled billing.
+- **Cache Reads = 0 is expected, not a fault.** Reads only count fetches from
+  the shared *global* cache; regional POP hits don't report. A single-region
+  audience (RO → fra1/cdg1) shows ~0 reads while caching works fine
+  (verified MISS→HIT on repeat).
+- **~29% of burn is non-human**: US POPs (iad1/sfo1/pdx1/cle1 = 1,085) plus
+  global scatter (SYD/SIN/HKG/ICN/HND/GRU) — scanners/renderers that ignore
+  robots.txt. fra1 carried 51% (Romanian traffic; no Bucharest POP exists).
+
+Decision — **slot-split**: only `hero`/`detail` keep the optimizer;
+`card`/`thumbnail` render Payload's pre-generated upload sizes raw — the
+sizes become deliverables, a partial adoption of option 2 above. Cuts
+optimizer requests ~3× for bots and humans alike (~45–60/day → ~1.5–1.8K/mo,
+~3× margin). AI search-and-cite crawlers stay allowed per the ai-seo skill;
+only training-only CCBot is disallowed (robots.txt added — the site had
+none).
+
+If monthly transformations exceed ~3K again (traffic growth), escalate to
+full option 2 (all slots raw + larger Payload sizes) or Vercel Pro.

@@ -18,10 +18,10 @@ const placeholderBlur =
  * All imagery funnels through here so source-selection, quality, and cache behavior
  * are controlled in one place (see docs/adr/0003-image-optimization-strategy.md).
  *
- * A Payload upload size is used as a *source cap*: the max-resolution (and optional
- * crop) input that Vercel's image optimizer downscales from. It is NOT the deliverable
- * — the optimizer still emits the responsive srcset. Picking a smaller source bounds
- * the optimizer's origin fetch on cache-miss and caps the output resolution.
+ * Hero/detail: a Payload upload size is a *source cap* the optimizer
+ * downscales from (it emits the responsive srcset). Card/thumbnail: the
+ * pre-generated upload size IS the deliverable — served raw, optimizer
+ * skipped (see SLOT-SPLIT below and ADR 0003's sustainability addendum).
  *
  * URLs are either local (`/api/media/file/...`) or absolute Vercel Blob URLs
  * (`https://*.blob.vercel-storage.com/...`), both covered by next.config remotePatterns.
@@ -37,6 +37,16 @@ const SOURCE_SIZE: Record<ImageSlot, 'card' | 'thumbnail' | undefined> = {
   card: 'card',
   thumbnail: 'thumbnail',
 };
+
+// SLOT-SPLIT (#32 follow-up): only hero/detail go through the Vercel image
+// optimizer. Vercel bills a transformation for every cache MISS+STALE per POP —
+// at this site's traffic, regional caches go cold between visits and ~29% of
+// requests are non-human (US/global scanners), so optimizer requests ≈ billed
+// transforms. Card/thumbnail upload sizes are already slot-appropriate
+// deliverables (640/300px, edge-cached 1y via /api/media/file), so serving them
+// raw removes ~2/3 of optimizer requests (bots and humans alike) at no quality
+// cost. Hero/detail keep the optimizer for on-the-fly avif/webp + big widths.
+const OPTIMIZER_SLOTS: ReadonlyArray<ImageSlot> = ['hero', 'detail'];
 
 export const ImageMedia: React.FC<MediaProps> = (props) => {
   const {
@@ -96,7 +106,7 @@ export const ImageMedia: React.FC<MediaProps> = (props) => {
         blurDataURL={placeholderBlur}
         priority={priority}
         quality={75}
-        unoptimized={unoptimized}
+        unoptimized={unoptimized || !OPTIMIZER_SLOTS.includes(slot)}
         loading={loading}
         sizes={sizes}
         src={src}
