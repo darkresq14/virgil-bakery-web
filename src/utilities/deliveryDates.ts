@@ -3,7 +3,11 @@ export interface DeliveryDateOption {
   label: string;
   isSelectable: boolean;
   isHoliday: boolean;
+  /** Why the option is unselectable (null when selectable or holiday-blocked). */
+  blockedReason: DeliveryBlockedReason | null;
 }
+
+export type DeliveryBlockedReason = 'cutoff' | 'availability';
 
 const DAY_NAMES: Record<number, string> = {
   1: 'Luni',
@@ -98,11 +102,13 @@ export function getDeliveryDates(input?: GetDeliveryDatesInput): DeliveryDateOpt
   };
   const makeOption = (date: Date): DeliveryDateOption => {
     const holiday = inHoliday(date);
+    const dayAllowed = allowedDays.includes(date.getDay());
     return {
       date,
       label: formatRomanianDate(date),
-      isSelectable: !holiday && allowedDays.includes(date.getDay()),
+      isSelectable: !holiday && dayAllowed,
       isHoliday: holiday,
+      blockedReason: !dayAllowed ? 'availability' : null,
     };
   };
   const results: DeliveryDateOption[] = [];
@@ -114,8 +120,12 @@ export function getDeliveryDates(input?: GetDeliveryDatesInput): DeliveryDateOpt
     if (now < cutoff) {
       results.push(makeOption(nearest));
     } else {
-      // Show grayed-out occurrence + next week's selectable occurrence
-      results.push({ ...makeOption(nearest), isSelectable: false });
+      // Show grayed-out occurrence + next week's selectable occurrence.
+      // Availability blocks keep their (more actionable) reason over the cutoff.
+      const pastCutoff = makeOption(nearest);
+      pastCutoff.isSelectable = false;
+      if (pastCutoff.blockedReason == null) pastCutoff.blockedReason = 'cutoff';
+      results.push(pastCutoff);
 
       const next = new Date(nearest);
       next.setDate(next.getDate() + 7);

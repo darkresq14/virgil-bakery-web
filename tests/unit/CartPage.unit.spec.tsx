@@ -435,3 +435,61 @@ describe('CartPageClient — holiday info message', () => {
     expect(screen.queryByText(/program concediu|reluăm livrările/i)).toBeNull();
   });
 });
+
+describe('CartPageClient — delivery date labels for availability-restricted carts', () => {
+  it('shows "indisponibil" (not "listă închisă") on Tuesdays when the cart holds a Friday-only product', async () => {
+    // Real getDeliveryDates logic, pinned to Mon 2025-06-09 10:00:
+    //   Fri 6/13 selectable (cutoff Wed 6/11 17:00 not reached)
+    //   Tue 6/10 past cutoff AND not allowed (Friday-only cart)
+    //   Tue 6/17 before cutoff but not allowed (the exact mislabelled case)
+    const actual = await vi.importActual<typeof import('@/utilities/deliveryDates')>(
+      '@/utilities/deliveryDates',
+    );
+    vi.mocked(getDeliveryDates).mockImplementation((input) =>
+      actual.getDeliveryDates({
+        ...input,
+        referenceDate: new Date('2025-06-09T10:00:00'),
+      }),
+    );
+
+    vi.mocked(useCart).mockReturnValue({
+      ...mockCartContext,
+      items: [
+        {
+          productId: '1',
+          name: 'Pâine Albă',
+          price: 10,
+          quantity: 2,
+          weight: '500g',
+          productType: 'paine',
+          slug: 'paine-alba',
+          availableDays: 'friday',
+        },
+      ],
+      total: 20,
+      itemCount: 2,
+    });
+    const store: Record<string, string> = {};
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation((key) => store[key] ?? null);
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key, value) => {
+      store[key] = value;
+    });
+    // Fresh server data agrees with the cart: Friday-only.
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      Response.json({ docs: [{ id: '1', available: true, availableDays: 'friday' }] }),
+    );
+    vi.spyOn(window, 'open').mockReturnValue(null);
+
+    render(<CartPageClient />);
+
+    const select = screen.getByLabelText(/dată livrare/i) as HTMLSelectElement;
+    const optionTexts = within(select)
+      .getAllByRole('option')
+      .map((o) => o.textContent ?? '');
+
+    expect(optionTexts).toContain('Vineri, 13 Iunie');
+    expect(optionTexts).toContain('Marți, 10 Iunie — indisponibil');
+    expect(optionTexts).toContain('Marți, 17 Iunie — indisponibil');
+    expect(optionTexts.join('\n')).not.toContain('Marți, 17 Iunie — listă închisă');
+  });
+});

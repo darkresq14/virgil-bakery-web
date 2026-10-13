@@ -68,9 +68,13 @@ interface CartPageClientProps {
   isNoticeActive?: boolean;
 }
 
-/** Holiday takes visual precedence over the cutoff ("listă închisă") label. */
+/**
+ * Label precedence: holiday ("concediu") > cart availability ("indisponibil")
+ * > ordering cutoff ("listă închisă").
+ */
 function formatDeliveryOptionLabel(option: DeliveryDateOption): string {
   if (option.isHoliday) return `${option.label} — concediu`;
+  if (option.blockedReason === 'availability') return `${option.label} — indisponibil`;
   if (!option.isSelectable) return `${option.label} — listă închisă`;
   return option.label;
 }

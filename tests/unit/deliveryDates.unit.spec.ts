@@ -40,6 +40,28 @@ describe('getDeliveryDates', () => {
     expect(byLabel.get('Vineri, 17 Iulie')?.isSelectable).toBe(true); // next week
   });
 
+  it('labels past-cutoff dates with blockedReason "cutoff"', () => {
+    // referenceDate Thu 7/9: Fri 7/10 is past its cutoff, Tue 7/14 is not.
+    const dates = getDeliveryDates({ referenceDate: at('2026-07-09') });
+    const byLabel = new Map(dates.map((d) => [d.label, d] as const));
+
+    expect(byLabel.get('Vineri, 10 Iulie')?.blockedReason).toBe('cutoff');
+    expect(byLabel.get('Marți, 14 Iulie')?.blockedReason).toBeNull();
+  });
+
+  it('labels non-allowed weekdays with blockedReason "availability", even past cutoff', () => {
+    // Friday-only cart (allowedDays [5]), referenceDate Thu 7/9.
+    // Tue 7/14 is before its cutoff but Tuesday is not allowed -> availability.
+    // Fri 7/10 is past cutoff AND allowed -> cutoff.
+    const dates = getDeliveryDates({ referenceDate: at('2026-07-09'), allowedDays: [5] });
+    const byLabel = new Map(dates.map((d) => [d.label, d] as const));
+
+    expect(byLabel.get('Marți, 14 Iulie')?.isSelectable).toBe(false);
+    expect(byLabel.get('Marți, 14 Iulie')?.blockedReason).toBe('availability');
+    expect(byLabel.get('Vineri, 10 Iulie')?.blockedReason).toBe('cutoff');
+    expect(byLabel.get('Vineri, 17 Iulie')?.blockedReason).toBeNull();
+  });
+
   it('marks a delivery date inside the holiday range as isHoliday true and non-selectable', () => {
     // Holiday Mon 7/13 -> Mon 7/20. referenceDate Thu 7/9.
     // Tue 7/14 sits inside the holiday and would normally be selectable (cutoff Sun 7/12 17:00).
