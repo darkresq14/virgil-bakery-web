@@ -39,3 +39,6 @@ TEMP/
 .vercel
 # Production-env override file (e.g. .env.production) is local only.
 .env*
+
+# TypeScript incremental build cache
+tsconfig.tsbuildinfo
