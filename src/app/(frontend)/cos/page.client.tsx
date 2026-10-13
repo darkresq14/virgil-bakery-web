@@ -1,9 +1,17 @@
 'use client';
 
-import { ArrowLeft, CalendarOff, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowLeft,
+  CalendarOff,
+  Minus,
+  Plus,
+  ShoppingBag,
+  Trash2,
+} from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { type AddressFields, AddressForm } from '@/components/AddressForm';
 import { useCart } from '@/providers/Cart';
@@ -16,6 +24,13 @@ import {
 import { detectDeliveryMethod } from '@/utilities/detectDeliveryMethod';
 import { formatPrice } from '@/utilities/formatPrice';
 import { holidayDates } from '@/utilities/holidayDates';
+import {
+  type AvailableDays,
+  availabilityDaysToWeekdays,
+  availableDaysLabel,
+  intersectWeekdays,
+  weekdayListLabel,
+} from '@/utilities/productAvailability';
 
 const STORAGE_KEY = 'vb-repeat-customer';
 
@@ -88,6 +103,79 @@ export function CartPageClient({
   });
   const [needsCourier, setNeedsCourier] = useState(false);
 
+  // Fresh availability from the server: catches products unpublished or marked
+  // unavailable after they were saved to localStorage (see CONTEXT.md → Order).
+  // null = fetch not finished yet (don't flag anything until it lands).
+  const [freshProducts, setFreshProducts] = useState<Record<
+    string,
+    { available?: boolean | null; availableDays?: AvailableDays | null }
+  > | null>(null);
+  const cartIdKey = items.map((item) => item.productId).join(',');
+  useEffect(() => {
+    if (!cartIdKey) return;
+    fetch(`/api/products?where[id][in]=${encodeURIComponent(cartIdKey)}&limit=100&depth=0`)
+      .then((res) => (res.ok ? res.json() : { docs: [] }))
+      .then(
+        ({
+          docs,
+        }: {
+          docs: Array<{
+            id: string;
+            available?: boolean | null;
+            availableDays?: AvailableDays | null;
+          }>;
+        }) => {
+          const map: Record<
+            string,
+            { available?: boolean | null; availableDays?: AvailableDays | null }
+          > = {};
+          for (const doc of docs) map[String(doc.id)] = doc;
+          setFreshProducts(map);
+        },
+      )
+      .catch(() => {
+        // Network failure: keep localStorage view, server hook still guards the DB write
+      });
+  }, [cartIdKey]);
+
+  /** Items whose product is gone (unpublished/deleted) or explicitly unavailable. */
+  const staleItemIds = useMemo(() => {
+    if (freshProducts === null) return new Set<string>();
+    return new Set(
+      items
+        .filter((item) => {
+          const fresh = freshProducts[item.productId];
+          return fresh === undefined || fresh.available === false;
+        })
+        .map((item) => item.productId),
+    );
+  }, [items, freshProducts]);
+
+  // Availability Day intersection across the cart (fresh data wins over localStorage).
+  const cartAllowedDays = useMemo(
+    () =>
+      intersectWeekdays(
+        items.map((item) =>
+          availabilityDaysToWeekdays(
+            freshProducts?.[item.productId]?.availableDays ?? item.availableDays,
+          ),
+        ),
+      ),
+    [items, freshProducts],
+  );
+
+  const hasDayConflict = cartAllowedDays.length === 0;
+  const restrictedItems = useMemo(
+    () =>
+      items.filter(
+        (item) =>
+          availableDaysLabel(
+            freshProducts?.[item.productId]?.availableDays ?? item.availableDays,
+          ) !== null,
+      ),
+    [items, freshProducts],
+  );
+
   const toggleFirstOrder = (value: boolean) => {
     setIsFirstOrder(value);
     localStorage.setItem(STORAGE_KEY, value ? 'false' : 'true');
@@ -101,8 +189,8 @@ export function CartPageClient({
   );
 
   const deliveryDates = useMemo(
-    () => getDeliveryDates({ holidayStartDate, holidayEndDate }),
-    [holidayStartDate, holidayEndDate],
+    () => getDeliveryDates({ holidayStartDate, holidayEndDate, allowedDays: cartAllowedDays }),
+    [holidayStartDate, holidayEndDate, cartAllowedDays],
   );
 
   const defaultDeliveryLabel = useMemo(() => {
@@ -110,7 +198,12 @@ export function CartPageClient({
     return selectable?.label ?? '';
   }, [deliveryDates]);
 
-  const selectedDelivery = form.deliveryDate || defaultDeliveryLabel;
+  // Selected date falls back to the first selectable option whenever the cart
+  // changes what is orderable (e.g. a Friday-only product rules out Tuesday).
+  const selectedDelivery =
+    (form.deliveryDate && deliveryDates.some((d) => d.label === form.deliveryDate && d.isSelectable)
+      ? form.deliveryDate
+      : '') || defaultDeliveryLabel;
 
   const shippingCost = isFirstOrder
     ? address.judet && address.localitate
@@ -131,8 +224,21 @@ export function CartPageClient({
   const showTransport = shippingCost > 0;
 
   const handleCheckout = async () => {
+    if (staleItemIds.size > 0) {
+      setFormError('Elimină produsele indisponibile din coș pentru a continua');
+      return;
+    }
+    if (hasDayConflict) {
+      setFormError('Produsele din coș nu pot fi livrate în aceeași zi — elimină unul');
+      return;
+    }
     if (!selectedDelivery) {
       setFormError('Selectează o dată de livrare');
+      return;
+    }
+    const preSelected = deliveryDates.find((d) => d.label === selectedDelivery);
+    if (preSelected && !cartAllowedDays.includes(preSelected.date.getDay())) {
+      setFormError('Data selectată nu este disponibilă pentru toate produsele din coș');
       return;
     }
     setFormError('');
@@ -236,6 +342,32 @@ export function CartPageClient({
           <HolidayCartNotice holidayStartDate={holidayStartDate} holidayEndDate={holidayEndDate} />
         )}
 
+        {/* Availability Day notices — explain why some delivery dates are unavailable */}
+        {hasDayConflict ? (
+          <div className="mb-8 flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+            <div className="font-sans text-sm leading-relaxed text-foreground">
+              <p className="font-semibold">Produse cu zile de livrare diferite</p>
+              <p className="mt-1">
+                Coșul conține produse disponibile doar marți și produse disponibile doar vineri — nu
+                pot fi livrate în aceeași zi. Elimină unul dintre ele pentru a continua.
+              </p>
+            </div>
+          </div>
+        ) : restrictedItems.length > 0 ? (
+          <div className="mb-8 flex items-start gap-3 rounded-xl border border-[oklch(89%_0.06_70deg)] bg-[oklch(96%_0.04_75deg)] p-4">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-[oklch(55%_0.15_65deg)]" />
+            <div className="font-sans text-sm leading-relaxed text-[oklch(30%_0.02_60deg)]">
+              <p className="font-semibold text-[oklch(20%_0.02_60deg)]">Zile de livrare limitate</p>
+              <p className="mt-1">
+                Putem livra {restrictedItems.map((item) => item.name).join(', ')} doar{' '}
+                {weekdayListLabel(cartAllowedDays)}. De aceea, celelalte zile de livrare sunt
+                dezactivate.
+              </p>
+            </div>
+          </div>
+        ) : null}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Cart items */}
           <div className="lg:col-span-2">
@@ -254,6 +386,22 @@ export function CartPageClient({
                     </Link>
                     {item.weight && (
                       <p className="text-sm text-muted-foreground font-sans">{item.weight}</p>
+                    )}
+                    {staleItemIds.has(item.productId) ? (
+                      <p className="text-sm text-destructive font-sans mt-1">
+                        Momentan indisponibil — elimină-l din coș pentru a continua
+                      </p>
+                    ) : (
+                      availableDaysLabel(
+                        freshProducts?.[item.productId]?.availableDays ?? item.availableDays,
+                      ) && (
+                        <p className="text-sm text-muted-foreground font-sans mt-1">
+                          Se livrează{' '}
+                          {availableDaysLabel(
+                            freshProducts?.[item.productId]?.availableDays ?? item.availableDays,
+                          )?.toLowerCase()}
+                        </p>
+                      )
                     )}
                     <p className="font-sans text-primary font-medium mt-1">
                       {formatPrice(item.price)} / buc
@@ -370,6 +518,12 @@ export function CartPageClient({
                   </select>
                   {formError && (
                     <p className="text-xs text-destructive font-sans mt-1">{formError}</p>
+                  )}
+                  {!hasDayConflict && restrictedItems.length > 0 && (
+                    <p className="text-xs text-muted-foreground font-sans mt-1">
+                      Se poate livra doar {weekdayListLabel(cartAllowedDays)} — unele produse din
+                      coș nu sunt disponibile în alte zile.
+                    </p>
                   )}
                 </div>
 
@@ -496,7 +650,8 @@ export function CartPageClient({
               <button
                 type="button"
                 onClick={handleCheckout}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] text-white px-8 py-3 font-sans font-medium hover:bg-[#20bd5a] transition-colors"
+                disabled={hasDayConflict || staleItemIds.size > 0}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] text-white px-8 py-3 font-sans font-medium hover:bg-[#20bd5a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#25D366]"
               >
                 <Image
                   unoptimized

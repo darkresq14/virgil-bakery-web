@@ -43,6 +43,7 @@ export default async function ProductsPage() {
         productType: p.productType,
         tags: p.tags ?? undefined,
         available: p.available ?? undefined,
+        availableDays: p.availableDays ?? undefined,
         sortOrder: p.sortOrder ?? undefined,
         featuredImage: isExpandedDoc(p.featuredImage) ? p.featuredImage : null,
       }))}

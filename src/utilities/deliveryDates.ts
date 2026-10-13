@@ -75,10 +75,20 @@ export interface GetDeliveryDatesInput {
   holidayStartDate?: Date | null;
   holidayEndDate?: Date | null;
   referenceDate?: Date;
+  /**
+   * Weekdays the order can be delivered on (product Availability Day
+   * intersection, see productAvailability.ts). Defaults to all delivery days.
+   * Days outside this set are still shown, but grayed out. An empty set means
+   * no weekday is orderable — every option comes back unselectable.
+   */
+  allowedDays?: number[];
 }
 
 export function getDeliveryDates(input?: GetDeliveryDatesInput): DeliveryDateOption[] {
   const now = input?.referenceDate ?? getRomaniaNow();
+  const deliveryDays = [2, 5]; // Tuesday, Friday — always both, so restricted
+  // days render as grayed-out options rather than vanishing
+  const allowedDays = input?.allowedDays ?? [2, 5];
   const holidayStart = input?.holidayStartDate != null ? startOfDay(input.holidayStartDate) : null;
   const holidayEnd = input?.holidayEndDate != null ? startOfDay(input.holidayEndDate) : null;
   const inHoliday = (date: Date) => {
@@ -91,22 +101,18 @@ export function getDeliveryDates(input?: GetDeliveryDatesInput): DeliveryDateOpt
     return {
       date,
       label: formatRomanianDate(date),
-      isSelectable: !holiday,
+      isSelectable: !holiday && allowedDays.includes(date.getDay()),
       isHoliday: holiday,
     };
   };
   const results: DeliveryDateOption[] = [];
 
-  const deliveryDays = [2, 5] as const; // Tuesday, Friday
-
   for (const targetDay of deliveryDays) {
     const nearest = nextDayOnOrAfter(now, targetDay);
     const cutoff = getDeliveryCutoff(nearest);
-    const isSelectable = now < cutoff;
 
-    if (isSelectable) {
-      const option = makeOption(nearest);
-      results.push(option);
+    if (now < cutoff) {
+      results.push(makeOption(nearest));
     } else {
       // Show grayed-out occurrence + next week's selectable occurrence
       results.push({ ...makeOption(nearest), isSelectable: false });
@@ -120,17 +126,27 @@ export function getDeliveryDates(input?: GetDeliveryDatesInput): DeliveryDateOpt
   // Sort chronologically
   results.sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  // Guarantee at least two selectable dates. When a holiday consumes the normal
-  // selectable window, extend forward with future delivery days (skipping any that
-  // still fall inside the holiday) until the threshold is met.
+  // Guarantee selectable dates. When a holiday or an Availability Day
+  // restriction consumes the normal selectable window, extend forward with
+  // future delivery days (skipping any that still fall inside the holiday) until
+  // the threshold is met. Only allowed weekdays are considered — grayed-out days
+  // never help reach the threshold. With a single allowed weekday the dropdown
+  // stays at the regular Tuesday/Friday pattern (threshold 1) instead of
+  // accumulating extra Fridays.
+  const selectableTarget = allowedDays.length >= 2 ? 2 : 1;
+  const candidateDays = allowedDays.length > 0 ? allowedDays : [];
   let lastDate = results.at(-1)?.date ?? now;
-  while (results.filter((r) => r.isSelectable).length < 2) {
+  while (
+    candidateDays.length > 0 &&
+    results.filter((r) => r.isSelectable).length < selectableTarget
+  ) {
     const dayAfter = new Date(lastDate.getTime() + 24 * 60 * 60 * 1000);
-    const candidateTue = nextDayOnOrAfter(dayAfter, 2);
-    const candidateFri = nextDayOnOrAfter(dayAfter, 5);
-    const nextCandidate =
-      candidateTue.getTime() <= candidateFri.getTime() ? candidateTue : candidateFri;
-    results.push(makeOption(nextCandidate));
+    const nextCandidate = candidateDays
+      .map((day) => nextDayOnOrAfter(dayAfter, day))
+      .sort((a, b) => a.getTime() - b.getTime())[0];
+    if (!results.some((r) => r.date.getTime() === nextCandidate.getTime())) {
+      results.push(makeOption(nextCandidate));
+    }
     lastDate = nextCandidate;
   }
 

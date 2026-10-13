@@ -1,35 +1,38 @@
-'use client'
+'use client';
 
-import { ShoppingBag } from 'lucide-react'
-import Link from 'next/link'
-import type React from 'react'
-import { ImageMedia } from '@/components/Media/ImageMedia'
-import { useToast } from '@/components/Toast'
-import type { Media } from '@/payload-types'
-import { useCart } from '@/providers/Cart'
+import { ShoppingBag } from 'lucide-react';
+import Link from 'next/link';
+import type React from 'react';
+import { ImageMedia } from '@/components/Media/ImageMedia';
+import { useToast } from '@/components/Toast';
+import type { Media } from '@/payload-types';
+import { useCart } from '@/providers/Cart';
+import { type AvailableDays, availableDaysLabel } from '@/utilities/productAvailability';
 
 interface ProductCardProps {
   product: {
-    id: string
-    name: string
-    slug: string
-    shortDescription?: string
-    price: number
-    weight?: string
-    productType?: string
-    tags?: string[]
-    available?: boolean
-    featuredImage?: Media | null
-  }
+    id: string;
+    name: string;
+    slug: string;
+    shortDescription?: string;
+    price: number;
+    weight?: string;
+    productType?: string;
+    tags?: string[];
+    available?: boolean;
+    availableDays?: AvailableDays | null;
+    featuredImage?: Media | null;
+  };
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const { addItem } = useCart()
-  const { showToast } = useToast()
+  const { addItem } = useCart();
+  const { showToast } = useToast();
+  const daysLabel = availableDaysLabel(product.availableDays);
 
   const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
+    e.preventDefault();
+    e.stopPropagation();
     addItem({
       productId: product.id,
       name: product.name,
@@ -37,9 +40,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       weight: product.weight || '',
       productType: product.productType || 'paine',
       slug: product.slug,
-    })
-    showToast(`${product.name} adăugat în coș`)
-  }
+      availableDays: product.availableDays ?? 'both',
+    });
+    showToast(
+      daysLabel
+        ? `În coș: ${product.name} — se livrează ${daysLabel.toLowerCase()}`
+        : `În coș: ${product.name}`,
+    );
+  };
 
   return (
     <Link
@@ -75,6 +83,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </span>
           </div>
         )}
+        {product.available !== false && daysLabel && (
+          <span className="absolute top-3 left-3 text-white font-sans font-medium text-xs bg-black/60 px-3 py-1 rounded-full">
+            {daysLabel}
+          </span>
+        )}
       </div>
 
       <div className="flex flex-col flex-1 p-4">
@@ -108,5 +121,5 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
       </div>
     </Link>
-  )
-}
+  );
+};

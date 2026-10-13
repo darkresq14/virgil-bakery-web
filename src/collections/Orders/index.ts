@@ -1,8 +1,9 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig } from 'payload';
 
-import { anyone } from '../../access/anyone'
-import { authenticated } from '../../access/authenticated'
-import { revalidateOrder } from './hooks/revalidateOrder'
+import { anyone } from '../../access/anyone';
+import { authenticated } from '../../access/authenticated';
+import { revalidateOrder } from './hooks/revalidateOrder';
+import { validateDeliveryDate } from './hooks/validateDeliveryDate';
 
 export const Orders: CollectionConfig = {
   slug: 'orders',
@@ -13,7 +14,15 @@ export const Orders: CollectionConfig = {
     update: authenticated,
   },
   admin: {
-    defaultColumns: ['id', 'customerName', 'deliveryMethod', 'deliveryDate', 'total', 'status', 'createdAt'],
+    defaultColumns: [
+      'id',
+      'customerName',
+      'deliveryMethod',
+      'deliveryDate',
+      'total',
+      'status',
+      'createdAt',
+    ],
     useAsTitle: 'id',
   },
   fields: [
@@ -127,5 +136,6 @@ export const Orders: CollectionConfig = {
   ],
   hooks: {
     afterChange: [revalidateOrder],
+    beforeChange: [validateDeliveryDate],
   },
-}
+};

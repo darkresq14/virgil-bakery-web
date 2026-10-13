@@ -1,24 +1,26 @@
-'use client'
+'use client';
 
-import type React from 'react'
-import { useMemo, useState } from 'react'
-import { ProductCard } from '@/components/ProductCard'
-import { ScrollReveal } from '@/components/ScrollReveal'
+import type React from 'react';
+import { useMemo, useState } from 'react';
+import { ProductCard } from '@/components/ProductCard';
+import { ScrollReveal } from '@/components/ScrollReveal';
 
-import type { Media } from '@/payload-types'
+import type { Media } from '@/payload-types';
+import type { AvailableDays } from '@/utilities/productAvailability';
 
 interface Product {
-  id: string
-  name: string
-  slug: string
-  shortDescription?: string
-  price: number
-  weight?: string
-  productType?: string
-  tags?: string[]
-  available?: boolean
-  sortOrder?: number
-  featuredImage?: Media | null
+  id: string;
+  name: string;
+  slug: string;
+  shortDescription?: string;
+  price: number;
+  weight?: string;
+  productType?: string;
+  tags?: string[];
+  available?: boolean;
+  availableDays?: AvailableDays | null;
+  sortOrder?: number;
+  featuredImage?: Media | null;
 }
 
 const typeFilters = [
@@ -32,7 +34,7 @@ const typeFilters = [
   { value: 'desert', label: 'Desert' },
   { value: 'saleuri', label: 'Saleuri' },
   { value: 'set-cadou', label: 'Set/Cadou' },
-]
+];
 
 const typeOrder: Record<string, number> = {
   paine: 1,
@@ -44,38 +46,38 @@ const typeOrder: Record<string, number> = {
   desert: 7,
   saleuri: 8,
   'set-cadou': 9,
-}
+};
 
 export const ProductsPageClient: React.FC<{ products: Product[] }> = ({ products }) => {
-  const [activeType, setActiveType] = useState('all')
+  const [activeType, setActiveType] = useState('all');
 
   const filtered = useMemo(() => {
-    let result = products
+    let result = products;
 
     if (activeType !== 'all') {
-      result = result.filter((p) => p.productType === activeType)
+      result = result.filter((p) => p.productType === activeType);
     }
 
     return result.sort((a, b) => {
       // Available products first
-      const aAvail = a.available ? 0 : 1
-      const bAvail = b.available ? 0 : 1
-      if (aAvail !== bAvail) return aAvail - bAvail
+      const aAvail = a.available ? 0 : 1;
+      const bAvail = b.available ? 0 : 1;
+      if (aAvail !== bAvail) return aAvail - bAvail;
 
       // Group by product type order
-      const aType = a.productType ? (typeOrder[a.productType] ?? 99) : 99
-      const bType = b.productType ? (typeOrder[b.productType] ?? 99) : 99
-      if (aType !== bType) return aType - bType
+      const aType = a.productType ? (typeOrder[a.productType] ?? 99) : 99;
+      const bType = b.productType ? (typeOrder[b.productType] ?? 99) : 99;
+      if (aType !== bType) return aType - bType;
 
       // Then by sortOrder
-      const aSort = a.sortOrder ?? 0
-      const bSort = b.sortOrder ?? 0
-      if (aSort !== bSort) return aSort - bSort
+      const aSort = a.sortOrder ?? 0;
+      const bSort = b.sortOrder ?? 0;
+      if (aSort !== bSort) return aSort - bSort;
 
       // Then alphabetically
-      return a.name.localeCompare(b.name, 'ro')
-    })
-  }, [products, activeType])
+      return a.name.localeCompare(b.name, 'ro');
+    });
+  }, [products, activeType]);
 
   return (
     <div className="py-12">
@@ -90,6 +92,7 @@ export const ProductsPageClient: React.FC<{ products: Product[] }> = ({ products
             {typeFilters.map((filter) => (
               <button
                 key={filter.value}
+                type="button"
                 onClick={() => setActiveType(filter.value)}
                 className={`rounded-full px-5 py-2 text-sm font-sans font-medium transition-colors ${
                   activeType === filter.value
@@ -119,5 +122,5 @@ export const ProductsPageClient: React.FC<{ products: Product[] }> = ({ products
         )}
       </div>
     </div>
-  )
-}
+  );
+};

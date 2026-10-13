@@ -4,7 +4,7 @@ import {
   MetaTitleField,
   OverviewField,
   PreviewField,
-} from '@payloadcms/plugin-seo/fields'
+} from '@payloadcms/plugin-seo/fields';
 
 import {
   BlocksFeature,
@@ -12,15 +12,15 @@ import {
   HeadingFeature,
   InlineToolbarFeature,
   lexicalEditor,
-} from '@payloadcms/richtext-lexical'
-import type { CollectionConfig } from 'payload'
-import { slugField } from 'payload'
-import { authenticated } from '../../access/authenticated'
-import { authenticatedOrPublished } from '../../access/authenticatedOrPublished'
-import { MediaBlock } from '../../blocks/MediaBlock/config'
-import { populatePublishedAt } from '../../hooks/populatePublishedAt'
-import { generatePreviewPath } from '../../utilities/generatePreviewPath'
-import { revalidateDelete, revalidateProduct } from './hooks/revalidateProduct'
+} from '@payloadcms/richtext-lexical';
+import type { CollectionConfig } from 'payload';
+import { slugField } from 'payload';
+import { authenticated } from '../../access/authenticated';
+import { authenticatedOrPublished } from '../../access/authenticatedOrPublished';
+import { MediaBlock } from '../../blocks/MediaBlock/config';
+import { populatePublishedAt } from '../../hooks/populatePublishedAt';
+import { generatePreviewPath } from '../../utilities/generatePreviewPath';
+import { revalidateDelete, revalidateProduct } from './hooks/revalidateProduct';
 
 export const Products: CollectionConfig<'products'> = {
   slug: 'products',
@@ -86,7 +86,7 @@ export const Products: CollectionConfig<'products'> = {
                     FixedToolbarFeature(),
                     InlineToolbarFeature(),
                     BlocksFeature({ blocks: [MediaBlock] }),
-                  ]
+                  ];
                 },
               }),
               label: 'Descriere detaliată',
@@ -141,11 +141,18 @@ export const Products: CollectionConfig<'products'> = {
               defaultValue: true,
             },
             {
-              name: 'availabilityText',
-              type: 'text',
-              label: 'Text disponibilitate',
+              name: 'availableDays',
+              type: 'radio',
+              label: 'Zile disponibilitate',
+              defaultValue: 'both',
+              options: [
+                { label: 'Ambele zile (marți și vineri)', value: 'both' },
+                { label: 'Doar marți', value: 'tuesday' },
+                { label: 'Doar vineri', value: 'friday' },
+              ],
               admin: {
-                description: 'Ex: "Disponibil vineri"',
+                description:
+                  'Zilele în care produsul poate fi livrat. Limitează datele de livrare disponibile la finalizarea comenzii.',
               },
             },
             {
@@ -190,7 +197,7 @@ export const Products: CollectionConfig<'products'> = {
                     ...rootFeatures,
                     HeadingFeature({ enabledHeadingSizes: ['h3', 'h4'] }),
                     FixedToolbarFeature(),
-                  ]
+                  ];
                 },
               }),
               label: 'Valori nutriționale',
@@ -246,7 +253,7 @@ export const Products: CollectionConfig<'products'> = {
               type: 'richText',
               editor: lexicalEditor({
                 features: ({ rootFeatures }) => {
-                  return [...rootFeatures, FixedToolbarFeature()]
+                  return [...rootFeatures, FixedToolbarFeature()];
                 },
               }),
               label: 'Informații comandă',
@@ -292,9 +299,9 @@ export const Products: CollectionConfig<'products'> = {
         beforeChange: [
           ({ siblingData, value }) => {
             if (siblingData._status === 'published' && !value) {
-              return new Date()
+              return new Date();
             }
-            return value
+            return value;
           },
         ],
       },
@@ -315,4 +322,4 @@ export const Products: CollectionConfig<'products'> = {
     },
     maxPerDoc: 50,
   },
-}
+};

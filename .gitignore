@@ -20,6 +20,7 @@ public/media/
 # nested .sql files are unaffected.
 /*.dump
 /*.sql
+/*.sql-wal
 
 public/robots.txt
 public/sitemap*.xml

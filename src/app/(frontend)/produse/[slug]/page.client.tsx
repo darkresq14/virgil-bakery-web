@@ -1,17 +1,18 @@
-'use client'
+'use client';
 
-import { AlertCircle, ArrowLeft, Check, ShoppingBag } from 'lucide-react'
-import Link from 'next/link'
-import type React from 'react'
-import { useMemo, useState } from 'react'
-import { Breadcrumbs } from '@/components/Breadcrumbs'
-import { ImageMedia } from '@/components/Media/ImageMedia'
-import RichText from '@/components/RichText'
-import { ScrollReveal } from '@/components/ScrollReveal'
-import { useToast } from '@/components/Toast'
-import type { Media, Product } from '@/payload-types'
-import { useCart } from '@/providers/Cart'
-import { isExpandedDoc } from '@/utilities/type-guards'
+import { AlertCircle, ArrowLeft, Check, ShoppingBag } from 'lucide-react';
+import Link from 'next/link';
+import type React from 'react';
+import { useMemo, useState } from 'react';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { ImageMedia } from '@/components/Media/ImageMedia';
+import RichText from '@/components/RichText';
+import { ScrollReveal } from '@/components/ScrollReveal';
+import { useToast } from '@/components/Toast';
+import type { Media, Product } from '@/payload-types';
+import { useCart } from '@/providers/Cart';
+import { availableDaysLabel } from '@/utilities/productAvailability';
+import { isExpandedDoc } from '@/utilities/type-guards';
 
 const productTypeLabels: Record<string, string> = {
   paine: 'Pâine',
@@ -23,28 +24,29 @@ const productTypeLabels: Record<string, string> = {
   desert: 'Desert',
   saleuri: 'Saleuri',
   'set-cadou': 'Set/Cadou',
-}
+};
 
 export const ProductDetailClient: React.FC<{ product: Product }> = ({ product }) => {
-  const { addItem } = useCart()
-  const { showToast } = useToast()
-  const [selectedImage, setSelectedImage] = useState(0)
+  const { addItem } = useCart();
+  const { showToast } = useToast();
+  const [selectedImage, setSelectedImage] = useState(0);
+  const daysLabel = availableDaysLabel(product.availableDays);
 
   const allImages = useMemo(() => {
-    const images: Array<Media> = []
+    const images: Array<Media> = [];
 
     if (isExpandedDoc(product.featuredImage) && product.featuredImage.url) {
-      images.push(product.featuredImage)
+      images.push(product.featuredImage);
     }
 
     product.gallery?.forEach((item) => {
       if (isExpandedDoc(item.image) && item.image.url) {
-        images.push(item.image)
+        images.push(item.image);
       }
-    })
+    });
 
-    return images
-  }, [product.featuredImage, product.gallery])
+    return images;
+  }, [product.featuredImage, product.gallery]);
 
   const handleAddToCart = () => {
     addItem({
@@ -54,9 +56,14 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
       weight: product.weight || '',
       productType: product.productType || 'paine',
       slug: product.slug,
-    })
-    showToast(`${product.name} adăugat în coș`)
-  }
+      availableDays: product.availableDays ?? 'both',
+    });
+    showToast(
+      daysLabel
+        ? `În coș: ${product.name} — se livrează ${daysLabel.toLowerCase()}`
+        : `În coș: ${product.name}`,
+    );
+  };
 
   return (
     <div className="container">
@@ -143,18 +150,17 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
             </div>
 
             {/* Availability */}
-            {product.available === false && (
+            {product.available === false ? (
               <div className="flex items-center gap-2 text-destructive font-sans text-sm mb-4">
                 <AlertCircle className="w-4 h-4" />
-                {product.availabilityText || 'Momentan indisponibil'}
+                Momentan indisponibil
               </div>
-            )}
-            {product.available !== false && product.availabilityText && (
+            ) : daysLabel ? (
               <div className="flex items-center gap-2 text-muted-foreground font-sans text-sm mb-4">
                 <Check className="w-4 h-4" />
-                {product.availabilityText}
+                Se livrează {daysLabel.toLowerCase()}
               </div>
-            )}
+            ) : null}
 
             {/* Add to cart */}
             {product.available !== false && (
@@ -164,7 +170,7 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
                 className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-8 py-3 font-sans font-medium hover:bg-primary/90 transition-colors mb-8"
               >
                 <ShoppingBag className="w-5 h-5" />
-                Adaugă în coș
+                {daysLabel ? `Adaugă în coș — ${daysLabel.toLowerCase()}` : 'Adaugă în coș'}
               </button>
             )}
 
@@ -244,5 +250,5 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
         </Link>
       </div>
     </div>
-  )
-}
+  );
+};

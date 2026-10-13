@@ -798,9 +798,9 @@ export interface Product {
   sortOrder?: number | null;
   available?: boolean | null;
   /**
-   * Ex: "Disponibil vineri"
+   * Zilele în care produsul poate fi livrat. Limitează datele de livrare disponibile la finalizarea comenzii.
    */
-  availabilityText?: string | null;
+  availableDays?: ('both' | 'tuesday' | 'friday') | null;
   featured?: boolean | null;
   characteristics?:
     | {
@@ -1439,7 +1439,7 @@ export interface ProductsSelect<T extends boolean = true> {
   tags?: T;
   sortOrder?: T;
   available?: T;
-  availabilityText?: T;
+  availableDays?: T;
   featured?: T;
   characteristics?:
     | T

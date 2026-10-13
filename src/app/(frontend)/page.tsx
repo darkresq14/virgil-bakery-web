@@ -120,6 +120,7 @@ export default async function HomePage() {
                         productType: product.productType,
                         tags: product.tags ?? undefined,
                         available: product.available ?? undefined,
+                        availableDays: product.availableDays ?? undefined,
                         featuredImage: isExpandedDoc(product.featuredImage)
                           ? product.featuredImage
                           : null,
