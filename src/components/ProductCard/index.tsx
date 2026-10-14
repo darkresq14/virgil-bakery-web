@@ -7,7 +7,12 @@ import { ImageMedia } from '@/components/Media/ImageMedia';
 import { useToast } from '@/components/Toast';
 import type { Media } from '@/payload-types';
 import { useCart } from '@/providers/Cart';
-import { type AvailableDays, availableDaysLabel } from '@/utilities/productAvailability';
+import {
+  type AvailableDays,
+  badgeDeliveryLabel,
+  inlineDeliveryLabel,
+  isEffectivelyPurchaseable,
+} from '@/utilities/productAvailability';
 
 interface ProductCardProps {
   product: {
@@ -21,6 +26,9 @@ interface ProductCardProps {
     tags?: string[];
     available?: boolean;
     availableDays?: AvailableDays | null;
+    availableOnDate?: string | null;
+    /** Server-computed effective purchaseability (One-off Availability aware). */
+    purchaseable?: boolean;
     featuredImage?: Media | null;
   };
 }
@@ -28,7 +36,10 @@ interface ProductCardProps {
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addItem } = useCart();
   const { showToast } = useToast();
-  const daysLabel = availableDaysLabel(product.availableDays);
+  const purchaseable = product.purchaseable ?? isEffectivelyPurchaseable(product);
+  const daysLabel = badgeDeliveryLabel(product);
+  const deliveryLabel = inlineDeliveryLabel(product);
+  const deliveryToast = deliveryLabel ? `se livrează ${deliveryLabel}` : null;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -41,11 +52,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       productType: product.productType || 'paine',
       slug: product.slug,
       availableDays: product.availableDays ?? 'both',
+      availableOnDate: product.availableOnDate ?? null,
     });
     showToast(
-      daysLabel
-        ? `În coș: ${product.name} — se livrează ${daysLabel.toLowerCase()}`
-        : `În coș: ${product.name}`,
+      deliveryToast ? `În coș: ${product.name} — ${deliveryToast}` : `În coș: ${product.name}`,
     );
   };
 
@@ -76,14 +86,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </span>
           </div>
         )}
-        {!product.available && (
+        {!purchaseable && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
             <span className="text-white font-sans font-medium text-sm bg-black/60 px-3 py-1 rounded-full">
               Indisponibil
             </span>
           </div>
         )}
-        {product.available !== false && daysLabel && (
+        {purchaseable && daysLabel && (
           <span className="absolute top-3 left-3 text-white font-sans font-medium text-xs bg-black/60 px-3 py-1 rounded-full">
             {daysLabel}
           </span>
@@ -108,7 +118,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               <span className="text-sm text-muted-foreground ml-1">/ {product.weight}</span>
             )}
           </div>
-          {product.available !== false && (
+          {purchaseable && (
             <button
               type="button"
               onClick={handleAddToCart}

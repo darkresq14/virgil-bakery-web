@@ -801,6 +801,10 @@ export interface Product {
    * Zilele în care produsul poate fi livrat. Limitează datele de livrare disponibile la finalizarea comenzii.
    */
   availableDays?: ('both' | 'tuesday' | 'friday') | null;
+  /**
+   * Dacă e completat, produsul se poate comanda DOAR pentru data aleasă — de la intrarea ei în selectorul de livrare (cu ~9 zile înainte) până la închiderea listei (ora 17:00, cu 2 zile înainte). Are prioritate față de „Zile disponibilitate” și „Disponibil”. Alege doar marți sau vineri, în afara perioadelor de concediu.
+   */
+  availableOnDate?: string | null;
   featured?: boolean | null;
   characteristics?:
     | {
@@ -1440,6 +1444,7 @@ export interface ProductsSelect<T extends boolean = true> {
   sortOrder?: T;
   available?: T;
   availableDays?: T;
+  availableOnDate?: T;
   featured?: T;
   characteristics?:
     | T

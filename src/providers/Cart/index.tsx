@@ -14,15 +14,8 @@ export interface CartItem {
   productType: string;
   slug: string;
   availableDays: AvailableDays;
-}
-export interface CartItem {
-  productId: string;
-  name: string;
-  price: number;
-  quantity: number;
-  weight: string;
-  productType: string;
-  slug: string;
+  /** ISO date — One-off Availability snapshot (null = recurring product). */
+  availableOnDate?: string | null;
 }
 
 interface CartContextType {
@@ -58,6 +51,7 @@ function loadCart(): CartItem[] {
     return (JSON.parse(stored) as CartItem[]).map((item) => ({
       ...item,
       availableDays: item.availableDays ?? 'both',
+      availableOnDate: item.availableOnDate ?? null,
     }));
   } catch {
     return [];

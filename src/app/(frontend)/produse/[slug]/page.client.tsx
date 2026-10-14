@@ -11,7 +11,11 @@ import { ScrollReveal } from '@/components/ScrollReveal';
 import { useToast } from '@/components/Toast';
 import type { Media, Product } from '@/payload-types';
 import { useCart } from '@/providers/Cart';
-import { availableDaysLabel } from '@/utilities/productAvailability';
+import {
+  badgeDeliveryLabel,
+  inlineDeliveryLabel,
+  isEffectivelyPurchaseable,
+} from '@/utilities/productAvailability';
 import { isExpandedDoc } from '@/utilities/type-guards';
 
 const productTypeLabels: Record<string, string> = {
@@ -30,7 +34,9 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
   const { addItem } = useCart();
   const { showToast } = useToast();
   const [selectedImage, setSelectedImage] = useState(0);
-  const daysLabel = availableDaysLabel(product.availableDays);
+  const purchaseable = isEffectivelyPurchaseable(product);
+  const daysLabel = badgeDeliveryLabel(product);
+  const deliveryLabel = inlineDeliveryLabel(product);
 
   const allImages = useMemo(() => {
     const images: Array<Media> = [];
@@ -57,10 +63,11 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
       productType: product.productType || 'paine',
       slug: product.slug,
       availableDays: product.availableDays ?? 'both',
+      availableOnDate: product.availableOnDate ?? null,
     });
     showToast(
-      daysLabel
-        ? `În coș: ${product.name} — se livrează ${daysLabel.toLowerCase()}`
+      deliveryLabel
+        ? `În coș: ${product.name} — se livrează ${deliveryLabel}`
         : `În coș: ${product.name}`,
     );
   };
@@ -150,7 +157,7 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
             </div>
 
             {/* Availability */}
-            {product.available === false ? (
+            {!purchaseable ? (
               <div className="flex items-center gap-2 text-destructive font-sans text-sm mb-4">
                 <AlertCircle className="w-4 h-4" />
                 Momentan indisponibil
@@ -158,19 +165,19 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
             ) : daysLabel ? (
               <div className="flex items-center gap-2 text-muted-foreground font-sans text-sm mb-4">
                 <Check className="w-4 h-4" />
-                Se livrează {daysLabel.toLowerCase()}
+                Se livrează {deliveryLabel}
               </div>
             ) : null}
 
             {/* Add to cart */}
-            {product.available !== false && (
+            {purchaseable && (
               <button
                 type="button"
                 onClick={handleAddToCart}
                 className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-8 py-3 font-sans font-medium hover:bg-primary/90 transition-colors mb-8"
               >
                 <ShoppingBag className="w-5 h-5" />
-                {daysLabel ? `Adaugă în coș — ${daysLabel.toLowerCase()}` : 'Adaugă în coș'}
+                {deliveryLabel ? `Adaugă în coș — ${deliveryLabel}` : 'Adaugă în coș'}
               </button>
             )}
 

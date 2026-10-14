@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getDeliveryDates } from '@/utilities/deliveryDates';
+import { getDeliveryDates, isInHoliday } from '@/utilities/deliveryDates';
 
 // 2026 weekday anchors (date-only semantics):
 //   Sun 7/5, Mon 7/6, Tue 7/7, Wed 7/8, Thu 7/9, Fri 7/10, Sat 7/11,
@@ -135,5 +135,78 @@ describe('getDeliveryDates', () => {
     for (const option of nulled) {
       expect(option.isHoliday).toBe(false);
     }
+  });
+
+  it('restricts selectable dates to concrete allowedDates (one-off cart), graying the others as "availability"', () => {
+    // Cart with a one-off product for Fri 7/17 + a regular product (allowedDays [5]).
+    // referenceDate Thu 7/9: Fri 7/10 is past cutoff AND not the allowed date
+    // -> "availability" keeps priority, Tue 7/14 is a non-allowed weekday,
+    // Fri 7/17 is the only selectable option.
+    const dates = getDeliveryDates({
+      referenceDate: at('2026-07-09'),
+      allowedDays: [5],
+      allowedDates: [at('2026-07-17')],
+    });
+    const byLabel = new Map(dates.map((d) => [d.label, d] as const));
+
+    expect(byLabel.get('Vineri, 10 Iulie')?.isSelectable).toBe(false);
+    expect(byLabel.get('Vineri, 10 Iulie')?.blockedReason).toBe('availability');
+    expect(byLabel.get('Marți, 14 Iulie')?.isSelectable).toBe(false);
+    expect(byLabel.get('Vineri, 17 Iulie')?.isSelectable).toBe(true);
+    expect(byLabel.get('Vineri, 17 Iulie')?.blockedReason).toBeNull();
+    // Never extends beyond the latest allowed date chasing more selectable options.
+    expect(dates.filter((d) => d.isSelectable)).toHaveLength(1);
+  });
+
+  it('reaches forward to the allowed date when the near occurrences are not allowed', () => {
+    // referenceDate Wed 7/8 10:00 (before the 17:00 cutoff): Fri 7/10 would
+    // normally be selectable, but only Fri 7/17 is allowed for this cart.
+    const dates = getDeliveryDates({
+      referenceDate: at('2026-07-08', 10),
+      allowedDays: [5],
+      allowedDates: [at('2026-07-17')],
+    });
+    const byLabel = new Map(dates.map((d) => [d.label, d] as const));
+
+    expect(byLabel.get('Vineri, 10 Iulie')?.isSelectable).toBe(false);
+    expect(byLabel.get('Vineri, 10 Iulie')?.blockedReason).toBe('availability');
+    expect(byLabel.get('Vineri, 17 Iulie')?.isSelectable).toBe(true);
+  });
+
+  it('treats an empty allowedDates array as a full conflict: everything unselectable, no runaway extension', () => {
+    // Two one-off products with different dates -> no valid delivery date.
+    const dates = getDeliveryDates({
+      referenceDate: at('2026-07-09'),
+      allowedDays: [2, 5],
+      allowedDates: [],
+    });
+
+    expect(dates.length).toBeGreaterThan(0);
+    expect(dates.every((d) => !d.isSelectable)).toBe(true);
+    for (const option of dates) {
+      expect(option.blockedReason).toBe('availability');
+    }
+  });
+});
+
+describe('isInHoliday', () => {
+  const start = at('2026-07-06'); // Monday
+  const end = at('2026-07-12'); // Sunday
+
+  it('matches days inside the range (inclusive on both ends)', () => {
+    expect(isInHoliday(at('2026-07-06'), start, end)).toBe(true);
+    expect(isInHoliday(at('2026-07-10'), start, end)).toBe(true);
+    expect(isInHoliday(at('2026-07-12'), start, end)).toBe(true);
+  });
+
+  it('rejects days outside the range', () => {
+    expect(isInHoliday(at('2026-07-05'), start, end)).toBe(false);
+    expect(isInHoliday(at('2026-07-13'), start, end)).toBe(false);
+  });
+
+  it('accepts ISO strings and treats null as no holiday', () => {
+    expect(isInHoliday(at('2026-07-08'), '2026-07-06T00:00:00.000Z', '2026-07-12')).toBe(true);
+    expect(isInHoliday(at('2026-07-08'), null, null)).toBe(false);
+    expect(isInHoliday(at('2026-07-08'), undefined, undefined)).toBe(false);
   });
 });

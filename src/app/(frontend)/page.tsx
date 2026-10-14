@@ -13,6 +13,7 @@ import { getImageURL } from '@/utilities/generateMeta';
 import { getCachedGlobal } from '@/utilities/getGlobals';
 import { getServerSideURL } from '@/utilities/getURL';
 import { mergeOpenGraph } from '@/utilities/mergeOpenGraph';
+import { isActiveOneOff, isEffectivelyPurchaseable } from '@/utilities/productAvailability';
 import { SITE_DESCRIPTION, SITE_TITLE } from '@/utilities/seoDefaults';
 import { isExpandedDoc } from '@/utilities/type-guards';
 
@@ -79,6 +80,26 @@ export default async function HomePage() {
   const aboutImg1 = homepage?.aboutImage1;
   const aboutImg2 = homepage?.aboutImage2;
 
+  // Featured cards mirror the /produse list: purchaseable one-off products
+  // pin to the top of the grid (bread of the week).
+  const featured = featuredProducts.docs
+    .map((product) => ({
+      id: String(product.id),
+      name: product.name,
+      slug: product.slug,
+      shortDescription: product.shortDescription,
+      price: product.price,
+      weight: product.weight,
+      productType: product.productType,
+      tags: product.tags ?? undefined,
+      available: product.available ?? undefined,
+      availableDays: product.availableDays ?? undefined,
+      availableOnDate: product.availableOnDate ?? null,
+      purchaseable: isEffectivelyPurchaseable(product),
+      featuredImage: isExpandedDoc(product.featuredImage) ? product.featuredImage : null,
+    }))
+    .sort((a, b) => Number(isActiveOneOff(b)) - Number(isActiveOneOff(a)));
+
   return (
     <div>
       {/* Hero */}
@@ -107,25 +128,9 @@ export default async function HomePage() {
             <div className="container">
               <h2 className="text-3xl font-heading text-center mb-12">Produse recomandate</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {featuredProducts.docs.map((product, i) => (
+                {featured.map((product, i) => (
                   <ScrollReveal key={product.id} delay={i * 100}>
-                    <ProductCard
-                      product={{
-                        id: String(product.id),
-                        name: product.name,
-                        slug: product.slug,
-                        shortDescription: product.shortDescription,
-                        price: product.price,
-                        weight: product.weight,
-                        productType: product.productType,
-                        tags: product.tags ?? undefined,
-                        available: product.available ?? undefined,
-                        availableDays: product.availableDays ?? undefined,
-                        featuredImage: isExpandedDoc(product.featuredImage)
-                          ? product.featuredImage
-                          : null,
-                      }}
-                    />
+                    <ProductCard product={product} />
                   </ScrollReveal>
                 ))}
               </div>

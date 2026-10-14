@@ -38,6 +38,8 @@ const mockCartItems = [
     weight: '500g',
     productType: 'paine',
     slug: 'paine-alba',
+    availableDays: 'both' as const,
+    availableOnDate: null,
   },
   {
     productId: '2',
@@ -47,6 +49,8 @@ const mockCartItems = [
     weight: '300g',
     productType: 'produs',
     slug: 'scoverga',
+    availableDays: 'both' as const,
+    availableOnDate: null,
   },
 ];
 
@@ -181,7 +185,10 @@ describe('CartPageClient — first-time buyer', () => {
     const checkoutButton = screen.getByText(/comandă prin whatsapp/i);
     fireEvent.click(checkoutButton);
 
-    expect(fetchSpy).not.toHaveBeenCalled();
+    // Only the mount-time availability revalidation may hit the network —
+    // a failed validation must never POST an order.
+    const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    expect(orderPosts).toHaveLength(0);
   });
 });
 
@@ -252,9 +259,10 @@ describe('CartPageClient — returning customer', () => {
     const checkoutButton = screen.getByText(/comandă prin whatsapp/i);
     fireEvent.click(checkoutButton);
 
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const call = fetchSpy.mock.calls[0];
-    const body = JSON.parse((call![1] as RequestInit).body as string);
+    // Ignore the mount-time /api/products availability fetch.
+    const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    expect(orderPosts).toHaveLength(1);
+    const body = JSON.parse((orderPosts[0]![1] as RequestInit).body as string);
     expect(body.deliveryMethod).toBe('curier');
     expect(body.shippingCost).toBe(25);
     expect(body.subtotal).toBe(30);
@@ -270,9 +278,10 @@ describe('CartPageClient — returning customer', () => {
     const checkoutButton = screen.getByText(/comandă prin whatsapp/i);
     fireEvent.click(checkoutButton);
 
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const call = fetchSpy.mock.calls[0];
-    const body = JSON.parse((call![1] as RequestInit).body as string);
+    // Ignore the mount-time /api/products availability fetch.
+    const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    expect(orderPosts).toHaveLength(1);
+    const body = JSON.parse((orderPosts[0]![1] as RequestInit).body as string);
     expect(body.deliveryMethod).toBe('personal');
     expect(body.shippingCost).toBe(0);
     expect(body.subtotal).toBe(30);
@@ -288,18 +297,21 @@ describe('CartPageClient — holiday-aware delivery dropdown', () => {
         label: 'Vineri, 10 Iulie',
         isSelectable: true,
         isHoliday: false,
+        blockedReason: null,
       },
       {
         date: new Date('2026-07-14'),
         label: 'Marți, 14 Iulie',
         isSelectable: false,
         isHoliday: true,
+        blockedReason: null,
       },
       {
         date: new Date('2026-07-21'),
         label: 'Marți, 21 Iulie',
         isSelectable: true,
         isHoliday: false,
+        blockedReason: null,
       },
     ]);
 
@@ -330,18 +342,21 @@ describe('CartPageClient — holiday-aware delivery dropdown', () => {
         label: 'Vineri, 10 Iulie',
         isSelectable: false,
         isHoliday: false,
+        blockedReason: 'cutoff',
       },
       {
         date: new Date('2026-07-14'),
         label: 'Marți, 14 Iulie',
         isSelectable: false,
         isHoliday: true,
+        blockedReason: 'cutoff',
       },
       {
         date: new Date('2026-07-21'),
         label: 'Marți, 21 Iulie',
         isSelectable: true,
         isHoliday: false,
+        blockedReason: null,
       },
     ]);
 
@@ -383,12 +398,14 @@ describe('CartPageClient — holiday info message', () => {
         label: 'Vineri, 13 Iunie',
         isSelectable: true,
         isHoliday: false,
+        blockedReason: null,
       },
       {
         date: new Date('2025-06-17'),
         label: 'Marți, 17 Iunie',
         isSelectable: true,
         isHoliday: false,
+        blockedReason: null,
       },
     ]);
   });

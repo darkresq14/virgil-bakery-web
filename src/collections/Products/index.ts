@@ -19,7 +19,9 @@ import { authenticated } from '../../access/authenticated';
 import { authenticatedOrPublished } from '../../access/authenticatedOrPublished';
 import { MediaBlock } from '../../blocks/MediaBlock/config';
 import { populatePublishedAt } from '../../hooks/populatePublishedAt';
+import { isInHoliday } from '../../utilities/deliveryDates';
 import { generatePreviewPath } from '../../utilities/generatePreviewPath';
+import { parseOneOffDate } from '../../utilities/productAvailability';
 import { revalidateDelete, revalidateProduct } from './hooks/revalidateProduct';
 
 export const Products: CollectionConfig<'products'> = {
@@ -153,6 +155,36 @@ export const Products: CollectionConfig<'products'> = {
               admin: {
                 description:
                   'Zilele în care produsul poate fi livrat. Limitează datele de livrare disponibile la finalizarea comenzii.',
+              },
+            },
+            {
+              name: 'availableOnDate',
+              type: 'date',
+              label: 'Disponibil o singură dată',
+              admin: {
+                date: {
+                  pickerAppearance: 'dayOnly',
+                  displayFormat: 'd MMMM yyyy',
+                },
+                description:
+                  'Dacă e completat, produsul se poate comanda DOAR pentru data aleasă — de la intrarea ei în selectorul de livrare (cu ~9 zile înainte) până la închiderea listei (ora 17:00, cu 2 zile înainte). Are prioritate față de „Zile disponibilitate” și „Disponibil”. Alege doar marți sau vineri, în afara perioadelor de concediu.',
+              },
+              validate: async (value, { req }) => {
+                if (!value) return true;
+                const oneOff = parseOneOffDate(value);
+                if (!oneOff) return 'Dată invalidă';
+                const weekday = oneOff.getUTCDay();
+                if (weekday !== 2 && weekday !== 5)
+                  return 'Alege o marți sau o vineri (zile de livrare)';
+                // A one-off date inside the holiday can never be delivered: the
+                // product would show as purchaseable while its date stays
+                // unselectable in the delivery-date picker (deadlock).
+                const siteConfig = req.payload
+                  ? await req.payload.findGlobal({ slug: 'siteConfig', depth: 0 })
+                  : null;
+                if (isInHoliday(oneOff, siteConfig?.holidayStartDate, siteConfig?.holidayEndDate))
+                  return 'Data se suprapune cu perioada de concediu — alege altă dată';
+                return true;
               },
             },
             {

@@ -19,6 +19,8 @@ interface Product {
   tags?: string[];
   available?: boolean;
   availableDays?: AvailableDays | null;
+  availableOnDate?: string | null;
+  purchaseable?: boolean;
   sortOrder?: number;
   featuredImage?: Media | null;
 }
@@ -59,9 +61,12 @@ export const ProductsPageClient: React.FC<{ products: Product[] }> = ({ products
     }
 
     return result.sort((a, b) => {
-      // Available products first
-      const aAvail = a.available ? 0 : 1;
-      const bAvail = b.available ? 0 : 1;
+      // Purchaseable products first (effective availability: One-off aware).
+      // Server already pinned active one-off products to the top; this stable
+      // sort keeps them in the purchaseable group without demoting them.
+      const isBuyable = (p: Product) => p.purchaseable ?? p.available;
+      const aAvail = isBuyable(a) ? 0 : 1;
+      const bAvail = isBuyable(b) ? 0 : 1;
       if (aAvail !== bAvail) return aAvail - bAvail;
 
       // Group by product type order

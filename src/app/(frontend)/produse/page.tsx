@@ -2,6 +2,7 @@ import configPromise from '@payload-config';
 import type { Metadata } from 'next';
 import { draftMode } from 'next/headers';
 import { getPayload } from 'payload';
+import { isActiveOneOff, isEffectivelyPurchaseable } from '@/utilities/productAvailability';
 import { isExpandedDoc } from '@/utilities/type-guards';
 import { ProductsPageClient } from './page.client';
 
@@ -31,22 +32,29 @@ export default async function ProductsPage() {
     sort: '-available,sortOrder,name',
   });
 
+  // Purchaseable one-off products pin to the top of the list (bread of the
+  // week); the client keeps availability/type ordering for the rest. Mirrored
+  // by the homepage featured grid.
   return (
     <ProductsPageClient
-      products={products.docs.map((p) => ({
-        id: String(p.id),
-        name: p.name,
-        slug: p.slug,
-        shortDescription: p.shortDescription,
-        price: p.price,
-        weight: p.weight,
-        productType: p.productType,
-        tags: p.tags ?? undefined,
-        available: p.available ?? undefined,
-        availableDays: p.availableDays ?? undefined,
-        sortOrder: p.sortOrder ?? undefined,
-        featuredImage: isExpandedDoc(p.featuredImage) ? p.featuredImage : null,
-      }))}
+      products={products.docs
+        .map((p) => ({
+          id: String(p.id),
+          name: p.name,
+          slug: p.slug,
+          shortDescription: p.shortDescription,
+          price: p.price,
+          weight: p.weight,
+          productType: p.productType,
+          tags: p.tags ?? undefined,
+          available: p.available ?? undefined,
+          availableDays: p.availableDays ?? undefined,
+          availableOnDate: p.availableOnDate ?? null,
+          purchaseable: isEffectivelyPurchaseable(p),
+          sortOrder: p.sortOrder ?? undefined,
+          featuredImage: isExpandedDoc(p.featuredImage) ? p.featuredImage : null,
+        }))
+        .sort((a, b) => Number(isActiveOneOff(b)) - Number(isActiveOneOff(a)))}
     />
   );
 }

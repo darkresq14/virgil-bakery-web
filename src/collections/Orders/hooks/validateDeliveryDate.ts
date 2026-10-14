@@ -1,13 +1,20 @@
 import type { CollectionBeforeChangeHook } from 'payload';
 import { ValidationError } from 'payload';
-
-import { availabilityDaysToWeekdays } from '@/utilities/productAvailability';
+import { formatRomanianDate, isInHoliday } from '@/utilities/deliveryDates';
+import {
+  availabilityDaysToWeekdays,
+  isOneOffPurchaseable,
+  isSameRoDay,
+  parseOneOffDate,
+} from '@/utilities/productAvailability';
 
 /**
- * Server-side guard for Availability Day + availability (see CONTEXT.md).
- * The cart UI already filters delivery dates, but the DB write must not trust
- * the client: an order whose delivery weekday is not allowed for some item, or
- * that references an unpublished/unavailable product, is rejected with 400.
+ * Server-side guard for Availability Day, One-off Availability, availability
+ * and holiday periods (see CONTEXT.md). The cart UI already filters delivery
+ * dates, but the DB write must not trust the client: an order whose delivery
+ * weekday is not allowed for some item, that references an unpublished/
+ * unavailable product, that misses a one-off product's date/window, or whose
+ * delivery date falls inside the holiday period, is rejected with 400.
  */
 export const validateDeliveryDate: CollectionBeforeChangeHook = async ({
   data,
@@ -54,6 +61,13 @@ export const validateDeliveryDate: CollectionBeforeChangeHook = async ({
     });
   };
 
+  // A holiday closes the bakery entirely — no delivery date inside the period
+  // is ever orderable, regardless of products in the cart.
+  const siteConfig = await req.payload.findGlobal({ slug: 'siteConfig', depth: 0 });
+  if (isInHoliday(deliveryDate, siteConfig?.holidayStartDate, siteConfig?.holidayEndDate)) {
+    fail('Nu livrăm în perioada de concediu — alege altă dată de livrare');
+  }
+
   const found = new Map(products.docs.map((p) => [String(p.id), p]));
   for (const id of productIds) {
     if (!found.has(id)) {
@@ -61,7 +75,20 @@ export const validateDeliveryDate: CollectionBeforeChangeHook = async ({
     }
   }
 
+  const now = new Date();
   for (const product of products.docs) {
+    // One-off Availability has the highest priority: exact-date match plus a
+    // live purchase window; it overrides the available flag and Availability Day.
+    const oneOff = parseOneOffDate(product.availableOnDate);
+    if (oneOff) {
+      if (!isSameRoDay(deliveryDate, oneOff)) {
+        fail(`${product.name} se poate comanda doar pentru ${formatRomanianDate(oneOff)}`);
+      }
+      if (!isOneOffPurchaseable(oneOff, now)) {
+        fail(`${product.name} nu mai este disponibil pentru data selectată`);
+      }
+      continue;
+    }
     if (product.available === false) {
       fail(`${product.name} este momentan indisponibil`);
     }
