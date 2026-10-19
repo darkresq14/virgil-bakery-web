@@ -1,3 +1,4 @@
+import { after } from 'next/server';
 import type { CollectionAfterChangeHook } from 'payload';
 
 import { pushOrderToSheet } from '@/utilities/sheetSync';
@@ -11,7 +12,22 @@ import { pushOrderToSheet } from '@/utilities/sheetSync';
  * Updates of synced or never-synced orders never re-push. Outcome is
  * persisted on the order via the DB adapter directly, bypassing hooks and
  * revalidation loops.
+ *
+ * Issue #41 — the push must not delay the order response either: the workbook
+ * script takes 5–10s+ per push, which hung checkout and bred duplicate orders.
+ * next/server after() runs the push once the response is on its way; Vercel
+ * keeps the function alive for it (maxDuration pinned in vercel.json). Outside
+ * a request scope (tests, cron, local API) after() throws — the fallback lets
+ * the promise float on the long-lived process instead of blocking the caller.
  */
+/** In-flight background pushes — lets tests await completion deterministically. */
+const sheetSyncInflight = new Set<Promise<unknown>>();
+
+/** Resolves once every background sheet push triggered so far has settled. */
+export function settleSheetSyncs(): Promise<void> {
+  return Promise.all([...sheetSyncInflight]).then(() => undefined);
+}
+
 export const syncOrderToSheet: CollectionAfterChangeHook = async ({
   doc,
   previousDoc,
@@ -24,27 +40,43 @@ export const syncOrderToSheet: CollectionAfterChangeHook = async ({
   const isFailedRetry = operation === 'update' && previousDoc?.sheetSyncStatus === 'failed';
   if (operation !== 'create' && !isFailedRetry) return doc;
 
-  try {
-    const outcome = await pushOrderToSheet(doc);
+  // Captured before the response ends; `req` itself is stale by the time the
+  // callback runs, so the DB adapter is used without it.
+  const payloadDb = req.payload;
+  const orderId = doc.id;
 
-    // Missing env vars: the seam already warned; nothing to persist.
-    if (outcome.status === 'skipped') return doc;
+  const push = (async () => {
+    try {
+      const outcome = await pushOrderToSheet(doc);
 
-    if (outcome.status === 'failed') {
-      console.error(`[orders] Sheet sync failed for order ${doc.id}: ${outcome.reason}`);
+      // Missing env vars: the seam already warned; nothing to persist.
+      if (outcome.status === 'skipped') return;
+
+      if (outcome.status === 'failed') {
+        console.error(`[orders] Sheet sync failed for order ${orderId}: ${outcome.reason}`);
+      }
+
+      await payloadDb.db.updateOne({
+        collection: collection.slug,
+        id: orderId,
+        data: { sheetSyncStatus: outcome.status },
+      });
+    } catch (error) {
+      // Belt and braces — the seam never throws, but order creation is sacred.
+      console.error(`[orders] Sheet sync hook error for order ${orderId}:`, error);
     }
+  })();
 
-    await req.payload.db.updateOne({
-      collection: collection.slug,
-      id: doc.id,
-      data: { sheetSyncStatus: outcome.status },
-      req,
-    });
+  sheetSyncInflight.add(push);
+  const forget = () => sheetSyncInflight.delete(push);
+  push.then(forget, forget);
 
-    return { ...doc, sheetSyncStatus: outcome.status };
-  } catch (error) {
-    // Belt and braces — the seam never throws, but order creation is sacred.
-    console.error(`[orders] Sheet sync hook error for order ${doc.id}:`, error);
-    return doc;
+  try {
+    after(push);
+  } catch {
+    // No request scope: float the promise; it settles on the running process.
+    void push;
   }
+
+  return doc;
 };

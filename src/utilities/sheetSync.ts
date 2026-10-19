@@ -74,9 +74,14 @@ function toWirePayload(order: SheetSyncOrder, secret: string): WirePayload {
  * `redirect: 'manual'` and the JSON result is read back by GETting the
  * Location header. This transport lives here only.
  */
-/** Cap on each web-app fetch so a hanging Google response can never block
- * order creation (spec story 17). A timeout abort is just a transport error. */
-const FETCH_TIMEOUT_MS = 10_000;
+/** Cap on each web-app fetch. Since #41 the push runs in the background
+ * (next/server after()), so this bounds only the post-response verdict wait:
+ * the workbook script serializes pushes on a 30s lock and takes 5–10s+ per
+ * push. 45s (not the full 60s function budget) leaves headroom for the
+ * status write after the verdict; a timeout abort is just a transport error
+ * — the script may still have written the row; the admin re-save retry
+ * resolves it (the workbook dedupes on idComanda). */
+const FETCH_TIMEOUT_MS = 45_000;
 
 export async function pushOrderToSheet(
   order: SheetSyncOrder,

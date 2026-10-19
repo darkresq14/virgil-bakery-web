@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { type AddressFields, AddressForm } from '@/components/AddressForm';
 import { useCart } from '@/providers/Cart';
@@ -124,6 +124,12 @@ export function CartPageClient({
     streetAddress: '',
   });
   const [needsCourier, setNeedsCourier] = useState(false);
+  // Issue #41 — double-submit guard. The ref locks synchronously (a second
+  // click before re-render must not pass); the state only drives the disabled
+  // button. Unlocks on failure so the customer can retry; on success the cart
+  // is cleared, so staying locked is harmless.
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   // Fresh availability from the server: catches products unpublished or marked
   // unavailable after they were saved to localStorage (see CONTEXT.md → Order).
@@ -336,6 +342,9 @@ export function CartPageClient({
     setFieldErrors(errors);
     if (errors.name || errors.phone || errors.judet || errors.localitate || errors.streetAddress)
       return;
+    if (submittingRef.current) return; // an order POST is already in flight
+    submittingRef.current = true;
+    setIsSubmitting(true);
 
     const selectedDate = deliveryDates.find((d) => d.label === selectedDelivery);
 
@@ -358,7 +367,7 @@ export function CartPageClient({
     });
 
     try {
-      await fetch('/api/orders', {
+      const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -383,8 +392,17 @@ export function CartPageClient({
           status: 'nou',
         }),
       });
+      // Order not persisted server-side (non-2xx) counts as failure: the
+      // customer must be able to retry, so release the submit lock. The
+      // WhatsApp handoff below still runs — same as the catch path.
+      if (!res.ok) {
+        submittingRef.current = false;
+        setIsSubmitting(false);
+      }
     } catch {
-      // Still open WhatsApp even if DB save fails
+      // Still open WhatsApp even if DB save fails — but allow a retry.
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
 
     const url = `https://wa.me/40746245391?text=${encodeURIComponent(message)}`;
@@ -759,7 +777,9 @@ export function CartPageClient({
               <button
                 type="button"
                 onClick={handleCheckout}
-                disabled={hasDayConflict || hasDateConflict || staleItemIds.size > 0}
+                disabled={
+                  hasDayConflict || hasDateConflict || staleItemIds.size > 0 || isSubmitting
+                }
                 className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] text-white px-8 py-3 font-sans font-medium hover:bg-[#20bd5a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#25D366]"
               >
                 <Image
@@ -769,7 +789,7 @@ export function CartPageClient({
                   width={24}
                   height={24}
                 />
-                Comandă prin WhatsApp
+                {isSubmitting ? 'Se trimite…' : 'Comandă prin WhatsApp'}
               </button>
             </div>
           </div>

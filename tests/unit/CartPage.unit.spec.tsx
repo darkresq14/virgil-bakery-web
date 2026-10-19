@@ -249,6 +249,31 @@ describe('CartPageClient — returning customer', () => {
     expect(screen.queryByText(/transport \(curier cargus\)/i)).toBeNull();
   });
 
+  it('finishes the checkout flow (cart cleared) when the order POST answers non-ok, with the guard released', async () => {
+    // #41 review follow-up: a 500 from /api/orders is a failure — the guard
+    // must release (future sessions work) even though this flow still hands
+    // off to WhatsApp and clears the cart, by design.
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(Response.json({ ok: false }, { status: 500 }))
+      .mockResolvedValue(Response.json({ ok: true }));
+    const clearCart = vi.fn();
+    setupCartPage({ clearCart });
+    switchToReturningCustomer();
+
+    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
+
+    fireEvent.click(screen.getByText(/comandă prin whatsapp/i));
+
+    const orderPosts = () =>
+      fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    await waitFor(() => expect(orderPosts()).toHaveLength(1));
+
+    // Flow completed: cart cleared exactly once, exactly one POST.
+    expect(clearCart).toHaveBeenCalledTimes(1);
+    expect(orderPosts()).toHaveLength(1);
+  });
+
   it('POSTs order with deliveryMethod and shippingCost when courier checkbox is checked', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }));
     setupReturningCustomer();
@@ -273,6 +298,23 @@ describe('CartPageClient — returning customer', () => {
     expect(body.shippingCost).toBe(25);
     expect(body.subtotal).toBe(30);
     expect(body.total).toBe(55);
+  });
+
+  it('ignores a second rapid checkout click while the order POST is in flight', () => {
+    // Issue #41 — no double-submit guard: each impatient re-click created a
+    // duplicate Payload order (prod incident: five orders in 10s).
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() => new Promise(() => {}));
+    setupReturningCustomer();
+    switchToReturningCustomer();
+
+    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
+
+    const checkoutButton = screen.getByText(/comandă prin whatsapp/i);
+    fireEvent.click(checkoutButton);
+    fireEvent.click(checkoutButton);
+
+    const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    expect(orderPosts).toHaveLength(1);
   });
 
   it('POSTs order with personal delivery when courier checkbox is unchecked', async () => {

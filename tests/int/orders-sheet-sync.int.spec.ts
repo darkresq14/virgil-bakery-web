@@ -1,12 +1,19 @@
 import { getPayload, type Payload } from 'payload';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { settleSheetSyncs } from '@/collections/Orders/hooks/syncOrderToSheet';
 import config from '@/payload.config';
-import { jsonPage, stubFetch } from '../helpers/fetchStub';
+import { jsonPage, type ResponseLike, stubFetch } from '../helpers/fetchStub';
 
 /**
- * Issue #35 — sheetSyncStatus wiring on the real Payload harness.
+ * Issue #35 / #41 — sheetSyncStatus wiring on the real Payload harness.
  * The sheet-sync seam (pushOrderToSheet) talks to the web app via global
  * fetch, so stubbing fetch controls the sync outcome end to end.
+ *
+ * Since #41 the push runs AFTER the order response (next/server after()),
+ * so statuses are asserted after `await settleSheetSyncs()` — the hook
+ * tracks in-flight pushes for exactly this. In this harness there is no
+ * Next request scope, so the hook's fallback runs the push as a floating
+ * promise. The gated-fetch test proves create returns before the verdict.
  */
 
 let payload: Payload;
@@ -33,6 +40,15 @@ function setSyncEnv() {
   process.env.SHEETS_WEBAPP_TOKEN = WEBAPP_TOKEN;
 }
 
+/** Await every push triggered so far, then read the persisted status. */
+async function settledStatus(id: number | string) {
+  await settleSheetSyncs();
+  return (await payload.findByID({ collection: 'orders', id, depth: 0 })).sheetSyncStatus as
+    | 'synced'
+    | 'failed'
+    | null;
+}
+
 describe('orders sheet sync', () => {
   beforeAll(async () => {
     payload = await getPayload({ config: await config });
@@ -43,6 +59,8 @@ describe('orders sheet sync', () => {
   });
 
   afterEach(async () => {
+    // Let any background pushes settle before tearing stubs down.
+    await settleSheetSyncs();
     for (const id of createdIds.splice(0)) {
       await payload.delete({ collection: 'orders', id }).catch(() => {});
     }
@@ -63,13 +81,54 @@ describe('orders sheet sync', () => {
     });
     createdIds.push(Number(order.id));
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const persisted = await payload.findByID({
-      collection: 'orders',
-      id: order.id,
-      depth: 0,
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(await settledStatus(order.id)).toBe('synced');
+  });
+
+  it('returns from create before the push verdict arrives — checkout is never blocked', async () => {
+    setSyncEnv();
+    // Gate the web-app fetch: never resolves until the test releases it.
+    let release!: (page: ResponseLike) => void;
+    const gate = new Promise<ResponseLike>((resolve) => {
+      release = resolve;
     });
-    expect(persisted.sheetSyncStatus).toBe('synced');
+    stubFetch(() => gate);
+
+    const order = await payload.create({
+      collection: 'orders',
+      data: orderData(),
+      draft: false,
+      depth: 0,
+      context: { disableRevalidate: true },
+    });
+    createdIds.push(Number(order.id));
+
+    // Create resolved while the push was still in flight: no verdict yet.
+    const mid = await payload.findByID({ collection: 'orders', id: order.id, depth: 0 });
+    expect(mid.sheetSyncStatus).toBeNull();
+
+    release(jsonPage({ ok: true }));
+    expect(await settledStatus(order.id)).toBe('synced');
+  });
+
+  it('persists sheetSyncStatus synced when a slow push eventually answers', async () => {
+    // #41 acceptance: a slow-but-successful push (workbook script 5–10s+;
+    // scaled to 150ms here) must still land `synced`, not time out `failed`.
+    setSyncEnv();
+    stubFetch(
+      () => new Promise((resolve) => setTimeout(() => resolve(jsonPage({ ok: true })), 150)),
+    );
+
+    const order = await payload.create({
+      collection: 'orders',
+      data: orderData(),
+      draft: false,
+      depth: 0,
+      context: { disableRevalidate: true },
+    });
+    createdIds.push(Number(order.id));
+
+    expect(await settledStatus(order.id)).toBe('synced');
   });
 
   it('persists sheetSyncStatus failed when fetch rejects, order still created', async () => {
@@ -87,12 +146,7 @@ describe('orders sheet sync', () => {
     });
     createdIds.push(Number(order.id));
 
-    const persisted = await payload.findByID({
-      collection: 'orders',
-      id: order.id,
-      depth: 0,
-    });
-    expect(persisted.sheetSyncStatus).toBe('failed');
+    expect(await settledStatus(order.id)).toBe('failed');
   });
 
   it('persists sheetSyncStatus failed on a non-ok script response', async () => {
@@ -108,12 +162,7 @@ describe('orders sheet sync', () => {
     });
     createdIds.push(Number(order.id));
 
-    const persisted = await payload.findByID({
-      collection: 'orders',
-      id: order.id,
-      depth: 0,
-    });
-    expect(persisted.sheetSyncStatus).toBe('failed');
+    expect(await settledStatus(order.id)).toBe('failed');
   });
 
   it('does not re-push on update when the previous sync succeeded', async () => {
@@ -128,7 +177,8 @@ describe('orders sheet sync', () => {
       context: { disableRevalidate: true },
     });
     createdIds.push(Number(order.id));
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(await settledStatus(order.id)).toBe('synced');
 
     await payload.update({
       collection: 'orders',
@@ -183,6 +233,7 @@ describe('orders sheet sync', () => {
       context: { disableRevalidate: true },
     });
     createdIds.push(Number(order.id));
+    expect(await settledStatus(order.id)).toBe('failed');
 
     // Admin re-save = the retry (issue #33 story 13).
     const { fetchMock, calls } = stubFetch(() => jsonPage({ ok: true }));
@@ -195,18 +246,13 @@ describe('orders sheet sync', () => {
       context: { disableRevalidate: true },
     });
     expect(updated.status).toBe('confirmat');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
 
     // The retry pushes this same order (idComanda dedup on the workbook side).
     const body = JSON.parse(String(calls[0]?.init?.body));
     expect(body.idComanda).toBe(String(order.id));
 
-    const persisted = await payload.findByID({
-      collection: 'orders',
-      id: order.id,
-      depth: 0,
-    });
-    expect(persisted.sheetSyncStatus).toBe('synced');
+    expect(await settledStatus(order.id)).toBe('synced');
   });
 
   it('persists failed and still completes the update when a retried push fails again', async () => {
@@ -221,6 +267,7 @@ describe('orders sheet sync', () => {
       context: { disableRevalidate: true },
     });
     createdIds.push(Number(order.id));
+    expect(await settledStatus(order.id)).toBe('failed');
 
     // Re-save: retry still fails — the update itself must not throw.
     const updated = await payload.update({
@@ -232,12 +279,7 @@ describe('orders sheet sync', () => {
     });
     expect(updated.status).toBe('confirmat');
 
-    const persisted = await payload.findByID({
-      collection: 'orders',
-      id: order.id,
-      depth: 0,
-    });
-    expect(persisted.sheetSyncStatus).toBe('failed');
+    expect(await settledStatus(order.id)).toBe('failed');
   });
 
   it('does not re-push on update when the order was never synced (null status)', async () => {
@@ -288,6 +330,7 @@ describe('orders sheet sync', () => {
       context: { disableRevalidate: true },
     });
     createdIds.push(Number(order.id));
+    expect(await settledStatus(order.id)).toBe('failed');
 
     // Re-save with env missing: retry skipped, no throw, status untouched.
     delete process.env.SHEETS_WEBAPP_URL;
