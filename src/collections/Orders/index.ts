@@ -3,6 +3,7 @@ import type { CollectionConfig } from 'payload';
 import { anyone } from '../../access/anyone';
 import { authenticated } from '../../access/authenticated';
 import { revalidateOrder } from './hooks/revalidateOrder';
+import { syncOrderToSheet } from './hooks/syncOrderToSheet';
 import { validateDeliveryDate } from './hooks/validateDeliveryDate';
 
 export const Orders: CollectionConfig = {
@@ -21,6 +22,7 @@ export const Orders: CollectionConfig = {
       'deliveryDate',
       'total',
       'status',
+      'sheetSyncStatus',
       'createdAt',
     ],
     useAsTitle: 'id',
@@ -133,9 +135,27 @@ export const Orders: CollectionConfig = {
         },
       },
     },
+    {
+      name: 'sheetSyncStatus',
+      type: 'select',
+      label: 'Sync foaie ops',
+      // Written only by the afterChange hook via the DB adapter; the select
+      // never offers itself as writable anywhere.
+      options: [
+        { label: 'Sync', value: 'synced' },
+        { label: 'Eșuat', value: 'failed' },
+      ],
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        components: {
+          Cell: '@/collections/Orders/components/SheetSyncStatusCell#SheetSyncStatusCell',
+        },
+      },
+    },
   ],
   hooks: {
-    afterChange: [revalidateOrder],
+    afterChange: [revalidateOrder, syncOrderToSheet],
     beforeChange: [validateDeliveryDate],
   },
 };

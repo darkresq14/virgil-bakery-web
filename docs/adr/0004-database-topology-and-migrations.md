@@ -30,6 +30,10 @@ Split the environments and put production on migrations.
 
 **Transactions.** Left off. The only write path (the `Orders` collection) is a single insert followed by a revalidation hook (not a DB write), so nothing today needs multi-write atomicity. Enabling later is a one-line change; revisit when an atomic operation (e.g. order + stock decrement, order + audit log) is added.
 
+### Amendment (Oct 2026, post-#35)
+
+The Orders create path now performs a second, best-effort DB write: the sheet-sync `afterChange` hook persists `sheetSyncStatus` through the raw adapter (`db.updateOne`, bypassing hooks). This does not change the transactions decision — the status write is deliberately non-atomic metadata (a failed push must never block order creation, and a missed status write leaves the order intact), so there is still nothing that needs multi-write atomicity.
+
 ## Considered alternatives
 
 - **Second Turso DB for dev (instead of a local file).** Rejected — only worth it if Vercel Preview Deployments need a live backend, which this project does not use. A local file is free, instant, offline, and fully isolated. *(The preview-backend question is revisited in ADR 0006, which adopts a shared preview Turso DB; the dev-file decision here stands.)*

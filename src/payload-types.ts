@@ -915,6 +915,7 @@ export interface Order {
   addressDetails?: string | null;
   whatsappMessage?: string | null;
   status: 'nou' | 'confirmat' | 'livrat' | 'anulat';
+  sheetSyncStatus?: ('synced' | 'failed') | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1510,6 +1511,7 @@ export interface OrdersSelect<T extends boolean = true> {
   addressDetails?: T;
   whatsappMessage?: T;
   status?: T;
+  sheetSyncStatus?: T;
   updatedAt?: T;
   createdAt?: T;
 }
