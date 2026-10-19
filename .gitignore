@@ -42,3 +42,6 @@ TEMP/
 
 # TypeScript incremental build cache
 tsconfig.tsbuildinfo
+
+# Google service account keys (local only)
+.secrets/
