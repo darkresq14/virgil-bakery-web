@@ -17,6 +17,14 @@ Using default label vocabulary (needs-triage, needs-info, ready-for-agent, ready
 
 Single-context layout — one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
+## Scope
+
+This project covers the website only. Google Sheets (product data, orders, inventory) is maintained by the baker — anything sheet-related is out of scope here. If a task requires changing sheet structure or data, stop and tell the user to coordinate with the baker instead.
+
+## Git safety rules
+
+**The agent never runs `git push`.** Ever, to any branch or remote. The user always pushes themselves.
+
 ## Commit messages
 
 Use the caveman-commit skill at `.agents/skills/caveman-commit/SKILL.md` for every commit message — Conventional Commits format, subject ≤50 chars (hard cap 72), imperative mood, body only when the *why* is non-obvious. No AI attribution. Best-effort: read the skill before writing a commit message.
