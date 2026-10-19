@@ -5,18 +5,24 @@ import { pushOrderToSheet } from '@/utilities/sheetSync';
 /**
  * Issue #35 — every created order (site checkout or hand-made in admin)
  * attempts a push to the ops workbook. Never throws: a failed push must not
- * block or fail order creation. Fires on create only — re-saving an order
- * retries the push safely because the workbook dedupes on `idComanda`, but
- * plain updates never re-push. Outcome is persisted on the order via the DB
- * adapter directly, bypassing hooks and revalidation loops.
+ * block or fail order creation. Fires on create and again when an admin
+ * re-saves a failed order (retry mechanism v1): the workbook dedupes on
+ * `idComanda` and replaces quantities, so re-pushing the same order is safe.
+ * Updates of synced or never-synced orders never re-push. Outcome is
+ * persisted on the order via the DB adapter directly, bypassing hooks and
+ * revalidation loops.
  */
 export const syncOrderToSheet: CollectionAfterChangeHook = async ({
   doc,
+  previousDoc,
   operation,
   collection,
   req,
 }) => {
-  if (operation !== 'create') return doc;
+  // Push on create; on update, retry only a previously failed sync (admin
+  // re-save of a failed order = the v1 retry mechanism, issue #33 story 13).
+  const isFailedRetry = operation === 'update' && previousDoc?.sheetSyncStatus === 'failed';
+  if (operation !== 'create' && !isFailedRetry) return doc;
 
   try {
     const outcome = await pushOrderToSheet(doc);

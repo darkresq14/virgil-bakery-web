@@ -144,7 +144,7 @@ describe('orders sheet sync', () => {
     expect(persisted.sheetSyncStatus).toBe('failed');
   });
 
-  it('does not re-push on update (create-only guard)', async () => {
+  it('does not re-push on update when the previous sync succeeded', async () => {
     setSyncEnv();
     const { fetchMock } = stubFetch(() => jsonResponse({ ok: true }));
 
@@ -196,5 +196,147 @@ describe('orders sheet sync', () => {
       depth: 0,
     });
     expect(persisted.sheetSyncStatus).toBeNull();
+  });
+
+  it('retries the push on update when the previous sync failed', async () => {
+    setSyncEnv();
+    // First push fails — order lands as failed.
+    stubFetch(() => jsonResponse({ ok: false, eroare: 'bad secret' }));
+
+    const order = await payload.create({
+      collection: 'orders',
+      data: orderData(),
+      draft: false,
+      depth: 0,
+      context: { disableRevalidate: true },
+    });
+    createdIds.push(Number(order.id));
+
+    // Admin re-save = the retry (issue #33 story 13).
+    const { fetchMock, calls } = stubFetch(() => jsonResponse({ ok: true }));
+
+    const updated = await payload.update({
+      collection: 'orders',
+      id: order.id,
+      data: { status: 'confirmat' },
+      depth: 0,
+      context: { disableRevalidate: true },
+    });
+    expect(updated.status).toBe('confirmat');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // The retry pushes this same order (idComanda dedup on the workbook side).
+    const body = JSON.parse(String(calls[0]?.init?.body));
+    expect(body.idComanda).toBe(String(order.id));
+
+    const persisted = await payload.findByID({
+      collection: 'orders',
+      id: order.id,
+      depth: 0,
+    });
+    expect(persisted.sheetSyncStatus).toBe('synced');
+  });
+
+  it('persists failed and still completes the update when a retried push fails again', async () => {
+    setSyncEnv();
+    stubFetch(() => jsonResponse({ ok: false, eroare: 'still broken' }));
+
+    const order = await payload.create({
+      collection: 'orders',
+      data: orderData(),
+      draft: false,
+      depth: 0,
+      context: { disableRevalidate: true },
+    });
+    createdIds.push(Number(order.id));
+
+    // Re-save: retry still fails — the update itself must not throw.
+    const updated = await payload.update({
+      collection: 'orders',
+      id: order.id,
+      data: { status: 'confirmat' },
+      depth: 0,
+      context: { disableRevalidate: true },
+    });
+    expect(updated.status).toBe('confirmat');
+
+    const persisted = await payload.findByID({
+      collection: 'orders',
+      id: order.id,
+      depth: 0,
+    });
+    expect(persisted.sheetSyncStatus).toBe('failed');
+  });
+
+  it('does not re-push on update when the order was never synced (null status)', async () => {
+    // Create with env missing — no push, status stays null.
+    delete process.env.SHEETS_WEBAPP_URL;
+    delete process.env.SHEETS_WEBAPP_TOKEN;
+
+    const order = await payload.create({
+      collection: 'orders',
+      data: orderData(),
+      draft: false,
+      depth: 0,
+      context: { disableRevalidate: true },
+    });
+    createdIds.push(Number(order.id));
+
+    // Re-save with sync configured: previous status is null, not failed — no retry.
+    setSyncEnv();
+    const { fetchMock } = stubFetch(() => jsonResponse({ ok: true }));
+
+    await payload.update({
+      collection: 'orders',
+      id: order.id,
+      data: { status: 'confirmat' },
+      depth: 0,
+      context: { disableRevalidate: true },
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    const persisted = await payload.findByID({
+      collection: 'orders',
+      id: order.id,
+      depth: 0,
+    });
+    expect(persisted.sheetSyncStatus).toBeNull();
+  });
+
+  it('skips the retry without a status write when sync env vars are missing', async () => {
+    setSyncEnv();
+    // First push fails — order lands as failed.
+    stubFetch(() => jsonResponse({ ok: false, eroare: 'bad secret' }));
+
+    const order = await payload.create({
+      collection: 'orders',
+      data: orderData(),
+      draft: false,
+      depth: 0,
+      context: { disableRevalidate: true },
+    });
+    createdIds.push(Number(order.id));
+
+    // Re-save with env missing: retry skipped, no throw, status untouched.
+    delete process.env.SHEETS_WEBAPP_URL;
+    delete process.env.SHEETS_WEBAPP_TOKEN;
+    const { fetchMock } = stubFetch(() => jsonResponse({ ok: true }));
+
+    const updated = await payload.update({
+      collection: 'orders',
+      id: order.id,
+      data: { status: 'confirmat' },
+      depth: 0,
+      context: { disableRevalidate: true },
+    });
+    expect(updated.status).toBe('confirmat');
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    const persisted = await payload.findByID({
+      collection: 'orders',
+      id: order.id,
+      depth: 0,
+    });
+    expect(persisted.sheetSyncStatus).toBe('failed');
   });
 });
