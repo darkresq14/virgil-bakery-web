@@ -74,7 +74,14 @@ function toWirePayload(order: SheetSyncOrder, secret: string): WirePayload {
  * `redirect: 'manual'` and the JSON result is read back by GETting the
  * Location header. This transport lives here only.
  */
-export async function pushOrderToSheet(order: SheetSyncOrder): Promise<SheetSyncOutcome> {
+/** Cap on each web-app fetch so a hanging Google response can never block
+ * order creation (spec story 17). A timeout abort is just a transport error. */
+const FETCH_TIMEOUT_MS = 10_000;
+
+export async function pushOrderToSheet(
+  order: SheetSyncOrder,
+  { timeoutMs = FETCH_TIMEOUT_MS }: { timeoutMs?: number } = {},
+): Promise<SheetSyncOutcome> {
   const url = process.env.SHEETS_WEBAPP_URL;
   const secret = process.env.SHEETS_WEBAPP_TOKEN;
 
@@ -91,6 +98,7 @@ export async function pushOrderToSheet(order: SheetSyncOrder): Promise<SheetSync
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(toWirePayload(order, secret)),
       redirect: 'manual',
+      signal: AbortSignal.timeout(timeoutMs),
     });
 
     let resultPage: Response;
@@ -99,7 +107,7 @@ export async function pushOrderToSheet(order: SheetSyncOrder): Promise<SheetSync
       if (!location) {
         return { status: 'failed', reason: `Redirect without Location header (${post.status})` };
       }
-      resultPage = await fetch(location, { method: 'GET' });
+      resultPage = await fetch(location, { method: 'GET', signal: AbortSignal.timeout(timeoutMs) });
     } else {
       resultPage = post;
     }

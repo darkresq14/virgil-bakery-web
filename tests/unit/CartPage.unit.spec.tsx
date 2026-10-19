@@ -268,7 +268,7 @@ describe('CartPageClient — returning customer', () => {
     // Ignore the mount-time /api/products availability fetch.
     const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
     expect(orderPosts).toHaveLength(1);
-    const body = JSON.parse((orderPosts[0]![1] as RequestInit).body as string);
+    const body = JSON.parse(String(orderPosts[0]?.[1]?.body));
     expect(body.deliveryMethod).toBe('curier');
     expect(body.shippingCost).toBe(25);
     expect(body.subtotal).toBe(30);
@@ -290,7 +290,7 @@ describe('CartPageClient — returning customer', () => {
     // Ignore the mount-time /api/products availability fetch.
     const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
     expect(orderPosts).toHaveLength(1);
-    const body = JSON.parse((orderPosts[0]![1] as RequestInit).body as string);
+    const body = JSON.parse(String(orderPosts[0]?.[1]?.body));
     expect(body.deliveryMethod).toBe('personal');
     expect(body.shippingCost).toBe(0);
     expect(body.subtotal).toBe(30);
@@ -516,13 +516,15 @@ describe('CartPageClient — phone required on every order', () => {
     expect(orderPosts).toHaveLength(0);
   });
 
-  it('prefills the phone from the cache for a returning customer', () => {
+  it('prefills the phone from the cache after mount (hydration-safe)', async () => {
     setupCartPage(undefined, {
       [REPEAT_KEY]: 'true',
       [PHONE_CACHE_KEY]: '0722 111 222',
     });
 
-    expect(getPhoneInput().value).toBe('0722 111 222');
+    // Server renders '' and the prefill lands post-mount via effect — no
+    // hydration mismatch, same end value.
+    await waitFor(() => expect(getPhoneInput().value).toBe('0722 111 222'));
   });
 
   it('submits the edited phone, not the cached one', async () => {
@@ -537,7 +539,7 @@ describe('CartPageClient — phone required on every order', () => {
 
     const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
     expect(orderPosts).toHaveLength(1);
-    const body = JSON.parse((orderPosts[0]![1] as RequestInit).body as string);
+    const body = JSON.parse(String(orderPosts[0]?.[1]?.body));
     expect(body.customerPhone).toBe('0733 000 111');
   });
 

@@ -1,6 +1,7 @@
 import { getPayload, type Payload } from 'payload';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import config from '@/payload.config';
+import { jsonPage, stubFetch } from '../helpers/fetchStub';
 
 /**
  * Issue #35 — sheetSyncStatus wiring on the real Payload harness.
@@ -13,35 +14,6 @@ const createdIds: number[] = [];
 
 const WEBAPP_URL = 'https://script.google.com/macros/s/TEST_DEPLOYMENT/exec';
 const WEBAPP_TOKEN = 'test-token';
-
-interface ResponseLike {
-  ok: boolean;
-  status: number;
-  headers: { get(name: string): string | null };
-  json(): Promise<unknown>;
-}
-
-function jsonResponse(body: unknown, status = 200): ResponseLike {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    headers: { get: () => null },
-    json: async () => body,
-  };
-}
-
-/** Records every fetch call and answers with the given script. */
-function stubFetch(
-  script: (url: string, init?: RequestInit) => ResponseLike | Promise<ResponseLike> | never,
-) {
-  const calls: { url: string; init: RequestInit | undefined }[] = [];
-  const fetchMock = vi.fn(async (url: unknown, init?: RequestInit) => {
-    calls.push({ url: String(url), init });
-    return script(String(url), init);
-  });
-  vi.stubGlobal('fetch', fetchMock);
-  return { calls, fetchMock };
-}
 
 /** Valid order — no productIds keeps validateDeliveryDate out of product checks. */
 const orderData = () => ({
@@ -80,7 +52,7 @@ describe('orders sheet sync', () => {
 
   it('persists sheetSyncStatus synced when the push succeeds', async () => {
     setSyncEnv();
-    const { fetchMock } = stubFetch(() => jsonResponse({ ok: true }));
+    const { fetchMock } = stubFetch(() => jsonPage({ ok: true }));
 
     const order = await payload.create({
       collection: 'orders',
@@ -125,7 +97,7 @@ describe('orders sheet sync', () => {
 
   it('persists sheetSyncStatus failed on a non-ok script response', async () => {
     setSyncEnv();
-    stubFetch(() => jsonResponse({ ok: false, eroare: 'bad secret' }));
+    stubFetch(() => jsonPage({ ok: false, eroare: 'bad secret' }));
 
     const order = await payload.create({
       collection: 'orders',
@@ -146,7 +118,7 @@ describe('orders sheet sync', () => {
 
   it('does not re-push on update when the previous sync succeeded', async () => {
     setSyncEnv();
-    const { fetchMock } = stubFetch(() => jsonResponse({ ok: true }));
+    const { fetchMock } = stubFetch(() => jsonPage({ ok: true }));
 
     const order = await payload.create({
       collection: 'orders',
@@ -178,7 +150,7 @@ describe('orders sheet sync', () => {
   it('skips the push entirely when sync env vars are missing', async () => {
     delete process.env.SHEETS_WEBAPP_URL;
     delete process.env.SHEETS_WEBAPP_TOKEN;
-    const { fetchMock } = stubFetch(() => jsonResponse({ ok: true }));
+    const { fetchMock } = stubFetch(() => jsonPage({ ok: true }));
 
     const order = await payload.create({
       collection: 'orders',
@@ -201,7 +173,7 @@ describe('orders sheet sync', () => {
   it('retries the push on update when the previous sync failed', async () => {
     setSyncEnv();
     // First push fails — order lands as failed.
-    stubFetch(() => jsonResponse({ ok: false, eroare: 'bad secret' }));
+    stubFetch(() => jsonPage({ ok: false, eroare: 'bad secret' }));
 
     const order = await payload.create({
       collection: 'orders',
@@ -213,7 +185,7 @@ describe('orders sheet sync', () => {
     createdIds.push(Number(order.id));
 
     // Admin re-save = the retry (issue #33 story 13).
-    const { fetchMock, calls } = stubFetch(() => jsonResponse({ ok: true }));
+    const { fetchMock, calls } = stubFetch(() => jsonPage({ ok: true }));
 
     const updated = await payload.update({
       collection: 'orders',
@@ -239,7 +211,7 @@ describe('orders sheet sync', () => {
 
   it('persists failed and still completes the update when a retried push fails again', async () => {
     setSyncEnv();
-    stubFetch(() => jsonResponse({ ok: false, eroare: 'still broken' }));
+    stubFetch(() => jsonPage({ ok: false, eroare: 'still broken' }));
 
     const order = await payload.create({
       collection: 'orders',
@@ -284,7 +256,7 @@ describe('orders sheet sync', () => {
 
     // Re-save with sync configured: previous status is null, not failed — no retry.
     setSyncEnv();
-    const { fetchMock } = stubFetch(() => jsonResponse({ ok: true }));
+    const { fetchMock } = stubFetch(() => jsonPage({ ok: true }));
 
     await payload.update({
       collection: 'orders',
@@ -306,7 +278,7 @@ describe('orders sheet sync', () => {
   it('skips the retry without a status write when sync env vars are missing', async () => {
     setSyncEnv();
     // First push fails — order lands as failed.
-    stubFetch(() => jsonResponse({ ok: false, eroare: 'bad secret' }));
+    stubFetch(() => jsonPage({ ok: false, eroare: 'bad secret' }));
 
     const order = await payload.create({
       collection: 'orders',
@@ -320,7 +292,7 @@ describe('orders sheet sync', () => {
     // Re-save with env missing: retry skipped, no throw, status untouched.
     delete process.env.SHEETS_WEBAPP_URL;
     delete process.env.SHEETS_WEBAPP_TOKEN;
-    const { fetchMock } = stubFetch(() => jsonResponse({ ok: true }));
+    const { fetchMock } = stubFetch(() => jsonPage({ ok: true }));
 
     const updated = await payload.update({
       collection: 'orders',

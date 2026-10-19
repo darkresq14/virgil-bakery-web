@@ -5,6 +5,7 @@ import { authenticated } from '../../access/authenticated';
 import { revalidateOrder } from './hooks/revalidateOrder';
 import { syncOrderToSheet } from './hooks/syncOrderToSheet';
 import { validateDeliveryDate } from './hooks/validateDeliveryDate';
+import { SHEET_SYNC_STATUS_OPTIONS } from './syncStatus';
 
 export const Orders: CollectionConfig = {
   slug: 'orders',
@@ -141,10 +142,7 @@ export const Orders: CollectionConfig = {
       label: 'Sync foaie ops',
       // Written only by the afterChange hook via the DB adapter; the select
       // never offers itself as writable anywhere.
-      options: [
-        { label: 'Sync', value: 'synced' },
-        { label: 'Eșuat', value: 'failed' },
-      ],
+      options: SHEET_SYNC_STATUS_OPTIONS,
       admin: {
         position: 'sidebar',
         readOnly: true,

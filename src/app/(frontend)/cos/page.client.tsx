@@ -97,11 +97,19 @@ export function CartPageClient({
     streetAddress: '',
     addressDetails: '',
   };
-  const [form, setForm] = useState(() => ({
+  const [form, setForm] = useState({
     name: '',
-    phone: typeof window === 'undefined' ? '' : (localStorage.getItem(PHONE_STORAGE_KEY) ?? ''),
+    phone: '',
     deliveryDate: '',
-  }));
+  });
+  // Hydration-safe phone prefill: localStorage is read only after mount, so
+  // server and client first paint the same '' (no mismatch). Cached value
+  // never overwrites what the customer typed while it landed.
+  useEffect(() => {
+    const cached = localStorage.getItem(PHONE_STORAGE_KEY);
+    if (!cached) return;
+    setForm((f) => (f.phone === '' ? { ...f, phone: cached } : f));
+  }, []);
   const [address, setAddress] = useState<AddressFields>(emptyAddress);
   const [formError, setFormError] = useState('');
   const [isFirstOrder, setIsFirstOrder] = useState<boolean>(() => {

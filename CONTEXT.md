@@ -62,7 +62,7 @@ No toggle — the holiday is active purely based on dates. Auto-clears when toda
 A customer who has not ordered before. Must provide: name, phone, and structured address (judet, localitate, strada+număr, optional detalii). The system auto-detects the delivery zone from judet+localitate and applies the courier fee if outside the personal delivery zone.
 
 ### Returning Customer (Am mai comandat)
-A customer who has ordered before, identified by a localStorage flag. Only provides: delivery date, and optionally checks "Am nevoie de livrare prin curier (+25 lei)." No address or contact fields — the baker already has this info from previous orders.
+A customer who has ordered before, identified by a localStorage flag. Provides: delivery date, phone (required on every order — the customer identity used to match the client in the ops workbook), and optionally checks "Am nevoie de livrare prin curier (+25 lei)." No name or address fields — the baker already has this info from previous orders.
 
 ## Address Model
 

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { pushOrderToSheet, type SheetSyncOrder } from '@/utilities/sheetSync';
+import { hangingResponse, jsonPage, redirectPage, stubFetch } from '../helpers/fetchStub';
 
 const WEBAPP_URL = 'https://script.google.com/macros/s/DEPLOYMENT_ID/exec';
 const WEBAPP_TOKEN = '28201bfadbae4bffa3aa29950c4bb1d2';
@@ -31,45 +31,6 @@ const ORDER: OrderFixture = {
   addressDetails: 'etaj 2, ap 5',
   status: 'nou',
 };
-
-/** Stubbed global fetch: records every call, answers from a script. */
-function stubFetch(
-  script: (url: string, init?: RequestInit) => ResponseLike | Promise<ResponseLike> | never,
-) {
-  const calls: { url: string; init: RequestInit | undefined }[] = [];
-  const fetchMock = vi.fn(async (url: unknown, init?: RequestInit) => {
-    calls.push({ url: String(url), init });
-    return script(String(url), init);
-  });
-  vi.stubGlobal('fetch', fetchMock);
-  return { calls, fetchMock };
-}
-
-/** Minimal Response stand-in — keeps tests off any concrete fetch impl. */
-interface ResponseLike {
-  ok: boolean;
-  status: number;
-  headers: { get(name: string): string | null };
-  json(): Promise<unknown>;
-}
-
-function jsonPage(body: unknown, status = 200): ResponseLike {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    headers: { get: () => null },
-    json: () => Promise.resolve(body),
-  };
-}
-
-function redirectPage(location: string, status = 302): ResponseLike {
-  return {
-    ok: false,
-    status,
-    headers: { get: (name: string) => (name.toLowerCase() === 'location' ? location : null) },
-    json: () => Promise.reject(new Error('no body on redirect')),
-  };
-}
 
 const ECHO_URL = 'https://n-xxxxxx-script.googleusercontent.com/echo?user_content_key=abc';
 
@@ -204,6 +165,47 @@ describe('pushOrderToSheet — outcomes', () => {
     expect(outcome).toEqual({
       status: 'failed',
       reason: expect.stringContaining('Location'),
+    });
+  });
+});
+
+describe('pushOrderToSheet — timeouts', () => {
+  beforeEach(() => {
+    vi.stubEnv('SHEETS_WEBAPP_URL', WEBAPP_URL);
+    vi.stubEnv('SHEETS_WEBAPP_TOKEN', WEBAPP_TOKEN);
+  });
+
+  it('attaches an abort signal to both fetches', async () => {
+    const { calls } = stubFetch((url) =>
+      url === WEBAPP_URL ? redirectPage(ECHO_URL) : jsonPage({ ok: true }),
+    );
+
+    await pushOrderToSheet(ORDER);
+
+    const [post, get] = calls;
+    expect(post.init?.signal).toBeInstanceOf(AbortSignal);
+    expect(get.init?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('fails (no throw) when the POST hangs — checkout is never blocked by Google', async () => {
+    stubFetch((_url, init) => hangingResponse(init));
+
+    const outcome = await pushOrderToSheet(ORDER, { timeoutMs: 10 });
+
+    expect(outcome).toEqual({
+      status: 'failed',
+      reason: expect.stringContaining('Transport error'),
+    });
+  });
+
+  it('fails (no throw) when the Location GET hangs', async () => {
+    stubFetch((url, init) => (url === WEBAPP_URL ? redirectPage(ECHO_URL) : hangingResponse(init)));
+
+    const outcome = await pushOrderToSheet(ORDER, { timeoutMs: 10 });
+
+    expect(outcome).toEqual({
+      status: 'failed',
+      reason: expect.stringContaining('Transport error'),
     });
   });
 });

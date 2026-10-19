@@ -27,4 +27,15 @@ describe('SheetSyncStatusCell', () => {
 
     expect(screen.getByText('—')).toBeTruthy();
   });
+
+  it('renders a neutral dash (not a red badge) for an unrecognized status', () => {
+    render(<SheetSyncStatusCell cellData="unexpected-value" />);
+
+    expect(screen.getByText('—')).toBeTruthy();
+    // Unknown ≠ failed: nothing may carry the failed badge styling
+    const spans = document.querySelectorAll('span');
+    expect(Array.from(spans).some((s) => s.style.getPropertyValue('background-color') !== '')).toBe(
+      false,
+    );
+  });
 });
