@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CartPageClient } from '@/app/(frontend)/cos/page.client';
@@ -64,11 +64,14 @@ const mockCartContext = {
   itemCount: 3,
 };
 
-function setupCartPage(overrides?: Partial<typeof mockCartContext>) {
+function setupCartPage(
+  overrides?: Partial<typeof mockCartContext>,
+  initialStorage: Record<string, string> = {},
+) {
   vi.mocked(useCart).mockReturnValue({ ...mockCartContext, ...overrides });
 
   // Mock localStorage
-  const store: Record<string, string> = {};
+  const store: Record<string, string> = { ...initialStorage };
   vi.spyOn(Storage.prototype, 'getItem').mockImplementation((key) => store[key] ?? null);
   vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key, value) => {
     store[key] = value;
@@ -80,7 +83,7 @@ function setupCartPage(overrides?: Partial<typeof mockCartContext>) {
   // Mock window.open
   vi.spyOn(window, 'open').mockReturnValue(null);
 
-  return render(<CartPageClient />);
+  return { view: render(<CartPageClient />), store };
 }
 
 afterEach(() => {
@@ -251,6 +254,9 @@ describe('CartPageClient — returning customer', () => {
     setupReturningCustomer();
     switchToReturningCustomer();
 
+    // Phone is required on every order — fill it so submit passes validation
+    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
+
     // Check courier checkbox
     const checkbox = screen.getByLabelText(/am nevoie de livrare prin curier/i) as HTMLInputElement;
     fireEvent.click(checkbox);
@@ -273,6 +279,9 @@ describe('CartPageClient — returning customer', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }));
     setupReturningCustomer();
     switchToReturningCustomer();
+
+    // Phone is required on every order — fill it so submit passes validation
+    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
 
     // Submit without checking courier
     const checkoutButton = screen.getByText(/comandă prin whatsapp/i);
@@ -450,6 +459,139 @@ describe('CartPageClient — holiday info message', () => {
     );
 
     expect(screen.queryByText(/program concediu|reluăm livrările/i)).toBeNull();
+  });
+});
+
+describe('CartPageClient — phone required on every order', () => {
+  const PHONE_CACHE_KEY = 'virgil-bakery-phone';
+  const REPEAT_KEY = 'vb-repeat-customer';
+
+  function getPhoneInput() {
+    return screen.getByLabelText(/telefon/i) as HTMLInputElement;
+  }
+
+  function submitOrder() {
+    fireEvent.click(screen.getByText(/comandă prin whatsapp/i));
+  }
+
+  it('renders the phone input for a returning customer, not just first order', () => {
+    setupCartPage();
+
+    // Returning customer via the "Am mai comandat" pill
+    fireEvent.click(screen.getByText(/am mai comandat/i));
+
+    expect(getPhoneInput()).toBeTruthy();
+  });
+
+  it('phone input carries tel semantics for browsers and password managers', () => {
+    // First-order view (default)
+    setupCartPage();
+    const firstOrderInput = getPhoneInput();
+    expect(firstOrderInput.type).toBe('tel');
+    expect(firstOrderInput.getAttribute('autocomplete')).toBe('tel');
+    expect(firstOrderInput.getAttribute('inputmode')).toBe('tel');
+
+    cleanup();
+
+    // Returning-customer view (same field, rendered outside the first-order gate)
+    setupCartPage(undefined, { [REPEAT_KEY]: 'true' });
+    const returningInput = getPhoneInput();
+    expect(returningInput.type).toBe('tel');
+    expect(returningInput.getAttribute('autocomplete')).toBe('tel');
+    expect(returningInput.getAttribute('inputmode')).toBe('tel');
+  });
+
+  it('blocks submit without phone for a returning customer and shows the standard validation error', () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }));
+    setupCartPage(undefined, { [REPEAT_KEY]: 'true' });
+
+    submitOrder();
+
+    // Same validation style as the other required fields (error message + destructive border)
+    expect(screen.getByText(/telefonul este obligatoriu/i)).toBeTruthy();
+    expect(getPhoneInput().className).toContain('border-destructive');
+
+    // Blocked submit must never POST an order (ignore mount-time availability fetch)
+    const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    expect(orderPosts).toHaveLength(0);
+  });
+
+  it('prefills the phone from the cache for a returning customer', () => {
+    setupCartPage(undefined, {
+      [REPEAT_KEY]: 'true',
+      [PHONE_CACHE_KEY]: '0722 111 222',
+    });
+
+    expect(getPhoneInput().value).toBe('0722 111 222');
+  });
+
+  it('submits the edited phone, not the cached one', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }));
+    setupCartPage(undefined, {
+      [REPEAT_KEY]: 'true',
+      [PHONE_CACHE_KEY]: '0722 111 222',
+    });
+
+    fireEvent.change(getPhoneInput(), { target: { value: '0733 000 111' } });
+    submitOrder();
+
+    const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    expect(orderPosts).toHaveLength(1);
+    const body = JSON.parse((orderPosts[0]![1] as RequestInit).body as string);
+    expect(body.customerPhone).toBe('0733 000 111');
+  });
+
+  it('caches the submitted phone after a successful order', async () => {
+    const { store } = setupCartPage(undefined, { [REPEAT_KEY]: 'true' });
+
+    fireEvent.change(getPhoneInput(), { target: { value: '0722 333 444' } });
+    submitOrder();
+
+    // The cache write happens after the fire-and-forget order POST resolves
+    await waitFor(() => expect(store[PHONE_CACHE_KEY]).toBe('0722 333 444'));
+  });
+
+  it('cache does not overwrite a field the customer cleared before submit', () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }));
+    setupCartPage(undefined, {
+      [REPEAT_KEY]: 'true',
+      [PHONE_CACHE_KEY]: '0722 111 222',
+    });
+
+    // Customer clears the prefilled field, then submits
+    fireEvent.change(getPhoneInput(), { target: { value: '' } });
+    submitOrder();
+
+    // Submit is blocked with the validation error; the cleared field stays empty
+    expect(screen.getByText(/telefonul este obligatoriu/i)).toBeTruthy();
+    expect(getPhoneInput().value).toBe('');
+
+    const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    expect(orderPosts).toHaveLength(0);
+  });
+
+  it('keeps name and address gating unchanged for returning customers', () => {
+    setupCartPage(undefined, { [REPEAT_KEY]: 'true' });
+
+    // Phone is present, but name/address stay gated behind the first-order flow
+    expect(getPhoneInput()).toBeTruthy();
+    expect(screen.queryByLabelText(/nume/i)).toBeNull();
+    expect(screen.queryByLabelText(/județ/i)).toBeNull();
+    expect(screen.queryByLabelText(/localitate/i)).toBeNull();
+    expect(screen.queryByPlaceholderText(/strada și numărul/i)).toBeNull();
+  });
+
+  it('still requires name and address on the first-order flow', () => {
+    setupCartPage();
+
+    // Default = first order; empty submit shows name + address errors (phone too)
+    submitOrder();
+
+    expect(screen.getByText(/numele este obligatoriu/i)).toBeTruthy();
+    expect(screen.getByText(/telefonul este obligatoriu/i)).toBeTruthy();
+    expect(screen.getByText(/județul este obligatoriu/i)).toBeTruthy();
+    expect(screen.getByText(/localitatea este obligatorie/i)).toBeTruthy();
+    expect(screen.getByText(/strada este obligatorie/i)).toBeTruthy();
   });
 });
 

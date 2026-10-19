@@ -37,6 +37,9 @@ import {
 
 const STORAGE_KEY = 'vb-repeat-customer';
 
+/** Cached customer phone (prefill convenience only — the server never reads it). */
+const PHONE_STORAGE_KEY = 'virgil-bakery-phone';
+
 interface HolidayCartNoticeProps {
   holidayStartDate: Date;
   holidayEndDate: Date;
@@ -94,7 +97,11 @@ export function CartPageClient({
     streetAddress: '',
     addressDetails: '',
   };
-  const [form, setForm] = useState({ name: '', phone: '', deliveryDate: '' });
+  const [form, setForm] = useState(() => ({
+    name: '',
+    phone: typeof window === 'undefined' ? '' : (localStorage.getItem(PHONE_STORAGE_KEY) ?? ''),
+    deliveryDate: '',
+  }));
   const [address, setAddress] = useState<AddressFields>(emptyAddress);
   const [formError, setFormError] = useState('');
   const [isFirstOrder, setIsFirstOrder] = useState<boolean>(() => {
@@ -310,9 +317,10 @@ export function CartPageClient({
     setFormError('');
 
     const errors = { name: '', phone: '', judet: '', localitate: '', streetAddress: '' };
+    // Phone is the customer identity for the whole pipeline — required on every order.
+    if (!form.phone.trim()) errors.phone = 'Telefonul este obligatoriu';
     if (isFirstOrder) {
       if (!form.name.trim()) errors.name = 'Numele este obligatoriu';
-      if (!form.phone.trim()) errors.phone = 'Telefonul este obligatoriu';
       if (!address.judet) errors.judet = 'Județul este obligatoriu';
       if (!address.localitate.trim()) errors.localitate = 'Localitatea este obligatorie';
       if (!address.streetAddress.trim()) errors.streetAddress = 'Strada este obligatorie';
@@ -373,6 +381,9 @@ export function CartPageClient({
 
     const url = `https://wa.me/40746245391?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
+    // Cache the submitted phone so the next checkout prefills it (prefill only —
+    // never overwrites what the customer typed this session).
+    localStorage.setItem(PHONE_STORAGE_KEY, form.phone);
     if (!isFirstOrder) {
       localStorage.setItem(STORAGE_KEY, 'true');
     }
@@ -656,7 +667,35 @@ export function CartPageClient({
                   </div>
                 )}
 
-                {/* Fields for first-time buyers */}
+                {/* Phone — required on every order (customer identity for order matching) */}
+                <div>
+                  <label
+                    htmlFor="customer-phone"
+                    className="block text-sm font-sans font-medium mb-1"
+                  >
+                    Telefon <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    id="customer-phone"
+                    type="tel"
+                    autoComplete="tel"
+                    inputMode="tel"
+                    value={form.phone}
+                    onChange={(e) => {
+                      setForm({ ...form, phone: e.target.value });
+                      setFieldErrors({ ...fieldErrors, phone: '' });
+                    }}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring ${
+                      fieldErrors.phone ? 'border-destructive' : 'border-input'
+                    }`}
+                    placeholder="+40 7XX XXX XXX"
+                  />
+                  {fieldErrors.phone && (
+                    <p className="text-xs text-destructive font-sans mt-1">{fieldErrors.phone}</p>
+                  )}
+                </div>
+
+                {/* Name + address — first-order flow only */}
                 {isFirstOrder && (
                   <div className="space-y-3 pt-1">
                     <div>
@@ -682,32 +721,6 @@ export function CartPageClient({
                       {fieldErrors.name && (
                         <p className="text-xs text-destructive font-sans mt-1">
                           {fieldErrors.name}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="customer-phone"
-                        className="block text-sm font-sans font-medium mb-1"
-                      >
-                        Telefon <span className="text-destructive">*</span>
-                      </label>
-                      <input
-                        id="customer-phone"
-                        type="tel"
-                        value={form.phone}
-                        onChange={(e) => {
-                          setForm({ ...form, phone: e.target.value });
-                          setFieldErrors({ ...fieldErrors, phone: '' });
-                        }}
-                        className={`w-full rounded-lg border px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring ${
-                          fieldErrors.phone ? 'border-destructive' : 'border-input'
-                        }`}
-                        placeholder="+40 7XX XXX XXX"
-                      />
-                      {fieldErrors.phone && (
-                        <p className="text-xs text-destructive font-sans mt-1">
-                          {fieldErrors.phone}
                         </p>
                       )}
                     </div>
