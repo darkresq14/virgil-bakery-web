@@ -14,9 +14,9 @@ export const ItemsCell = ({ cellData }: { cellData: unknown }) => {
 
   return (
     <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-      {items.map((item) => (
+      {items.map((item, index) => (
         <li
-          key={`${item.id}-${item.name ?? 'item'}`}
+          key={item.id ?? `${item.name ?? 'item'}-${index}`}
           style={{ fontSize: '13px', lineHeight: '1.4' }}
         >
           {item.quantity}× {item.name}

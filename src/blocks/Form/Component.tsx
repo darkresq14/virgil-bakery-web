@@ -128,8 +128,9 @@ export const FormBlock: React.FC<
             <form id={formID} onSubmit={handleSubmit(onSubmit)}>
               <div className="mb-4 last:mb-0">
                 {formFromProps?.fields?.map((field, index) => {
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  const Field: React.FC<any> = fields?.[field.blockType as keyof typeof fields];
+                  const Field = fields?.[field.blockType as keyof typeof fields] as
+                    | React.FC<Record<string, unknown>>
+                    | undefined;
                   if (Field) {
                     return (
                       // biome-ignore lint/suspicious/noArrayIndexKey: CMS form field list has no stable id; field order is fixed per form definition
