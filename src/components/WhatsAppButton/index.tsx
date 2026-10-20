@@ -1,33 +1,33 @@
-'use client'
+'use client';
 
-import Image from 'next/image'
-import { useEffect, useState } from 'react'
+import Image from 'next/image';
+import { useEffect, useState } from 'react';
 
 export const WhatsAppButton = () => {
-  const [visible, setVisible] = useState(false)
-  const [reducedMotion, setReducedMotion] = useState(false)
+  const [visible, setVisible] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    setReducedMotion(mq.matches)
-    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReducedMotion(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
-      const scrolledHalf = window.scrollY > window.innerHeight * 0.5
+      const scrolledHalf = window.scrollY > window.innerHeight * 0.5;
       const atBottom =
-        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 100
-      setVisible(scrolledHalf && !atBottom)
-    }
+        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 100;
+      setVisible(scrolledHalf && !atBottom);
+    };
 
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
-  if (!visible) return null
+  if (!visible) return null;
 
   return (
     <a
@@ -41,5 +41,5 @@ export const WhatsAppButton = () => {
     >
       <Image unoptimized src="/WhatsApp_White.svg" alt="WhatsApp" width={56} height={56} />
     </a>
-  )
-}
+  );
+};

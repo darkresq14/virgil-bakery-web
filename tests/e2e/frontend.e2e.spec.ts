@@ -37,7 +37,7 @@ test.describe('Frontend SEO', () => {
 
     // Permanent (301 by Next when permanent: true; 308 is also acceptable).
     expect([301, 308]).toContain(response.status());
-    expect(response.headers()['location']).toMatch(/\/posts\/?$/);
+    expect(response.headers().location).toMatch(/\/posts\/?$/);
   });
 
   test('pages sitemap contains the homepage location', async ({ request }) => {

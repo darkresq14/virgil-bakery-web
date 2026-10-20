@@ -1,21 +1,21 @@
-import Link from 'next/link'
-import type React from 'react'
-import { ImageMedia } from '@/components/Media/ImageMedia'
-import RichText from '@/components/RichText'
+import Link from 'next/link';
+import type React from 'react';
+import { ImageMedia } from '@/components/Media/ImageMedia';
+import RichText from '@/components/RichText';
 
-import type { Media } from '@/payload-types'
+import type { Media } from '@/payload-types';
 
-type RichTextData = Parameters<typeof RichText>[0]['data'] | null
+type RichTextData = Parameters<typeof RichText>[0]['data'] | null;
 
 interface AboutProps {
-  heading?: RichTextData
-  description?: RichTextData
-  image1?: Media | null
-  image2?: Media | null
+  heading?: RichTextData;
+  description?: RichTextData;
+  image1?: Media | null;
+  image2?: Media | null;
 }
 
 export const About: React.FC<AboutProps> = ({ heading, description, image1, image2 }) => {
-  if (!heading && !description) return null
+  if (!heading && !description) return null;
 
   return (
     <section className="py-20 bg-white">
@@ -66,5 +66,5 @@ export const About: React.FC<AboutProps> = ({ heading, description, image1, imag
         </div>
       </div>
     </section>
-  )
-}
+  );
+};

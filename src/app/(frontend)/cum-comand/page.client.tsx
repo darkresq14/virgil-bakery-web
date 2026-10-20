@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
 const PageClient: React.FC = () => {
-  return null
-}
+  return null;
+};
 
-export default PageClient
+export default PageClient;

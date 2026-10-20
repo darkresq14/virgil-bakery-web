@@ -4,10 +4,10 @@ import {
   MetaTitleField,
   OverviewField,
   PreviewField,
-} from '@payloadcms/plugin-seo/fields'
-import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
-import type { GlobalConfig } from 'payload'
-import { revalidateHomepage } from './hooks/revalidateHomepage'
+} from '@payloadcms/plugin-seo/fields';
+import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/richtext-lexical';
+import type { GlobalConfig } from 'payload';
+import { revalidateHomepage } from './hooks/revalidateHomepage';
 
 export const Homepage: GlobalConfig = {
   slug: 'homepage',
@@ -58,7 +58,7 @@ export const Homepage: GlobalConfig = {
                     ...rootFeatures,
                     HeadingFeature({ enabledHeadingSizes: ['h2', 'h3'] }),
                     FixedToolbarFeature(),
-                  ]
+                  ];
                 },
               }),
             },
@@ -72,7 +72,7 @@ export const Homepage: GlobalConfig = {
                     ...rootFeatures,
                     HeadingFeature({ enabledHeadingSizes: ['h3', 'h4'] }),
                     FixedToolbarFeature(),
-                  ]
+                  ];
                 },
               }),
             },
@@ -141,4 +141,4 @@ export const Homepage: GlobalConfig = {
   hooks: {
     afterChange: [revalidateHomepage],
   },
-}
+};

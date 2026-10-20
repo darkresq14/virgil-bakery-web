@@ -1,34 +1,34 @@
-import { formBuilderPlugin } from '@payloadcms/plugin-form-builder'
-import { nestedDocsPlugin } from '@payloadcms/plugin-nested-docs'
-import { redirectsPlugin } from '@payloadcms/plugin-redirects'
-import { seoPlugin } from '@payloadcms/plugin-seo'
-import type { GenerateTitle, GenerateURL } from '@payloadcms/plugin-seo/types'
-import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
-import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
-import type { Plugin } from 'payload'
-import { revalidateRedirects } from '@/hooks/revalidateRedirects'
+import { formBuilderPlugin } from '@payloadcms/plugin-form-builder';
+import { nestedDocsPlugin } from '@payloadcms/plugin-nested-docs';
+import { redirectsPlugin } from '@payloadcms/plugin-redirects';
+import { seoPlugin } from '@payloadcms/plugin-seo';
+import type { GenerateTitle, GenerateURL } from '@payloadcms/plugin-seo/types';
+import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/richtext-lexical';
+import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob';
+import type { Plugin } from 'payload';
+import { revalidateRedirects } from '@/hooks/revalidateRedirects';
 
-import type { Page, Post, Product } from '@/payload-types'
-import { isBlobStorageEnabled } from '@/utilities/blobStorage'
-import { getServerSideURL } from '@/utilities/getURL'
+import type { Page, Post, Product } from '@/payload-types';
+import { isBlobStorageEnabled } from '@/utilities/blobStorage';
+import { getServerSideURL } from '@/utilities/getURL';
 
 const generateTitle: GenerateTitle<Post | Page | Product> = ({ doc }) => {
-  const title = doc && ('title' in doc ? doc.title : doc.name)
-  return title ? `${title} | Pâine cu Maia by Virgil` : 'Pâine cu Maia by Virgil'
-}
+  const title = doc && ('title' in doc ? doc.title : doc.name);
+  return title ? `${title} | Pâine cu Maia by Virgil` : 'Pâine cu Maia by Virgil';
+};
 
 const generateURL: GenerateURL<Post | Page | Product> = ({ doc, collectionSlug }) => {
-  const url = getServerSideURL()
-  if (!doc?.slug) return url
+  const url = getServerSideURL();
+  if (!doc?.slug) return url;
 
   const prefix: Record<string, string> = {
     posts: '/posts',
     products: '/produse',
-  }
-  const path = prefix[collectionSlug ?? ''] ?? ''
+  };
+  const path = prefix[collectionSlug ?? ''] ?? '';
 
-  return `${url}${path}/${doc.slug}`
-}
+  return `${url}${path}/${doc.slug}`;
+};
 
 export const plugins: Plugin[] = [
   redirectsPlugin({
@@ -43,10 +43,10 @@ export const plugins: Plugin[] = [
               admin: {
                 description: 'You will need to rebuild the website when changing this field.',
               },
-            }
+            };
           }
-          return field
-        })
+          return field;
+        });
       },
       hooks: {
         afterChange: [revalidateRedirects],
@@ -77,13 +77,13 @@ export const plugins: Plugin[] = [
                     ...rootFeatures,
                     FixedToolbarFeature(),
                     HeadingFeature({ enabledHeadingSizes: ['h1', 'h2', 'h3', 'h4'] }),
-                  ]
+                  ];
                 },
               }),
-            }
+            };
           }
-          return field
-        })
+          return field;
+        });
       },
     },
   }),
@@ -92,4 +92,4 @@ export const plugins: Plugin[] = [
     collections: { media: true },
     token: process.env.BLOB_READ_WRITE_TOKEN,
   }),
-]
+];

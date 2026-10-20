@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import * as CheckboxPrimitive from '@radix-ui/react-checkbox'
-import { Check } from 'lucide-react'
-import type * as React from 'react'
-import { cn } from '@/utilities/ui'
+import * as CheckboxPrimitive from '@radix-ui/react-checkbox';
+import { Check } from 'lucide-react';
+import type * as React from 'react';
+import { cn } from '@/utilities/ui';
 
 const Checkbox: React.FC<React.ComponentProps<typeof CheckboxPrimitive.Root>> = ({
   className,
@@ -24,6 +24,6 @@ const Checkbox: React.FC<React.ComponentProps<typeof CheckboxPrimitive.Root>> = 
       <Check className="size-3.5" />
     </CheckboxPrimitive.Indicator>
   </CheckboxPrimitive.Root>
-)
+);
 
-export { Checkbox }
+export { Checkbox };

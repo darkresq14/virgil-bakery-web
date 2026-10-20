@@ -1,40 +1,40 @@
-'use client'
+'use client';
 
-import { ChevronLeft, ChevronRight, Quote } from 'lucide-react'
-import type React from 'react'
-import { useEffect, useState } from 'react'
+import { ChevronLeft, ChevronRight, Quote } from 'lucide-react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 
 interface Testimonial {
-  id: string
-  author: string
-  content: string
-  language?: string
+  id: string;
+  author: string;
+  content: string;
+  language?: string;
 }
 
 interface TestimonialsProps {
-  testimonials: Testimonial[]
+  testimonials: Testimonial[];
 }
 
 export const Testimonials: React.FC<TestimonialsProps> = ({ testimonials }) => {
-  const [current, setCurrent] = useState(0)
-  const [paused, setPaused] = useState(false)
+  const [current, setCurrent] = useState(0);
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
-    if (testimonials.length <= 1 || paused) return
+    if (testimonials.length <= 1 || paused) return;
     const timer = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % testimonials.length)
-    }, 5000)
-    return () => clearInterval(timer)
-  }, [testimonials.length, paused])
+      setCurrent((prev) => (prev + 1) % testimonials.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [testimonials.length, paused]);
 
-  if (!testimonials.length) return null
+  if (!testimonials.length) return null;
 
   return (
     <section className="py-20 bg-secondary/50" aria-label="Testimoniale clienți">
       <div className="container">
         <h2 className="text-3xl font-heading text-center mb-12">Ce spun clienții</h2>
 
-        <div
+        <section
           className="max-w-3xl mx-auto text-center"
           aria-roledescription="carusel"
           aria-label="Testimoniale"
@@ -60,11 +60,12 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ testimonials }) => {
               </div>
             ))}
           </div>
-        </div>
+        </section>
 
         {testimonials.length > 1 && (
           <div className="flex items-center justify-center gap-4 mt-8">
             <button
+              type="button"
               onClick={() =>
                 setCurrent((prev) => (prev - 1 + testimonials.length) % testimonials.length)
               }
@@ -74,9 +75,10 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ testimonials }) => {
               <ChevronLeft className="w-5 h-5" />
             </button>
             <div className="flex gap-2">
-              {testimonials.map((_, i) => (
+              {testimonials.map((t, i) => (
                 <button
-                  key={i}
+                  type="button"
+                  key={t.id}
                   onClick={() => setCurrent(i)}
                   className={`w-2 h-2 rounded-full transition-colors ${
                     i === current ? 'bg-primary' : 'bg-foreground/20'
@@ -86,6 +88,7 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ testimonials }) => {
               ))}
             </div>
             <button
+              type="button"
               onClick={() => setCurrent((prev) => (prev + 1) % testimonials.length)}
               className="p-2 rounded-full hover:bg-secondary transition-colors"
               aria-label="Următorul testimonial"
@@ -96,5 +99,5 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ testimonials }) => {
         )}
       </div>
     </section>
-  )
-}
+  );
+};

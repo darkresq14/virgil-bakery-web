@@ -1,5 +1,5 @@
-import type * as React from 'react'
-import { cn } from '@/utilities/ui'
+import type * as React from 'react';
+import { cn } from '@/utilities/ui';
 
 const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = ({
   className,
@@ -14,7 +14,7 @@ const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = ({
       )}
       {...props}
     />
-  )
-}
+  );
+};
 
-export { Textarea }
+export { Textarea };

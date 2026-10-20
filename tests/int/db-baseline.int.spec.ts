@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
 import type { Payload } from 'payload';
+import { describe, expect, it, vi } from 'vitest';
 
 describe('db-baseline', () => {
   it('reads initial migration name from migrations index', async () => {
@@ -44,10 +44,7 @@ describe('db-baseline', () => {
     expect(mockPayload.find).toHaveBeenCalledWith({
       collection: 'payload-migrations',
       where: {
-        and: [
-          { name: { equals: '20260701_132238_initial' } },
-          { batch: { equals: 1 } },
-        ],
+        and: [{ name: { equals: '20260701_132238_initial' } }, { batch: { equals: 1 } }],
       },
     });
   });

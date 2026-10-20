@@ -1,33 +1,33 @@
-'use client'
+'use client';
 
-import type React from 'react'
-import { createContext, use, useCallback, useState } from 'react'
+import type React from 'react';
+import { createContext, use, useCallback, useState } from 'react';
 
 interface Toast {
-  id: number
-  message: string
+  id: number;
+  message: string;
 }
 
 interface ToastContextType {
-  showToast: (message: string) => void
+  showToast: (message: string) => void;
 }
 
-const ToastContext = createContext<ToastContextType>({ showToast: () => null })
+const ToastContext = createContext<ToastContextType>({ showToast: () => null });
 
-export const useToast = () => use(ToastContext)
+export const useToast = () => use(ToastContext);
 
-let toastId = 0
+let toastId = 0;
 
 export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
-  const [toasts, setToasts] = useState<Toast[]>([])
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
   const showToast = useCallback((message: string) => {
-    const id = ++toastId
-    setToasts((prev) => [...prev, { id, message }])
+    const id = ++toastId;
+    setToasts((prev) => [...prev, { id, message }]);
     setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id))
-    }, 3000)
-  }, [])
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3000);
+  }, []);
 
   return (
     <ToastContext value={{ showToast }}>
@@ -44,5 +44,5 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
         ))}
       </div>
     </ToastContext>
-  )
-}
+  );
+};

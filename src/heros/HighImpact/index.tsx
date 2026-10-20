@@ -1,9 +1,9 @@
-'use client'
-import type React from 'react'
-import { CMSLink } from '@/components/Link'
-import { Media } from '@/components/Media'
-import RichText from '@/components/RichText'
-import type { Page } from '@/payload-types'
+'use client';
+import type React from 'react';
+import { CMSLink } from '@/components/Link';
+import { Media } from '@/components/Media';
+import RichText from '@/components/RichText';
+import type { Page } from '@/payload-types';
 
 export const HighImpactHero: React.FC<Page['hero']> = ({ links, media, richText }) => {
   return (
@@ -13,12 +13,12 @@ export const HighImpactHero: React.FC<Page['hero']> = ({ links, media, richText 
           {richText && <RichText className="mb-6" data={richText} enableGutter={false} />}
           {Array.isArray(links) && links.length > 0 && (
             <ul className="flex md:justify-center gap-4">
-              {links.map(({ link }, i) => {
+              {links.map((item) => {
                 return (
-                  <li key={i}>
-                    <CMSLink {...link} />
+                  <li key={item.id ?? item.link.label}>
+                    <CMSLink {...item.link} />
                   </li>
-                )
+                );
               })}
             </ul>
           )}
@@ -30,5 +30,5 @@ export const HighImpactHero: React.FC<Page['hero']> = ({ links, media, richText 
         )}
       </div>
     </div>
-  )
-}
+  );
+};

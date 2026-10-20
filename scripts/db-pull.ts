@@ -1,6 +1,6 @@
-import { execaCommand } from 'execa';
-import { rm, copyFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { copyFile, rm } from 'node:fs/promises';
+import { execaCommand } from 'execa';
 
 export interface DbPullOptions {
   dbName: string | undefined;
@@ -38,7 +38,9 @@ export async function main(options?: DbPullOptions): Promise<void> {
 
   // Remove old files using wsl to avoid Windows lock issues
   try {
-    await execaCommand(`wsl rm -f /mnt/g/Code/virgil-bakery-web/${devDbPath} /mnt/g/Code/virgil-bakery-web/${devDbPath}-wal /mnt/g/Code/virgil-bakery-web/${devDbPath}-shm`);
+    await execaCommand(
+      `wsl rm -f /mnt/g/Code/virgil-bakery-web/${devDbPath} /mnt/g/Code/virgil-bakery-web/${devDbPath}-wal /mnt/g/Code/virgil-bakery-web/${devDbPath}-shm`,
+    );
   } catch {
     // Files might be locked, continue
     console.log(`  Note: Could not remove old ${devDbPath} files`);

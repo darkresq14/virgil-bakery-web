@@ -3,10 +3,10 @@ import {
   HeadingFeature,
   InlineToolbarFeature,
   lexicalEditor,
-} from '@payloadcms/richtext-lexical'
-import type { Block, Field } from 'payload'
+} from '@payloadcms/richtext-lexical';
+import type { Block, Field } from 'payload';
 
-import { link } from '@/fields/link'
+import { link } from '@/fields/link';
 
 const columnFields: Field[] = [
   {
@@ -42,7 +42,7 @@ const columnFields: Field[] = [
           HeadingFeature({ enabledHeadingSizes: ['h2', 'h3', 'h4'] }),
           FixedToolbarFeature(),
           InlineToolbarFeature(),
-        ]
+        ];
       },
     }),
     label: false,
@@ -55,12 +55,12 @@ const columnFields: Field[] = [
     overrides: {
       admin: {
         condition: (_data, siblingData) => {
-          return Boolean(siblingData?.enableLink)
+          return Boolean(siblingData?.enableLink);
         },
       },
     },
   }),
-]
+];
 
 export const Content: Block = {
   slug: 'content',
@@ -75,4 +75,4 @@ export const Content: Block = {
       fields: columnFields,
     },
   ],
-}
+};

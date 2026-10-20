@@ -2,7 +2,7 @@
 
 import { useFormContext } from 'react-hook-form';
 
-export const Error = ({ name }: { name: string }) => {
+export const ErrorField = ({ name }: { name: string }) => {
   const {
     formState: { errors },
   } = useFormContext();

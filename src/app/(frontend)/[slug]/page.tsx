@@ -79,12 +79,12 @@ export default async function Page({ params: paramsPromise }: Args) {
 
       <script
         type="application/ld+json"
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: inject JSON-LD structured data
         dangerouslySetInnerHTML={{ __html: JSON.stringify(bSchema) }}
       />
       <script
         type="application/ld+json"
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: inject JSON-LD structured data
         dangerouslySetInnerHTML={{ __html: JSON.stringify(wpSchema) }}
       />
 

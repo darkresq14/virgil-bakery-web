@@ -3,8 +3,8 @@ import {
   HeadingFeature,
   InlineToolbarFeature,
   lexicalEditor,
-} from '@payloadcms/richtext-lexical'
-import type { Block } from 'payload'
+} from '@payloadcms/richtext-lexical';
+import type { Block } from 'payload';
 
 export const Archive: Block = {
   slug: 'archive',
@@ -20,7 +20,7 @@ export const Archive: Block = {
             HeadingFeature({ enabledHeadingSizes: ['h1', 'h2', 'h3', 'h4'] }),
             FixedToolbarFeature(),
             InlineToolbarFeature(),
-          ]
+          ];
         },
       }),
       label: 'Intro Content',
@@ -90,4 +90,4 @@ export const Archive: Block = {
     plural: 'Archives',
     singular: 'Archive',
   },
-}
+};

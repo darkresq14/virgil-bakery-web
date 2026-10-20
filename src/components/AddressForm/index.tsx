@@ -1,33 +1,33 @@
-'use client'
+'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { JUDETE, LOCALITIES_BY_JUDET } from '@/data/ro-localities'
-import { stripRoDiacritics } from '@/utilities/stripRoDiacritics'
+import { JUDETE, LOCALITIES_BY_JUDET } from '@/data/ro-localities';
+import { stripRoDiacritics } from '@/utilities/stripRoDiacritics';
 
 export interface AddressFields {
-  judet: string
-  localitate: string
-  streetAddress: string
-  addressDetails: string
+  judet: string;
+  localitate: string;
+  streetAddress: string;
+  addressDetails: string;
 }
 
 export interface AddressFormProps {
-  values: AddressFields
-  onChange: (values: AddressFields) => void
-  errors?: Partial<Record<keyof AddressFields, string>>
+  values: AddressFields;
+  onChange: (values: AddressFields) => void;
+  errors?: Partial<Record<keyof AddressFields, string>>;
 }
 
 /** Minimum characters before showing suggestions. */
-const MIN_CHARS = 2
+const MIN_CHARS = 2;
 /** Maximum visible suggestions. */
-const MAX_SUGGESTIONS = 50
+const MAX_SUGGESTIONS = 50;
 
 export function AddressForm({ values, onChange, errors }: AddressFormProps) {
-  const localitati = values.judet ? (LOCALITIES_BY_JUDET[values.judet] ?? []) : []
+  const localitati = values.judet ? (LOCALITIES_BY_JUDET[values.judet] ?? []) : [];
 
   function handleChange(partial: Partial<AddressFields>) {
-    onChange({ ...values, ...partial })
+    onChange({ ...values, ...partial });
   }
 
   return (
@@ -41,8 +41,8 @@ export function AddressForm({ values, onChange, errors }: AddressFormProps) {
           id="address-judet"
           value={values.judet}
           onChange={(e) => {
-            const judet = e.target.value
-            handleChange({ judet, localitate: '' })
+            const judet = e.target.value;
+            handleChange({ judet, localitate: '' });
           }}
           className={`${fieldBase} bg-background ${
             errors?.judet ? 'border-destructive' : 'border-input'
@@ -57,9 +57,7 @@ export function AddressForm({ values, onChange, errors }: AddressFormProps) {
             </option>
           ))}
         </select>
-        {errors?.judet && (
-          <p className={errorClass}>{errors.judet}</p>
-        )}
+        {errors?.judet && <p className={errorClass}>{errors.judet}</p>}
       </div>
 
       {/* Localitate — custom autocomplete */}
@@ -86,9 +84,7 @@ export function AddressForm({ values, onChange, errors }: AddressFormProps) {
           }`}
           placeholder="Strada și numărul"
         />
-        {errors?.streetAddress && (
-          <p className={errorClass}>{errors.streetAddress}</p>
-        )}
+        {errors?.streetAddress && <p className={errorClass}>{errors.streetAddress}</p>}
       </div>
 
       {/* Detalii suplimentare */}
@@ -106,7 +102,7 @@ export function AddressForm({ values, onChange, errors }: AddressFormProps) {
         />
       </div>
     </div>
-  )
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -114,71 +110,77 @@ export function AddressForm({ values, onChange, errors }: AddressFormProps) {
 /* ------------------------------------------------------------------ */
 
 interface LocalityAutocompleteProps {
-  options: { value: string; label: string }[]
-  value: string
-  disabled: boolean
-  error?: string
-  onChange: (value: string) => void
+  options: { value: string; label: string }[];
+  value: string;
+  disabled: boolean;
+  error?: string;
+  onChange: (value: string) => void;
 }
 
-function LocalityAutocomplete({ options, value, disabled, error, onChange }: LocalityAutocompleteProps) {
-  const [open, setOpen] = useState(false)
-  const [highlightIndex, setHighlightIndex] = useState(-1)
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const listboxId = 'address-form-localitati'
+function LocalityAutocomplete({
+  options,
+  value,
+  disabled,
+  error,
+  onChange,
+}: LocalityAutocompleteProps) {
+  const [open, setOpen] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const listboxId = 'address-form-localitati';
 
   const filtered = useCallback(() => {
-    const q = stripRoDiacritics(value.trim().toLowerCase())
-    if (q.length < MIN_CHARS) return []
+    const q = stripRoDiacritics(value.trim().toLowerCase());
+    if (q.length < MIN_CHARS) return [];
     return options
       .filter((loc) => stripRoDiacritics(loc.label.toLowerCase()).includes(q))
-      .slice(0, MAX_SUGGESTIONS)
-  }, [value, options])()
+      .slice(0, MAX_SUGGESTIONS);
+  }, [value, options])();
 
   // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setOpen(false)
+        setOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   function handleSelect(label: string) {
-    const match = options.find((o) => o.label === label)
-    onChange(match?.value ?? label)
-    setOpen(false)
-    setHighlightIndex(-1)
+    const match = options.find((o) => o.label === label);
+    onChange(match?.value ?? label);
+    setOpen(false);
+    setHighlightIndex(-1);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (!open || filtered.length === 0) return
+    if (!open || filtered.length === 0) return;
 
     switch (e.key) {
       case 'ArrowDown':
-        e.preventDefault()
-        setHighlightIndex((i) => (i + 1) % filtered.length)
-        break
+        e.preventDefault();
+        setHighlightIndex((i) => (i + 1) % filtered.length);
+        break;
       case 'ArrowUp':
-        e.preventDefault()
-        setHighlightIndex((i) => (i - 1 + filtered.length) % filtered.length)
-        break
+        e.preventDefault();
+        setHighlightIndex((i) => (i - 1 + filtered.length) % filtered.length);
+        break;
       case 'Enter':
-        e.preventDefault()
+        e.preventDefault();
         if (highlightIndex >= 0 && highlightIndex < filtered.length) {
-          handleSelect(filtered[highlightIndex].label)
+          handleSelect(filtered[highlightIndex].label);
         }
-        break
+        break;
       case 'Escape':
-        setOpen(false)
-        setHighlightIndex(-1)
-        break
+        setOpen(false);
+        setHighlightIndex(-1);
+        break;
     }
   }
 
-  const showDropdown = open && filtered.length > 0
+  const showDropdown = open && filtered.length > 0;
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -190,12 +192,12 @@ function LocalityAutocomplete({ options, value, disabled, error, onChange }: Loc
         id="address-localitate"
         value={value}
         onChange={(e) => {
-          onChange(e.target.value)
-          setOpen(true)
-          setHighlightIndex(-1)
+          onChange(e.target.value);
+          setOpen(true);
+          setHighlightIndex(-1);
         }}
         onFocus={() => {
-          if (value.trim().length >= MIN_CHARS) setOpen(true)
+          if (value.trim().length >= MIN_CHARS) setOpen(true);
         }}
         onKeyDown={handleKeyDown}
         disabled={disabled}
@@ -205,7 +207,9 @@ function LocalityAutocomplete({ options, value, disabled, error, onChange }: Loc
         aria-controls={listboxId}
         aria-activedescendant={highlightIndex >= 0 ? `${listboxId}-${highlightIndex}` : undefined}
         className={`${fieldBase} ${error ? 'border-destructive' : 'border-input'}`}
-        placeholder={disabled ? 'Selectează mai întâi județul' : `Scrie cel puțin ${MIN_CHARS} caractere…`}
+        placeholder={
+          disabled ? 'Selectează mai întâi județul' : `Scrie cel puțin ${MIN_CHARS} caractere…`
+        }
       />
       {showDropdown && (
         <div
@@ -221,14 +225,12 @@ function LocalityAutocomplete({ options, value, disabled, error, onChange }: Loc
               tabIndex={-1}
               aria-selected={i === highlightIndex}
               className={`cursor-pointer px-3 py-1.5 text-sm font-sans ${
-                i === highlightIndex
-                  ? 'bg-primary/10 text-primary'
-                  : 'hover:bg-secondary'
+                i === highlightIndex ? 'bg-primary/10 text-primary' : 'hover:bg-secondary'
               }`}
               onMouseDown={(e) => {
                 // Prevent blur from closing before click registers
-                e.preventDefault()
-                handleSelect(loc.label)
+                e.preventDefault();
+                handleSelect(loc.label);
               }}
               onMouseEnter={() => setHighlightIndex(i)}
             >
@@ -239,11 +241,12 @@ function LocalityAutocomplete({ options, value, disabled, error, onChange }: Loc
       )}
       {error && <p className={errorClass}>{error}</p>}
     </div>
-  )
+  );
 }
 
 /* ------------------------------------------------------------------ */
 
-const fieldBase = 'w-full rounded-lg border px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring'
+const fieldBase =
+  'w-full rounded-lg border px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring';
 
-const errorClass = 'text-xs text-destructive font-sans mt-1'
+const errorClass = 'text-xs text-destructive font-sans mt-1';

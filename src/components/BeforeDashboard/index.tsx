@@ -1,8 +1,8 @@
-import { Banner } from '@payloadcms/ui/elements/Banner'
-import type React from 'react'
-import './index.scss'
+import { Banner } from '@payloadcms/ui/elements/Banner';
+import type React from 'react';
+import './index.scss';
 
-const baseClass = 'before-dashboard'
+const baseClass = 'before-dashboard';
 
 const BeforeDashboard: React.FC = () => {
   return (
@@ -11,7 +11,7 @@ const BeforeDashboard: React.FC = () => {
         <h4>Welcome to your dashboard!</h4>
       </Banner>
     </div>
-  )
-}
+  );
+};
 
-export default BeforeDashboard
+export default BeforeDashboard;

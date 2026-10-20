@@ -1,15 +1,18 @@
-'use client'
+'use client';
 
-const DELIVERY_METHOD_STYLES: Record<string, { bg: string; text: string; border: string; icon: string; label: string }> = {
+const DELIVERY_METHOD_STYLES: Record<
+  string,
+  { bg: string; text: string; border: string; icon: string; label: string }
+> = {
   personal: { bg: '#dcfce7', text: '#166534', border: '#86efac', icon: '🚗', label: 'Personală' },
   curier: { bg: '#dbeafe', text: '#1e40af', border: '#93c5fd', icon: '📦', label: 'Curier' },
-}
+};
 
 export const DeliveryMethodCell = ({ cellData }: { cellData: string }) => {
-  const method = DELIVERY_METHOD_STYLES[cellData]
+  const method = DELIVERY_METHOD_STYLES[cellData];
 
   if (!method) {
-    return <span style={{ color: '#9ca3af' }}>—</span>
+    return <span style={{ color: '#9ca3af' }}>—</span>;
   }
 
   return (
@@ -27,5 +30,5 @@ export const DeliveryMethodCell = ({ cellData }: { cellData: string }) => {
     >
       {method.icon} {method.label}
     </span>
-  )
-}
+  );
+};

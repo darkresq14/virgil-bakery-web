@@ -1,14 +1,14 @@
-import { ChevronDown } from 'lucide-react'
-import Link from 'next/link'
-import type React from 'react'
+import { ChevronDown } from 'lucide-react';
+import Link from 'next/link';
+import type React from 'react';
 
-import { ImageMedia } from '@/components/Media/ImageMedia'
-import type { Media } from '@/payload-types'
+import { ImageMedia } from '@/components/Media/ImageMedia';
+import type { Media } from '@/payload-types';
 
 interface HeroProps {
-  heading: string
-  subheading?: string
-  backgroundImage?: Media | null
+  heading: string;
+  subheading?: string;
+  backgroundImage?: Media | null;
 }
 
 export const Hero: React.FC<HeroProps> = ({ heading, subheading, backgroundImage }) => {
@@ -49,5 +49,5 @@ export const Hero: React.FC<HeroProps> = ({ heading, subheading, backgroundImage
         <ChevronDown className="w-8 h-8 text-white/70" />
       </div>
     </section>
-  )
-}
+  );
+};

@@ -1,5 +1,5 @@
-import type * as React from 'react'
-import { cn } from '@/utilities/ui'
+import type * as React from 'react';
+import { cn } from '@/utilities/ui';
 
 const Card: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, ...props }) => {
   return (
@@ -8,8 +8,8 @@ const Card: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, ...pr
       className={cn('bg-card text-card-foreground rounded-lg border shadow-sm', className)}
       {...props}
     />
-  )
-}
+  );
+};
 
 const CardHeader: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, ...props }) => {
   return (
@@ -18,8 +18,8 @@ const CardHeader: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className,
       className={cn('flex flex-col gap-1.5 p-6', className)}
       {...props}
     />
-  )
-}
+  );
+};
 
 const CardTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = ({ className, ...props }) => {
   return (
@@ -28,8 +28,8 @@ const CardTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = ({ classNa
       className={cn('text-2xl leading-none font-semibold tracking-tight', className)}
       {...props}
     />
-  )
-}
+  );
+};
 
 const CardDescription: React.FC<React.HTMLAttributes<HTMLParagraphElement>> = ({
   className,
@@ -41,12 +41,12 @@ const CardDescription: React.FC<React.HTMLAttributes<HTMLParagraphElement>> = ({
       className={cn('text-muted-foreground text-sm', className)}
       {...props}
     />
-  )
-}
+  );
+};
 
 const CardContent: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, ...props }) => {
-  return <div data-slot="card-content" className={cn('p-6 pt-0', className)} {...props} />
-}
+  return <div data-slot="card-content" className={cn('p-6 pt-0', className)} {...props} />;
+};
 
 const CardFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, ...props }) => {
   return (
@@ -55,7 +55,7 @@ const CardFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className,
       className={cn('flex items-center p-6 pt-0', className)}
       {...props}
     />
-  )
-}
+  );
+};
 
-export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
+export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle };

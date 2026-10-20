@@ -1,15 +1,11 @@
 import type { CheckboxField } from '@payloadcms/plugin-form-builder/types';
 import type React from 'react';
-import type {
-  FieldErrorsImpl,
-  FieldValues,
-  UseFormRegister,
-} from 'react-hook-form';
+import type { FieldErrorsImpl, FieldValues, UseFormRegister } from 'react-hook-form';
 import { useFormContext } from 'react-hook-form';
 import { Checkbox as CheckboxUi } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
-import { Error } from '../Error';
+import { ErrorField } from '../Error';
 import { Width } from '../Width';
 
 export const Checkbox: React.FC<
@@ -41,7 +37,7 @@ export const Checkbox: React.FC<
           {label}
         </Label>
       </div>
-      {errors[name] && <Error name={name} />}
+      {errors[name] && <ErrorField name={name} />}
     </Width>
   );
 };

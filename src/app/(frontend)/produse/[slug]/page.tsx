@@ -1,17 +1,17 @@
-import configPromise from '@payload-config'
-import type { Metadata } from 'next'
-import { draftMode } from 'next/headers'
-import { notFound } from 'next/navigation'
-import { getPayload } from 'payload'
-import { cache } from 'react'
-import { LivePreviewListener } from '@/components/LivePreviewListener'
-import { generateMeta } from '@/utilities/generateMeta'
-import { getServerSideURL } from '@/utilities/getURL'
-import { breadcrumbSchema, productSchema } from '@/utilities/schema'
-import { ProductDetailClient } from './page.client'
+import configPromise from '@payload-config';
+import type { Metadata } from 'next';
+import { draftMode } from 'next/headers';
+import { notFound } from 'next/navigation';
+import { getPayload } from 'payload';
+import { cache } from 'react';
+import { LivePreviewListener } from '@/components/LivePreviewListener';
+import { generateMeta } from '@/utilities/generateMeta';
+import { getServerSideURL } from '@/utilities/getURL';
+import { breadcrumbSchema, productSchema } from '@/utilities/schema';
+import { ProductDetailClient } from './page.client';
 
 export async function generateStaticParams() {
-  const payload = await getPayload({ config: configPromise })
+  const payload = await getPayload({ config: configPromise });
   const products = await payload.find({
     collection: 'products',
     draft: false,
@@ -21,61 +21,63 @@ export async function generateStaticParams() {
     select: {
       slug: true,
     },
-  })
+  });
 
-  return products.docs.map(({ slug }) => ({ slug }))
+  return products.docs.map(({ slug }) => ({ slug }));
 }
 
 type Args = {
-  params: Promise<{ slug?: string }>
-}
+  params: Promise<{ slug?: string }>;
+};
 
 export default async function ProductPage({ params: paramsPromise }: Args) {
-  const { isEnabled: draft } = await draftMode()
-  const { slug = '' } = await paramsPromise
-  const decodedSlug = decodeURIComponent(slug)
+  const { isEnabled: draft } = await draftMode();
+  const { slug = '' } = await paramsPromise;
+  const decodedSlug = decodeURIComponent(slug);
 
-  const product = await queryProductBySlug({ slug: decodedSlug })
+  const product = await queryProductBySlug({ slug: decodedSlug });
 
-  if (!product) return notFound()
+  if (!product) return notFound();
 
-  const baseUrl = getServerSideURL()
-  const productUrl = `${baseUrl}/produse/${decodedSlug}`
+  const baseUrl = getServerSideURL();
+  const productUrl = `${baseUrl}/produse/${decodedSlug}`;
 
-  const pSchema = productSchema({ product, url: productUrl })
+  const pSchema = productSchema({ product, url: productUrl });
   const bSchema = breadcrumbSchema([
     { name: 'Acasă', url: baseUrl },
     { name: 'Produse', url: `${baseUrl}/produse` },
     { name: product.name, url: productUrl },
-  ])
+  ]);
 
   return (
     <div className="py-12">
       <script
         type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: inject JSON-LD structured data
         dangerouslySetInnerHTML={{ __html: JSON.stringify(pSchema) }}
       />
       <script
         type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: inject JSON-LD structured data
         dangerouslySetInnerHTML={{ __html: JSON.stringify(bSchema) }}
       />
       {draft && <LivePreviewListener />}
       <ProductDetailClient product={product} />
     </div>
-  )
+  );
 }
 
 export async function generateMetadata({ params: paramsPromise }: Args): Promise<Metadata> {
-  const { slug = '' } = await paramsPromise
-  const decodedSlug = decodeURIComponent(slug)
-  const product = await queryProductBySlug({ slug: decodedSlug })
+  const { slug = '' } = await paramsPromise;
+  const decodedSlug = decodeURIComponent(slug);
+  const product = await queryProductBySlug({ slug: decodedSlug });
 
-  return generateMeta({ doc: product, pathPrefix: '/produse' })
+  return generateMeta({ doc: product, pathPrefix: '/produse' });
 }
 
 const queryProductBySlug = cache(async ({ slug }: { slug: string }) => {
-  const { isEnabled: draft } = await draftMode()
-  const payload = await getPayload({ config: configPromise })
+  const { isEnabled: draft } = await draftMode();
+  const payload = await getPayload({ config: configPromise });
 
   const result = await payload.find({
     collection: 'products',
@@ -86,7 +88,7 @@ const queryProductBySlug = cache(async ({ slug }: { slug: string }) => {
     where: {
       slug: { equals: slug },
     },
-  })
+  });
 
-  return result.docs?.[0] || null
-})
+  return result.docs?.[0] || null;
+});

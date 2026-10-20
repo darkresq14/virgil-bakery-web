@@ -1,12 +1,13 @@
-import Script from 'next/script'
-import type React from 'react'
+import Script from 'next/script';
+import type React from 'react';
 
-import { defaultTheme, themeLocalStorageKey } from '../ThemeSelector/types'
+import { defaultTheme, themeLocalStorageKey } from '../ThemeSelector/types';
 
 export const InitTheme: React.FC = () => {
   return (
     // eslint-disable-next-line @next/next/no-before-interactive-script-outside-document
     <Script
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: theme must be set beforeInteractive, before hydration
       dangerouslySetInnerHTML={{
         __html: `
   (function () {
@@ -46,5 +47,5 @@ export const InitTheme: React.FC = () => {
       id="theme-script"
       strategy="beforeInteractive"
     />
-  )
-}
+  );
+};

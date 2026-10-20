@@ -1,17 +1,14 @@
 import 'dotenv/config';
-import { migrations } from '../src/migrations';
-import { getPayload } from 'payload';
-import config from '../src/payload.config';
 import type { Payload } from 'payload';
+import { getPayload } from 'payload';
+import { migrations } from '../src/migrations';
+import config from '../src/payload.config';
 
 export function getInitialMigrationName(): string {
   return migrations[0].name;
 }
 
-export async function markMigrationApplied(
-  payload: Payload,
-  migrationName: string,
-): Promise<void> {
+export async function markMigrationApplied(payload: Payload, migrationName: string): Promise<void> {
   await payload.create({
     collection: 'payload-migrations',
     data: {
@@ -28,10 +25,7 @@ export async function verifyMigrationApplied(
   const result = await payload.find({
     collection: 'payload-migrations',
     where: {
-      and: [
-        { name: { equals: migrationName } },
-        { batch: { equals: 1 } },
-      ],
+      and: [{ name: { equals: migrationName } }, { batch: { equals: 1 } }],
     },
   });
 

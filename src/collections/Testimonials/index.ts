@@ -1,8 +1,8 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig } from 'payload';
 
-import { anyone } from '../../access/anyone'
-import { authenticated } from '../../access/authenticated'
-import { revalidateTestimonial } from './hooks/revalidateTestimonial'
+import { anyone } from '../../access/anyone';
+import { authenticated } from '../../access/authenticated';
+import { revalidateTestimonial } from './hooks/revalidateTestimonial';
 
 export const Testimonials: CollectionConfig<'testimonials'> = {
   slug: 'testimonials',
@@ -51,4 +51,4 @@ export const Testimonials: CollectionConfig<'testimonials'> = {
   hooks: {
     afterChange: [revalidateTestimonial],
   },
-}
+};

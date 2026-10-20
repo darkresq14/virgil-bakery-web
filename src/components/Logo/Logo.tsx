@@ -1,9 +1,9 @@
 interface Props {
-  className?: string
+  className?: string;
 }
 
 export const Logo = (props: Props) => {
-  const { className } = props
+  const { className } = props;
 
   return (
     <span className={`flex items-center gap-2 ${className || ''}`}>
@@ -11,5 +11,5 @@ export const Logo = (props: Props) => {
         Pâine cu Maia
       </span>
     </span>
-  )
-}
+  );
+};

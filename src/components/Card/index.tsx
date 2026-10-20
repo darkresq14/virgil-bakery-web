@@ -1,32 +1,32 @@
-'use client'
-import Link from 'next/link'
-import type React from 'react'
-import { Fragment } from 'react'
-import { Media } from '@/components/Media'
-import type { Post } from '@/payload-types'
-import { cn } from '@/utilities/ui'
-import useClickableCard from '@/utilities/useClickableCard'
+'use client';
+import Link from 'next/link';
+import type React from 'react';
+import { Fragment } from 'react';
+import { Media } from '@/components/Media';
+import type { Post } from '@/payload-types';
+import { cn } from '@/utilities/ui';
+import useClickableCard from '@/utilities/useClickableCard';
 
-export type CardPostData = Pick<Post, 'slug' | 'categories' | 'meta' | 'title'>
+export type CardPostData = Pick<Post, 'slug' | 'categories' | 'meta' | 'title'>;
 
 export const Card: React.FC<{
-  alignItems?: 'center'
-  className?: string
-  doc?: CardPostData
-  relationTo?: 'posts'
-  showCategories?: boolean
-  title?: string
+  alignItems?: 'center';
+  className?: string;
+  doc?: CardPostData;
+  relationTo?: 'posts';
+  showCategories?: boolean;
+  title?: string;
 }> = (props) => {
-  const { card, link } = useClickableCard({})
-  const { className, doc, relationTo, showCategories, title: titleFromProps } = props
+  const { card, link } = useClickableCard({});
+  const { className, doc, relationTo, showCategories, title: titleFromProps } = props;
 
-  const { slug, categories, meta, title } = doc || {}
-  const { description, image: metaImage } = meta || {}
+  const { slug, categories, meta, title } = doc || {};
+  const { description, image: metaImage } = meta || {};
 
-  const hasCategories = categories && Array.isArray(categories) && categories.length > 0
-  const titleToUse = titleFromProps || title
-  const sanitizedDescription = description?.replace(/\s/g, ' ') // replace non-breaking space with white space
-  const href = `/${relationTo}/${slug}`
+  const hasCategories = categories && Array.isArray(categories) && categories.length > 0;
+  const titleToUse = titleFromProps || title;
+  const sanitizedDescription = description?.replace(/\s/g, ' '); // replace non-breaking space with white space
+  const href = `/${relationTo}/${slug}`;
 
   return (
     <article
@@ -47,21 +47,21 @@ export const Card: React.FC<{
           <div className="uppercase text-sm mb-4">
             {categories?.map((category, index) => {
               if (typeof category === 'object') {
-                const { title: titleFromCategory } = category
+                const { title: titleFromCategory } = category;
 
-                const categoryTitle = titleFromCategory || 'Untitled category'
+                const categoryTitle = titleFromCategory || 'Untitled category';
 
-                const isLast = index === categories.length - 1
+                const isLast = index === categories.length - 1;
 
                 return (
                   <Fragment key={category.id ?? titleFromCategory}>
                     {categoryTitle}
                     {!isLast && <Fragment>, &nbsp;</Fragment>}
                   </Fragment>
-                )
+                );
               }
 
-              return null
+              return null;
             })}
           </div>
         )}
@@ -77,5 +77,5 @@ export const Card: React.FC<{
         {description && <div className="mt-2">{description && <p>{sanitizedDescription}</p>}</div>}
       </div>
     </article>
-  )
-}
+  );
+};

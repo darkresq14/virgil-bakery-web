@@ -1,23 +1,23 @@
-import type React from 'react'
-import { getMediaUrl } from '@/utilities/getMediaUrl'
+import type React from 'react';
+import { getMediaUrl } from '@/utilities/getMediaUrl';
 
-import { cn } from '@/utilities/ui'
-import type { Props as MediaProps } from '../types'
+import { cn } from '@/utilities/ui';
+import type { Props as MediaProps } from '../types';
 
 const formatFileSize = (bytes: number | null | undefined): string => {
-  if (!bytes) return ''
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 export const PdfMedia: React.FC<MediaProps> = (props) => {
-  const { imgClassName, resource } = props
+  const { imgClassName, resource } = props;
 
-  if (!resource || typeof resource !== 'object') return null
+  if (!resource || typeof resource !== 'object') return null;
 
-  const { filename, filesize, url, alt } = resource
-  const displayName = alt || filename || 'Document PDF'
+  const { filename, filesize, url, alt } = resource;
+  const displayName = alt || filename || 'Document PDF';
 
   return (
     <a
@@ -30,7 +30,8 @@ export const PdfMedia: React.FC<MediaProps> = (props) => {
       target="_blank"
       rel="noopener noreferrer"
     >
-      <svg className="h-10 w-10 shrink-0 text-red-500" viewBox="0 0 550.801 550.801">
+      <svg className="h-10 w-10 shrink-0 text-red-500" viewBox="0 0 550.801 550.801" role="img">
+        <title>Document PDF</title>
         <g>
           <path
             d="M160.381,282.225c0-14.832-10.299-23.684-28.474-23.684c-7.414,0-12.437,0.715-15.071,1.432V307.6
@@ -64,5 +65,5 @@ export const PdfMedia: React.FC<MediaProps> = (props) => {
         ) : null}
       </div>
     </a>
-  )
-}
+  );
+};

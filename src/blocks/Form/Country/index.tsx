@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-import { Error } from '../Error';
+import { ErrorField } from '../Error';
 import { Width } from '../Width';
 import { countryOptions } from './options';
 
@@ -40,9 +40,7 @@ export const Country: React.FC<
           const controlledValue = countryOptions.find((t) => t.value === value);
 
           return (
-            <Select
-              onValueChange={(val) => onChange(val)}
-              value={controlledValue?.value}>
+            <Select onValueChange={(val) => onChange(val)} value={controlledValue?.value}>
               <SelectTrigger className="w-full" id={name}>
                 <SelectValue placeholder={label} />
               </SelectTrigger>
@@ -60,7 +58,7 @@ export const Country: React.FC<
         }}
         rules={{ required }}
       />
-      {errors[name] && <Error name={name} />}
+      {errors[name] && <ErrorField name={name} />}
     </Width>
   );
 };

@@ -1,8 +1,8 @@
-import type React from 'react'
-import { CMSLink } from '@/components/Link'
-import { Media } from '@/components/Media'
-import RichText from '@/components/RichText'
-import type { Page } from '@/payload-types'
+import type React from 'react';
+import { CMSLink } from '@/components/Link';
+import { Media } from '@/components/Media';
+import RichText from '@/components/RichText';
+import type { Page } from '@/payload-types';
 
 export const MediumImpactHero: React.FC<Page['hero']> = ({ links, media, richText }) => {
   return (
@@ -12,12 +12,12 @@ export const MediumImpactHero: React.FC<Page['hero']> = ({ links, media, richTex
 
         {Array.isArray(links) && links.length > 0 && (
           <ul className="flex gap-4">
-            {links.map(({ link }, i) => {
+            {links.map((item) => {
               return (
-                <li key={i}>
-                  <CMSLink {...link} />
+                <li key={item.id ?? item.link.label}>
+                  <CMSLink {...item.link} />
                 </li>
-              )
+              );
             })}
           </ul>
         )}
@@ -40,5 +40,5 @@ export const MediumImpactHero: React.FC<Page['hero']> = ({ links, media, richTex
         )}
       </div>
     </div>
-  )
-}
+  );
+};

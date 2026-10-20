@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 import {
   type ConsentValue,
@@ -9,59 +9,59 @@ import {
   onBannerRequest,
   setConsentCookie,
   updateGtagConsent,
-} from './consent'
+} from './consent';
 
 export function CookieConsent() {
-  const [visible, setVisible] = useState(false)
-  const [dismissed, setDismissed] = useState(false)
-  const [reducedMotion, setReducedMotion] = useState(false)
+  const [visible, setVisible] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
     // Register reopen callback for the footer "Setări Cookies" button
     const unregister = onBannerRequest(() => {
-      setDismissed(false)
-      setVisible(true)
-    })
+      setDismissed(false);
+      setVisible(true);
+    });
 
     // Detect reduced motion preference
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    setReducedMotion(mq.matches)
-    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches)
-    mq.addEventListener('change', handler)
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReducedMotion(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    mq.addEventListener('change', handler);
 
     // Handle existing consent
-    const consent = getConsentCookie()
+    const consent = getConsentCookie();
     if (consent === 'accepted') {
-      updateGtagConsent(true)
+      updateGtagConsent(true);
     } else if (consent === null) {
-      setVisible(true)
+      setVisible(true);
     }
 
     return () => {
-      unregister()
-      mq.removeEventListener('change', handler)
-    }
-  }, [])
+      unregister();
+      mq.removeEventListener('change', handler);
+    };
+  }, []);
 
   const handleAccept = () => {
-    updateGtagConsent(true)
-    setConsentCookie('accepted' as ConsentValue)
-    handleDismiss()
-  }
+    updateGtagConsent(true);
+    setConsentCookie('accepted' as ConsentValue);
+    handleDismiss();
+  };
 
   const handleReject = () => {
-    updateGtagConsent(false)
-    setConsentCookie('rejected' as ConsentValue)
-    handleDismiss()
-  }
+    updateGtagConsent(false);
+    setConsentCookie('rejected' as ConsentValue);
+    handleDismiss();
+  };
 
   const handleDismiss = () => {
-    setDismissed(true)
+    setDismissed(true);
     // Wait for animation to finish before removing from DOM
-    setTimeout(() => setVisible(false), 300)
-  }
+    setTimeout(() => setVisible(false), 300);
+  };
 
-  if (!visible) return null
+  if (!visible) return null;
 
   return (
     <div
@@ -113,5 +113,5 @@ export function CookieConsent() {
         </button>
       </div>
     </div>
-  )
+  );
 }

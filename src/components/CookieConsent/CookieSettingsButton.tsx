@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import { requestConsentBanner } from './consent'
+import { requestConsentBanner } from './consent';
 
 export function CookieSettingsButton() {
   return (
@@ -11,5 +11,5 @@ export function CookieSettingsButton() {
     >
       Setări Cookies
     </button>
-  )
+  );
 }

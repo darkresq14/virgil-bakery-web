@@ -1,5 +1,5 @@
-import type * as React from 'react'
-import { cn } from '@/utilities/ui'
+import type * as React from 'react';
+import { cn } from '@/utilities/ui';
 
 const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = ({
   className,
@@ -16,7 +16,7 @@ const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = ({
       type={type}
       {...props}
     />
-  )
-}
+  );
+};
 
-export { Input }
+export { Input };

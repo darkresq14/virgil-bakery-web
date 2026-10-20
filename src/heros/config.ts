@@ -3,10 +3,10 @@ import {
   HeadingFeature,
   InlineToolbarFeature,
   lexicalEditor,
-} from '@payloadcms/richtext-lexical'
-import type { Field } from 'payload'
+} from '@payloadcms/richtext-lexical';
+import type { Field } from 'payload';
 
-import { linkGroup } from '@/fields/linkGroup'
+import { linkGroup } from '@/fields/linkGroup';
 
 export const hero: Field = {
   name: 'hero',
@@ -47,7 +47,7 @@ export const hero: Field = {
             HeadingFeature({ enabledHeadingSizes: ['h1', 'h2', 'h3', 'h4'] }),
             FixedToolbarFeature(),
             InlineToolbarFeature(),
-          ]
+          ];
         },
       }),
       label: false,
@@ -68,4 +68,4 @@ export const hero: Field = {
     },
   ],
   label: false,
-}
+};
