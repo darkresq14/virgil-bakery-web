@@ -44,6 +44,8 @@ pnpx create-payload-app my-project -t website
 1. `pnpm install && pnpm dev` to install dependencies and start the dev server
 1. open `http://localhost:3000` to open the app in your browser
 
+> **Windows note:** Turbopack dev is broken on Windows — `pnpm dev` fails with `Module not found: Can't resolve '@payloadcms/*'` and sass import errors (see [vercel/next.js#86431](https://github.com/vercel/next.js/issues/86431) and issue #39). Use `pnpm dev:webpack` instead. The Playwright e2e config does this automatically on Windows.
+
 That's it! Changes made in `./src` will be reflected in your app. Follow the on-screen instructions to login and create your first admin user. Then check out [Production](#production) once you're ready to build and serve your app, and [Deployment](#deployment) when you're ready to go live.
 
 ## How it works

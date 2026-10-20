@@ -1,10 +1,10 @@
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
  */
-import 'dotenv/config'
+import 'dotenv/config';
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -34,8 +34,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm dev',
+    // Turbopack dev (`pnpm dev`) can't resolve `@payloadcms/*` on Windows (#39).
+    // The webpack dev server boots clean there; other platforms keep Turbopack.
+    command: process.platform === 'win32' ? 'pnpm dev:webpack' : 'pnpm dev',
     reuseExistingServer: true,
     url: 'http://localhost:3000',
   },
-})
+});
