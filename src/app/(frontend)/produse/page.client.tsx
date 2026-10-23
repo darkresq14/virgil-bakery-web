@@ -115,7 +115,7 @@ export const ProductsPageClient: React.FC<{ products: Product[] }> = ({ products
         {filtered.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((product, i) => (
-              <ScrollReveal key={product.id} delay={Math.min(i * 80, 400)}>
+              <ScrollReveal key={product.id} delay={Math.min(i * 80, 400)} className="h-full">
                 <ProductCard product={product} />
               </ScrollReveal>
             ))}

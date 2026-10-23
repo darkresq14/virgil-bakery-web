@@ -129,7 +129,7 @@ export default async function HomePage() {
               <h2 className="text-3xl font-heading text-center mb-12">Produse recomandate</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {featured.map((product, i) => (
-                  <ScrollReveal key={product.id} delay={i * 100}>
+                  <ScrollReveal key={product.id} delay={i * 100} className="h-full">
                     <ProductCard product={product} />
                   </ScrollReveal>
                 ))}

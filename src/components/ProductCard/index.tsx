@@ -62,7 +62,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   return (
     <Link
       href={`/produse/${product.slug}`}
-      className="group flex flex-col rounded-xl bg-card shadow-md hover:shadow-lg transition-shadow overflow-hidden"
+      className="group flex h-full flex-col rounded-xl bg-card shadow-md hover:shadow-lg transition-shadow overflow-hidden"
       aria-label={`${product.name} — ${new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'RON' }).format(product.price)}`}
     >
       <div className="relative aspect-4/3 overflow-hidden">
@@ -86,13 +86,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </span>
           </div>
         )}
-        {!purchaseable && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <span className="text-white font-sans font-medium text-sm bg-black/60 px-3 py-1 rounded-full">
-              Indisponibil
-            </span>
-          </div>
-        )}
+        {/* Unavailable: dim only — the "Indisponibil" pill below the price carries the text */}
+        {!purchaseable && <div className="absolute inset-0 bg-black/50" aria-hidden="true" />}
         {purchaseable && daysLabel && (
           <span className="absolute top-3 left-3 text-white font-sans font-medium text-xs bg-black/60 px-3 py-1 rounded-full">
             {daysLabel}
@@ -107,8 +102,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             {product.shortDescription}
           </p>
         )}
-        <div className="mt-auto flex items-center justify-between">
-          <div className="font-sans">
+        {/* Bottom slot: same shape on every card so rows of cards align
+            (available = action button, unavailable = inert placeholder). */}
+        <div className="mt-auto">
+          <div className="font-sans mb-3">
             <span className="text-lg font-semibold text-primary">
               {new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'RON' }).format(
                 product.price,
@@ -118,15 +115,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               <span className="text-sm text-muted-foreground ml-1">/ {product.weight}</span>
             )}
           </div>
-          {purchaseable && (
+          {purchaseable ? (
             <button
               type="button"
               onClick={handleAddToCart}
-              className="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-              aria-label={`Adaugă ${product.name} în coș`}
+              className="flex w-full h-11 items-center justify-center gap-2 rounded-full bg-primary text-primary-foreground font-sans font-medium text-sm px-4 hover:bg-primary/90 transition-colors"
             >
-              <ShoppingBag className="w-4 h-4" />
+              <ShoppingBag className="w-4 h-4" aria-hidden="true" />
+              Adaugă în coș
             </button>
+          ) : (
+            <span className="flex w-full h-11 items-center justify-center rounded-full bg-secondary text-muted-foreground font-sans font-medium text-sm px-4 select-none">
+              Indisponibil
+            </span>
           )}
         </div>
       </div>

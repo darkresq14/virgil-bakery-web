@@ -142,15 +142,18 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({
           <div className="flex items-center gap-3">
             <Link
               href="/cos"
-              className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-secondary transition-colors"
+              className="relative flex items-center gap-2 h-11 px-3 rounded-full hover:bg-secondary transition-colors"
               aria-label={`Coșul tău (${itemCount} produse)`}
             >
-              <ShoppingBag className="w-5 h-5" />
-              {itemCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-sans font-medium">
-                  {itemCount}
-                </span>
-              )}
+              <span className="relative flex items-center justify-center">
+                <ShoppingBag className="w-5 h-5" aria-hidden="true" />
+                {itemCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-sans font-medium">
+                    {itemCount}
+                  </span>
+                )}
+              </span>
+              <span className="text-sm font-sans font-medium">Coș</span>
             </Link>
 
             {/* Mobile hamburger */}
