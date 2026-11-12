@@ -9,13 +9,12 @@ import {
   ShoppingBag,
   Trash2,
 } from 'lucide-react';
-import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { type AddressFields, AddressForm } from '@/components/AddressForm';
 import { useCart } from '@/providers/Cart';
-import { buildWhatsAppMessage } from '@/utilities/buildWhatsAppMessage';
 import {
   type DeliveryDateOption,
   formatRomanianDate,
@@ -127,9 +126,11 @@ export function CartPageClient({
   // Issue #41 — double-submit guard. The ref locks synchronously (a second
   // click before re-render must not pass); the state only drives the disabled
   // button. Unlocks on failure so the customer can retry; on success the cart
-  // is cleared, so staying locked is harmless.
+  // is cleared and we navigate away, so staying locked is harmless.
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
   const submittingRef = useRef(false);
+  const router = useRouter();
 
   // Fresh availability from the server: catches products unpublished or marked
   // unavailable after they were saved to localStorage (see CONTEXT.md → Order).
@@ -345,26 +346,9 @@ export function CartPageClient({
     if (submittingRef.current) return; // an order POST is already in flight
     submittingRef.current = true;
     setIsSubmitting(true);
+    setSubmitError(false);
 
     const selectedDate = deliveryDates.find((d) => d.label === selectedDelivery);
-
-    const message = buildWhatsAppMessage({
-      items: items.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price })),
-      subtotal: total,
-      shippingCost,
-      deliveryDate: selectedDelivery,
-      deliveryMethod,
-      ...(isFirstOrder
-        ? {
-            customerName: form.name || undefined,
-            customerPhone: form.phone || undefined,
-            judet: address.judet || undefined,
-            localitate: address.localitate || undefined,
-            streetAddress: address.streetAddress || undefined,
-            addressDetails: address.addressDetails || undefined,
-          }
-        : {}),
-    });
 
     try {
       const res = await fetch('/api/orders', {
@@ -388,32 +372,33 @@ export function CartPageClient({
           localitate: address.localitate || undefined,
           streetAddress: address.streetAddress || undefined,
           addressDetails: address.addressDetails || undefined,
-          whatsappMessage: message,
           status: 'nou',
         }),
       });
-      // Order not persisted server-side (non-2xx) counts as failure: the
-      // customer must be able to retry, so release the submit lock. The
-      // WhatsApp handoff below still runs — same as the catch path.
       if (!res.ok) {
+        // Order not persisted server-side: release the submit lock so the
+        // customer can retry, and keep the cart intact.
         submittingRef.current = false;
         setIsSubmitting(false);
+        setSubmitError(true);
+        return;
       }
     } catch {
-      // Still open WhatsApp even if DB save fails — but allow a retry.
+      // Network failure: same treatment — visible error, unlocked retry.
       submittingRef.current = false;
       setIsSubmitting(false);
+      setSubmitError(true);
+      return;
     }
 
-    const url = `https://wa.me/40746245391?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
-    // Cache the submitted phone so the next checkout prefills it (prefill only —
-    // never overwrites what the customer typed this session).
+    // Success: remember the phone for the next checkout prefill, mark the
+    // customer as returning, clear the cart, go to the thank-you page.
     localStorage.setItem(PHONE_STORAGE_KEY, form.phone);
     if (!isFirstOrder) {
       localStorage.setItem(STORAGE_KEY, 'true');
     }
     clearCart();
+    router.push('/multumim');
   };
 
   if (items.length === 0) {
@@ -774,22 +759,31 @@ export function CartPageClient({
                 )}
               </div>
 
+              {submitError && (
+                <div
+                  role="alert"
+                  className="mb-4 flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4"
+                >
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+                  <div className="font-sans text-sm leading-relaxed text-foreground">
+                    <p className="font-semibold">Comanda nu a putut fi trimisă</p>
+                    <p className="mt-1">
+                      Verifică conexiunea și apasă din nou butonul. Produsele din coș sunt păstrate
+                      — nu trebuie să le adaugi din nou.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <button
                 type="button"
                 onClick={handleCheckout}
                 disabled={
                   hasDayConflict || hasDateConflict || staleItemIds.size > 0 || isSubmitting
                 }
-                className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] text-white px-8 py-3 font-sans font-medium hover:bg-[#20bd5a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#25D366]"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-primary text-primary-foreground px-8 py-3 font-sans font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary"
               >
-                <Image
-                  unoptimized
-                  src="/WhatsApp_White.svg"
-                  alt="WhatsApp"
-                  width={24}
-                  height={24}
-                />
-                {isSubmitting ? 'Se trimite…' : 'Comandă prin WhatsApp'}
+                {isSubmitting ? 'Se trimite…' : 'Trimite comanda'}
               </button>
             </div>
           </div>

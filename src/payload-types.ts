@@ -1925,6 +1925,14 @@ export interface SiteConfig {
    */
   teaserWhatsapp?: string | null;
   /**
+   * Titlul paginii „/multumim” de după trimiterea comenzii. Lăsat gol, folosește un titlu implicit cald.
+   */
+  thankYouTitle?: string | null;
+  /**
+   * Mesajul de pe pagina „/multumim”. Lăsat gol, folosește un mesaj implicit. Evită să promiți cum confirmi comanda (telefon, SMS etc.) — rămâi liber să confirmi cum vrei.
+   */
+  thankYouMessage?: string | null;
+  /**
    * Prima zi de concediu (inclusiv). Lasă ambele date goale pentru a dezactiva.
    */
   holidayStartDate?: string | null;
@@ -2077,6 +2085,8 @@ export interface SiteConfigSelect<T extends boolean = true> {
   teaserDelivery?: T;
   teaserPayment?: T;
   teaserWhatsapp?: T;
+  thankYouTitle?: T;
+  thankYouMessage?: T;
   holidayStartDate?: T;
   holidayEndDate?: T;
   holidayModalTitle?: T;

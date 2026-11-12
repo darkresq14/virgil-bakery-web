@@ -239,7 +239,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({
               className="inline-flex items-center gap-2 rounded-full bg-[#25D366] text-white px-6 py-3 font-sans font-medium"
             >
               <MessageCircle className="w-5 h-5" />
-              Comandă prin WhatsApp
+              Întrebări? Scrie-ne
             </a>
           </div>
         </div>

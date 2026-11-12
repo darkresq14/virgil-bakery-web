@@ -138,6 +138,26 @@ export const SiteConfig: GlobalConfig = {
                 description: 'Text scurt pentru cardul de pe pagina principală (~120 caractere)',
               },
             },
+
+            // ── Pagină Mulțumire (post-checkout) ────────────────────
+            {
+              name: 'thankYouTitle',
+              type: 'text',
+              label: 'Mulțumire: Titlu',
+              admin: {
+                description:
+                  'Titlul paginii „/multumim” de după trimiterea comenzii. Lăsat gol, folosește un titlu implicit cald.',
+              },
+            },
+            {
+              name: 'thankYouMessage',
+              type: 'textarea',
+              label: 'Mulțumire: Mesaj',
+              admin: {
+                description:
+                  'Mesajul de pe pagina „/multumim”. Lăsat gol, folosește un mesaj implicit. Evită să promiți cum confirmi comanda (telefon, SMS etc.) — rămâi liber să confirmi cum vrei.',
+              },
+            },
           ],
         },
 

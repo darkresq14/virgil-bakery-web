@@ -10,6 +10,12 @@ vi.mock('@/providers/Cart', () => ({
   useCart: vi.fn(),
 }));
 
+// Cart redirects to the thank-you route on success — mock the Next router.
+const pushMock = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushMock }),
+}));
+
 // Mock getDeliveryDates to return predictable dates
 vi.mock('@/utilities/deliveryDates', async () => {
   const actual = await vi.importActual<typeof import('@/utilities/deliveryDates')>(
@@ -172,7 +178,7 @@ describe('CartPageClient — first-time buyer', () => {
     setupCartPage();
 
     // Click checkout without filling address fields
-    const checkoutButton = screen.getByText(/comandă prin whatsapp/i);
+    const checkoutButton = screen.getByText(/trimite comanda/i);
     fireEvent.click(checkoutButton);
 
     // Should show errors for judet, localitate, streetAddress
@@ -185,7 +191,7 @@ describe('CartPageClient — first-time buyer', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }));
     setupCartPage();
 
-    const checkoutButton = screen.getByText(/comandă prin whatsapp/i);
+    const checkoutButton = screen.getByText(/trimite comanda/i);
     fireEvent.click(checkoutButton);
 
     // Only the mount-time availability revalidation may hit the network —
@@ -249,29 +255,68 @@ describe('CartPageClient — returning customer', () => {
     expect(screen.queryByText(/transport \(curier cargus\)/i)).toBeNull();
   });
 
-  it('finishes the checkout flow (cart cleared) when the order POST answers non-ok, with the guard released', async () => {
-    // #41 review follow-up: a 500 from /api/orders is a failure — the guard
-    // must release (future sessions work) even though this flow still hands
-    // off to WhatsApp and clears the cart, by design.
+  it('keeps the cart and unlocks retry when the order POST answers non-ok', async () => {
+    // Site-only checkout (#45): a non-2xx POST is a hard failure — no
+    // WhatsApp handoff anymore, so the cart must survive and the customer
+    // must be able to retry.
+    const availability = Response.json({
+      docs: [
+        { id: '1', available: true, availableDays: 'both' },
+        { id: '2', available: true, availableDays: 'both' },
+      ],
+    });
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(availability)
       .mockResolvedValueOnce(Response.json({ ok: false }, { status: 500 }))
-      .mockResolvedValue(Response.json({ ok: true }));
+      .mockResolvedValueOnce(Response.json({ ok: false }, { status: 500 }));
     const clearCart = vi.fn();
     setupCartPage({ clearCart });
     switchToReturningCustomer();
 
     fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
 
-    fireEvent.click(screen.getByText(/comandă prin whatsapp/i));
+    fireEvent.click(screen.getByText(/trimite comanda/i));
 
     const orderPosts = () =>
       fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
     await waitFor(() => expect(orderPosts()).toHaveLength(1));
 
-    // Flow completed: cart cleared exactly once, exactly one POST.
-    expect(clearCart).toHaveBeenCalledTimes(1);
-    expect(orderPosts()).toHaveLength(1);
+    // Failure: visible error banner, cart intact, no redirect.
+    expect(await screen.findByText(/comanda nu a putut fi trimisă/i)).toBeTruthy();
+    expect(clearCart).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+
+    // Submit unlocked: a second click fires a second POST.
+    fireEvent.click(screen.getByText(/trimite comanda/i));
+    await waitFor(() => expect(orderPosts()).toHaveLength(2));
+    expect(clearCart).not.toHaveBeenCalled();
+  });
+
+  it('shows an error banner and keeps the cart when the order POST throws (network failure)', async () => {
+    const availability = Response.json({
+      docs: [
+        { id: '1', available: true, availableDays: 'both' },
+        { id: '2', available: true, availableDays: 'both' },
+      ],
+    });
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(availability)
+      .mockRejectedValueOnce(new TypeError('network down'));
+    const clearCart = vi.fn();
+    setupCartPage({ clearCart });
+    switchToReturningCustomer();
+
+    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
+    fireEvent.click(screen.getByText(/trimite comanda/i));
+
+    expect(await screen.findByText(/comanda nu a putut fi trimisă/i)).toBeTruthy();
+    expect(clearCart).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+
+    const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    expect(orderPosts).toHaveLength(1);
   });
 
   it('POSTs order with deliveryMethod and shippingCost when courier checkbox is checked', async () => {
@@ -287,7 +332,7 @@ describe('CartPageClient — returning customer', () => {
     fireEvent.click(checkbox);
 
     // Submit
-    const checkoutButton = screen.getByText(/comandă prin whatsapp/i);
+    const checkoutButton = screen.getByText(/trimite comanda/i);
     fireEvent.click(checkoutButton);
 
     // Ignore the mount-time /api/products availability fetch.
@@ -309,7 +354,7 @@ describe('CartPageClient — returning customer', () => {
 
     fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
 
-    const checkoutButton = screen.getByText(/comandă prin whatsapp/i);
+    const checkoutButton = screen.getByText(/trimite comanda/i);
     fireEvent.click(checkoutButton);
     fireEvent.click(checkoutButton);
 
@@ -326,7 +371,7 @@ describe('CartPageClient — returning customer', () => {
     fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
 
     // Submit without checking courier
-    const checkoutButton = screen.getByText(/comandă prin whatsapp/i);
+    const checkoutButton = screen.getByText(/trimite comanda/i);
     fireEvent.click(checkoutButton);
 
     // Ignore the mount-time /api/products availability fetch.
@@ -337,6 +382,124 @@ describe('CartPageClient — returning customer', () => {
     expect(body.shippingCost).toBe(0);
     expect(body.subtotal).toBe(30);
     expect(body.total).toBe(30);
+  });
+});
+
+describe('CartPageClient — site-only checkout submit', () => {
+  const PHONE_CACHE_KEY = 'virgil-bakery-phone';
+  const REPEAT_KEY = 'vb-repeat-customer';
+
+  function fillReturningCustomerPhone() {
+    fireEvent.click(screen.getByText(/am mai comandat/i));
+    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
+  }
+
+  it('on success: clears the cart and navigates to /multumim, never opening WhatsApp', async () => {
+    const availability = Response.json({
+      docs: [
+        { id: '1', available: true, availableDays: 'both' },
+        { id: '2', available: true, availableDays: 'both' },
+      ],
+    });
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(availability)
+      .mockResolvedValueOnce(Response.json({ ok: true }, { status: 201 }));
+    const clearCart = vi.fn();
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
+    setupCartPage({ clearCart });
+
+    fillReturningCustomerPhone();
+    fireEvent.click(screen.getByText(/trimite comanda/i));
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/multumim'));
+    expect(clearCart).toHaveBeenCalledTimes(1);
+    expect(openSpy).not.toHaveBeenCalled();
+
+    const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    expect(orderPosts).toHaveLength(1);
+  });
+
+  it('POSTs the Order without any WhatsApp message field', async () => {
+    const availability = Response.json({
+      docs: [
+        { id: '1', available: true, availableDays: 'both' },
+        { id: '2', available: true, availableDays: 'both' },
+      ],
+    });
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(availability)
+      .mockResolvedValueOnce(Response.json({ ok: true }, { status: 201 }));
+    setupCartPage();
+
+    fireEvent.change(screen.getByLabelText(/nume/i), { target: { value: 'Ion Pop' } });
+    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
+    fireEvent.change(screen.getByLabelText(/județ/i), { target: { value: 'Sibiu' } });
+    fireEvent.change(screen.getByLabelText(/localitate/i), { target: { value: 'Sibiu' } });
+    fireEvent.change(screen.getByPlaceholderText(/strada și numărul/i), {
+      target: { value: 'Str. Cerului 1' },
+    });
+    fireEvent.click(screen.getByText(/trimite comanda/i));
+
+    const orderPosts = () =>
+      fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    await waitFor(() => expect(orderPosts()).toHaveLength(1));
+    const body = JSON.parse(String(orderPosts()[0]?.[1]?.body));
+    expect(body.whatsappMessage).toBeUndefined();
+    expect(body.customerName).toBe('Ion Pop');
+    expect(body.customerPhone).toBe('0722 111 222');
+    expect(body.items).toHaveLength(2);
+    expect(body.status).toBe('nou');
+  });
+
+  it('caches the phone and the returning-customer flag only after a successful submit', async () => {
+    const availability = Response.json({
+      docs: [
+        { id: '1', available: true, availableDays: 'both' },
+        { id: '2', available: true, availableDays: 'both' },
+      ],
+    });
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(availability)
+      .mockResolvedValueOnce(Response.json({ ok: true }, { status: 201 }));
+    const { store } = setupCartPage();
+
+    fireEvent.click(screen.getByText(/am mai comandat/i));
+    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 333 444' } });
+    fireEvent.click(screen.getByText(/trimite comanda/i));
+
+    await waitFor(() => {
+      expect(store[PHONE_CACHE_KEY]).toBe('0722 333 444');
+      expect(store[REPEAT_KEY]).toBe('true');
+    });
+  });
+
+  it('does not cache the phone when the submit fails', async () => {
+    const availability = Response.json({
+      docs: [
+        { id: '1', available: true, availableDays: 'both' },
+        { id: '2', available: true, availableDays: 'both' },
+      ],
+    });
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(availability)
+      .mockResolvedValueOnce(Response.json({ ok: false }, { status: 500 }));
+    const { store } = setupCartPage(undefined, { [PHONE_CACHE_KEY]: '0722 111 222' });
+
+    fireEvent.click(screen.getByText(/am mai comandat/i));
+    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 333 444' } });
+    fireEvent.click(screen.getByText(/trimite comanda/i));
+
+    await screen.findByText(/comanda nu a putut fi trimisă/i);
+    // The submitted phone was NOT cached — the old value survives.
+    expect(store[PHONE_CACHE_KEY]).toBe('0722 111 222');
+  });
+
+  it('renders no wa.me link anywhere on the cart page', () => {
+    setupCartPage();
+    expect(document.querySelector('a[href*="wa.me"]')).toBeNull();
+    expect(document.body.textContent?.toLowerCase()).not.toContain('whatsapp');
   });
 });
 
@@ -513,7 +676,7 @@ describe('CartPageClient — phone required on every order', () => {
   }
 
   function submitOrder() {
-    fireEvent.click(screen.getByText(/comandă prin whatsapp/i));
+    fireEvent.click(screen.getByText(/trimite comanda/i));
   }
 
   it('renders the phone input for a returning customer, not just first order', () => {
