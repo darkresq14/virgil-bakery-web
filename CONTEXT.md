@@ -3,7 +3,7 @@
 ## Core Concepts
 
 ### Order (Comandă)
-A customer's request for bakery products, submitted via WhatsApp. Each order has a delivery method, a delivery date, line items, and customer contact info.
+A customer's request for bakery products, submitted via the site checkout: the cart POSTs the Order to the site (database save + Google Sheets sync) and redirects to the `/multumim` thank-you page. Each order has a delivery method, a delivery date, line items, and customer contact info. WhatsApp is not part of the ordering flow; historical orders may still carry a stored WhatsApp message from the old dual-track flow.
 
 ### Delivery Method (Metodă de livrare)
 How the order reaches the customer. Exactly one of:
@@ -96,4 +96,7 @@ CMS-managed page at `/politica-de-confidentialitate`. Covers personal data handl
 ## Channels
 
 ### WhatsApp
-The primary ordering channel. The cart page generates a pre-formatted WhatsApp message with all order details and opens it in the customer's WhatsApp app. The order is also saved to the database, but WhatsApp is the communication backbone.
+A questions & announcements channel only — never an ordering channel. Customers order exclusively through the site cart. WhatsApp surfaces as: the floating button, the footer link, the header CTA ("Întrebări? Scrie-ne"), the homepage teaser card, and the group section on the "Cum Comanzi" page. The announcement group is used for new-product and last-minute leftovers posts.
+
+### Thank-You Page (Pagină Mulțumire)
+The `/multumim` page customers land on after a successful order submit. Title and message come from two optional SiteConfig fields (General tab); empty values fall back to warm default copy that confirms the order was registered without promising how the baker confirms it. Noindex and excluded from the sitemap.
