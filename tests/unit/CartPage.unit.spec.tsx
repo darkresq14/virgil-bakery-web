@@ -70,6 +70,19 @@ const mockCartContext = {
   itemCount: 3,
 };
 
+/** Mount-time availability fetch answer: both cart products purchaseable. */
+const availabilityResponse = () =>
+  Response.json({
+    docs: [
+      { id: '1', available: true, availableDays: 'both' },
+      { id: '2', available: true, availableDays: 'both' },
+    ],
+  });
+
+/** Only the /api/orders POSTs, ignoring the mount-time availability fetch. */
+const orderPostsOf = (spy: ReturnType<typeof vi.spyOn>) =>
+  spy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+
 function setupCartPage(
   overrides?: Partial<typeof mockCartContext>,
   initialStorage: Record<string, string> = {},
@@ -196,7 +209,7 @@ describe('CartPageClient — first-time buyer', () => {
 
     // Only the mount-time availability revalidation may hit the network —
     // a failed validation must never POST an order.
-    const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    const orderPosts = orderPostsOf(fetchSpy);
     expect(orderPosts).toHaveLength(0);
   });
 });
@@ -259,12 +272,7 @@ describe('CartPageClient — returning customer', () => {
     // Site-only checkout (#45): a non-2xx POST is a hard failure — no
     // WhatsApp handoff anymore, so the cart must survive and the customer
     // must be able to retry.
-    const availability = Response.json({
-      docs: [
-        { id: '1', available: true, availableDays: 'both' },
-        { id: '2', available: true, availableDays: 'both' },
-      ],
-    });
+    const availability = availabilityResponse();
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(availability)
@@ -278,8 +286,7 @@ describe('CartPageClient — returning customer', () => {
 
     fireEvent.click(screen.getByText(/trimite comanda/i));
 
-    const orderPosts = () =>
-      fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    const orderPosts = () => orderPostsOf(fetchSpy);
     await waitFor(() => expect(orderPosts()).toHaveLength(1));
 
     // Failure: visible error banner, cart intact, no redirect.
@@ -294,12 +301,7 @@ describe('CartPageClient — returning customer', () => {
   });
 
   it('shows an error banner and keeps the cart when the order POST throws (network failure)', async () => {
-    const availability = Response.json({
-      docs: [
-        { id: '1', available: true, availableDays: 'both' },
-        { id: '2', available: true, availableDays: 'both' },
-      ],
-    });
+    const availability = availabilityResponse();
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(availability)
@@ -315,7 +317,7 @@ describe('CartPageClient — returning customer', () => {
     expect(clearCart).not.toHaveBeenCalled();
     expect(pushMock).not.toHaveBeenCalled();
 
-    const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    const orderPosts = orderPostsOf(fetchSpy);
     expect(orderPosts).toHaveLength(1);
   });
 
@@ -336,7 +338,7 @@ describe('CartPageClient — returning customer', () => {
     fireEvent.click(checkoutButton);
 
     // Ignore the mount-time /api/products availability fetch.
-    const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    const orderPosts = orderPostsOf(fetchSpy);
     expect(orderPosts).toHaveLength(1);
     const body = JSON.parse(String(orderPosts[0]?.[1]?.body));
     expect(body.deliveryMethod).toBe('curier');
@@ -358,7 +360,7 @@ describe('CartPageClient — returning customer', () => {
     fireEvent.click(checkoutButton);
     fireEvent.click(checkoutButton);
 
-    const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    const orderPosts = orderPostsOf(fetchSpy);
     expect(orderPosts).toHaveLength(1);
   });
 
@@ -375,7 +377,7 @@ describe('CartPageClient — returning customer', () => {
     fireEvent.click(checkoutButton);
 
     // Ignore the mount-time /api/products availability fetch.
-    const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    const orderPosts = orderPostsOf(fetchSpy);
     expect(orderPosts).toHaveLength(1);
     const body = JSON.parse(String(orderPosts[0]?.[1]?.body));
     expect(body.deliveryMethod).toBe('personal');
@@ -395,12 +397,7 @@ describe('CartPageClient — site-only checkout submit', () => {
   }
 
   it('on success: clears the cart and navigates to /multumim, never opening WhatsApp', async () => {
-    const availability = Response.json({
-      docs: [
-        { id: '1', available: true, availableDays: 'both' },
-        { id: '2', available: true, availableDays: 'both' },
-      ],
-    });
+    const availability = availabilityResponse();
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(availability)
@@ -416,17 +413,12 @@ describe('CartPageClient — site-only checkout submit', () => {
     expect(clearCart).toHaveBeenCalledTimes(1);
     expect(openSpy).not.toHaveBeenCalled();
 
-    const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    const orderPosts = orderPostsOf(fetchSpy);
     expect(orderPosts).toHaveLength(1);
   });
 
   it('POSTs the Order without any WhatsApp message field', async () => {
-    const availability = Response.json({
-      docs: [
-        { id: '1', available: true, availableDays: 'both' },
-        { id: '2', available: true, availableDays: 'both' },
-      ],
-    });
+    const availability = availabilityResponse();
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(availability)
@@ -442,8 +434,7 @@ describe('CartPageClient — site-only checkout submit', () => {
     });
     fireEvent.click(screen.getByText(/trimite comanda/i));
 
-    const orderPosts = () =>
-      fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    const orderPosts = () => orderPostsOf(fetchSpy);
     await waitFor(() => expect(orderPosts()).toHaveLength(1));
     const body = JSON.parse(String(orderPosts()[0]?.[1]?.body));
     expect(body.whatsappMessage).toBeUndefined();
@@ -454,12 +445,7 @@ describe('CartPageClient — site-only checkout submit', () => {
   });
 
   it('caches the phone and the returning-customer flag only after a successful submit', async () => {
-    const availability = Response.json({
-      docs: [
-        { id: '1', available: true, availableDays: 'both' },
-        { id: '2', available: true, availableDays: 'both' },
-      ],
-    });
+    const availability = availabilityResponse();
     vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(availability)
       .mockResolvedValueOnce(Response.json({ ok: true }, { status: 201 }));
@@ -476,12 +462,7 @@ describe('CartPageClient — site-only checkout submit', () => {
   });
 
   it('does not cache the phone when the submit fails', async () => {
-    const availability = Response.json({
-      docs: [
-        { id: '1', available: true, availableDays: 'both' },
-        { id: '2', available: true, availableDays: 'both' },
-      ],
-    });
+    const availability = availabilityResponse();
     vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(availability)
       .mockResolvedValueOnce(Response.json({ ok: false }, { status: 500 }));
@@ -717,7 +698,7 @@ describe('CartPageClient — phone required on every order', () => {
     expect(getPhoneInput().className).toContain('border-destructive');
 
     // Blocked submit must never POST an order (ignore mount-time availability fetch)
-    const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    const orderPosts = orderPostsOf(fetchSpy);
     expect(orderPosts).toHaveLength(0);
   });
 
@@ -742,7 +723,7 @@ describe('CartPageClient — phone required on every order', () => {
     fireEvent.change(getPhoneInput(), { target: { value: '0733 000 111' } });
     submitOrder();
 
-    const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    const orderPosts = orderPostsOf(fetchSpy);
     expect(orderPosts).toHaveLength(1);
     const body = JSON.parse(String(orderPosts[0]?.[1]?.body));
     expect(body.customerPhone).toBe('0733 000 111');
@@ -773,7 +754,7 @@ describe('CartPageClient — phone required on every order', () => {
     expect(screen.getByText(/telefonul este obligatoriu/i)).toBeTruthy();
     expect(getPhoneInput().value).toBe('');
 
-    const orderPosts = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+    const orderPosts = orderPostsOf(fetchSpy);
     expect(orderPosts).toHaveLength(0);
   });
 

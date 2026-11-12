@@ -350,6 +350,14 @@ export function CartPageClient({
 
     const selectedDate = deliveryDates.find((d) => d.label === selectedDelivery);
 
+    /** Failed submit: release the lock so the customer can retry, show the
+     * error banner, keep the cart. Used for both non-2xx and network errors. */
+    const failSubmit = () => {
+      submittingRef.current = false;
+      setIsSubmitting(false);
+      setSubmitError(true);
+    };
+
     try {
       const res = await fetch('/api/orders', {
         method: 'POST',
@@ -376,18 +384,13 @@ export function CartPageClient({
         }),
       });
       if (!res.ok) {
-        // Order not persisted server-side: release the submit lock so the
-        // customer can retry, and keep the cart intact.
-        submittingRef.current = false;
-        setIsSubmitting(false);
-        setSubmitError(true);
+        // Order not persisted server-side: retryable failure.
+        failSubmit();
         return;
       }
     } catch {
       // Network failure: same treatment — visible error, unlocked retry.
-      submittingRef.current = false;
-      setIsSubmitting(false);
-      setSubmitError(true);
+      failSubmit();
       return;
     }
 

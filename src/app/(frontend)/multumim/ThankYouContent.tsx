@@ -1,10 +1,10 @@
 import Link from 'next/link';
 
 const FALLBACK_TITLE = 'Mulțumim pentru comandă!';
-// No promise about HOW the baker confirms (phone, SMS, anything) — the baker
-// stays free to confirm however he wants (see #45).
-const FALLBACK_MESSAGE =
-  'Comanda ta a fost înregistrată. Pâinile pleacă spre tine în ziua de livrare aleasă.';
+// No promise beyond registration — neither how the baker confirms (phone,
+// SMS, anything) nor that every ordered item ships as ordered (see #45:
+// "thanks only, no confirmation-method promise").
+const FALLBACK_MESSAGE = 'Comanda ta a fost înregistrată. Mulțumim că ai ales pâinea noastră!';
 
 interface ThankYouContentProps {
   /** SiteConfig `thankYouTitle`. Empty/whitespace → warm fallback. */
