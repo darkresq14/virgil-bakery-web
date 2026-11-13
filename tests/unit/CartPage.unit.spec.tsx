@@ -81,7 +81,7 @@ const availabilityResponse = () =>
 
 /** Only the /api/orders POSTs, ignoring the mount-time availability fetch. */
 const orderPostsOf = (spy: ReturnType<typeof vi.spyOn>) =>
-  spy.mock.calls.filter(([url]) => String(url).includes('/api/orders'));
+  spy.mock.calls.filter(([url]: [input: RequestInfo | URL]) => String(url).includes('/api/orders'));
 
 function setupCartPage(
   overrides?: Partial<typeof mockCartContext>,
