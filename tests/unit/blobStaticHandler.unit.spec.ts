@@ -16,7 +16,7 @@ function makeReq(headers: Record<string, string> = {}) {
 function args(filename: string, prefix?: string) {
   return {
     doc: { id: 1 },
-    headers: new Headers({ 'access-control-allow-origin': '*' }),
+    headers: new Headers(), // payload core passes an empty Headers instance
     params: { collection: 'media', filename, prefix },
   } as never;
 }
@@ -47,7 +47,7 @@ describe('blobStaticHandler', () => {
     expect(await res.text()).toBe('img');
   });
 
-  it('passes through blob metadata, keeps base headers, sets 1y cache-control', async () => {
+  it('passes through blob metadata, sets 1y cache-control', async () => {
     const handler = createBlobStaticHandler({
       env: PROD_ENV,
       fetchImpl: vi.fn().mockResolvedValue(blobOk()),
@@ -59,7 +59,6 @@ describe('blobStaticHandler', () => {
     expect(res.headers.get('content-length')).toBe('3');
     expect(res.headers.get('etag')).toBe('"abc"');
     expect(res.headers.get('cache-control')).toBe('public, max-age=31536000');
-    expect(res.headers.get('access-control-allow-origin')).toBe('*');
     expect(res.headers.get('x-vercel-cache')).toBeNull();
   });
 
@@ -67,6 +66,19 @@ describe('blobStaticHandler', () => {
     const handler = createBlobStaticHandler({
       env: PROD_ENV,
       fetchImpl: vi.fn().mockResolvedValue(blobOk('<svg/>', { 'content-type': 'image/svg+xml' })),
+    });
+
+    const res = (await handler(makeReq(), args('logo.svg'))) as Response;
+
+    expect(res.headers.get('content-security-policy')).toBe("script-src 'none'");
+  });
+
+  it('adds the CSP for SVGs with parameterized content-type', async () => {
+    const handler = createBlobStaticHandler({
+      env: PROD_ENV,
+      fetchImpl: vi
+        .fn()
+        .mockResolvedValue(blobOk('<svg/>', { 'content-type': 'image/svg+xml; charset=utf-8' })),
     });
 
     const res = (await handler(makeReq(), args('logo.svg'))) as Response;
@@ -86,13 +98,14 @@ describe('blobStaticHandler', () => {
     expect(res.status).toBe(304);
   });
 
-  it('falls through to the plugin handler when the blob is missing', async () => {
-    const handler = createBlobStaticHandler({
-      env: PROD_ENV,
-      fetchImpl: vi.fn().mockResolvedValue(new Response('nope', { status: 404 })),
-    });
+  it('returns 404 directly when the blob is missing (no plugin head() op)', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(new Response('nope', { status: 404 }));
+    const handler = createBlobStaticHandler({ env: PROD_ENV, fetchImpl });
 
-    expect(await handler(makeReq(), args('gone.jpg'))).toBeUndefined();
+    const res = (await handler(makeReq(), args('gone.jpg'))) as Response;
+
+    expect(res.status).toBe(404);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
   it('falls through when fetch throws', async () => {

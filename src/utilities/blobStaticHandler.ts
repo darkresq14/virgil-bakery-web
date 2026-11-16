@@ -22,6 +22,9 @@ import { buildBlobFileUrl, getBlobBaseUrl } from '@/utilities/blobUrl';
  * plugin's staticHandler. Returning `undefined` falls through to the plugin
  * handler — used for range requests, misconfiguration and any fetch failure,
  * so behaviour degrades to the old path rather than breaking images.
+ * Blob 404s are answered directly: on this store a GET miss is definitive
+ * (media read access is `anyone`), and falling through would only re-check
+ * the same blob via the plugin's head() — one more op per miss.
  * Payload's collection `read` access check still runs before handlers.
  */
 
@@ -81,8 +84,15 @@ export function createBlobStaticHandler({
       return;
     }
 
+    // Blob 404 is definitive (public store, no per-doc access check) — the
+    // plugin fallback would just head() the same missing blob and 404 again,
+    // burning another simple op per miss.
+    if (blobResponse.status === 404) {
+      return new Response(null, { status: 404, headers: { 'cache-control': 'no-store' } });
+    }
+
     if (blobResponse.status !== 304 && (!blobResponse.ok || !blobResponse.body)) {
-      return; // let the plugin produce its own 404/error response
+      return; // let the plugin produce its own error response
     }
 
     const headers = new Headers(baseHeaders);
@@ -91,7 +101,7 @@ export function createBlobStaticHandler({
       if (value) headers.set(name, value);
     }
     headers.set('cache-control', CACHE_CONTROL);
-    if (headers.get('content-type') === 'image/svg+xml') {
+    if (headers.get('content-type')?.startsWith('image/svg+xml')) {
       headers.set('content-security-policy', "script-src 'none'");
     }
 
