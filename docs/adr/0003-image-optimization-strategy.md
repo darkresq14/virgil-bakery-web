@@ -121,3 +121,20 @@ none).
 
 If monthly transformations exceed ~3K again (traffic growth), escalate to
 full option 2 (all slots raw + larger Payload sizes) or Vercel Pro.
+
+### Lean media handler (Nov 2026)
+
+Blob "simple ops" hit 7,500/10,000 on Hobby (hard block at 100%). Cause: the
+storage plugin's `/api/media/file/*` staticHandler does `head()` (1 op,
+uncacheable) plus a `no-store`, cache-busted blob fetch (effectively another op)
+on every Vercel CDN miss - per POP, and again after each deploy.
+
+Fix: `src/utilities/blobStaticHandler.ts`, registered in Media's
+`upload.handlers` (runs before the plugin's handler). It fetches the public
+blob URL plainly (Blob CDN hit = 0 ops, miss = 1) and passes metadata through;
+it falls back to the plugin handler on range requests or errors.
+
+Public media URLs are unchanged (still `/api/media/file/*` on our domain), so
+optimizer cache keys, Payload read access, and storage portability (R2) are
+unaffected. Serving direct Blob URLs via `generateFileURL` was tried and
+rejected: vendor URLs leak into external caches/indexes and break on migration.

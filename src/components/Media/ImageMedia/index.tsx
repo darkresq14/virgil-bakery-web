@@ -23,8 +23,8 @@ const placeholderBlur =
  * pre-generated upload size IS the deliverable — served raw, optimizer
  * skipped (see SLOT-SPLIT below and ADR 0003's sustainability addendum).
  *
- * URLs are either local (`/api/media/file/...`) or absolute Vercel Blob URLs
- * (`https://*.blob.vercel-storage.com/...`), both covered by next.config remotePatterns.
+ * URLs are local (`/api/media/file/...`, next.config localPatterns) or absolute
+ * Vercel Blob URLs (`https://*.blob.vercel-storage.com/...`, remotePatterns).
  */
 
 // Display slot → Payload source size. `hero`/`detail` use the original (output is

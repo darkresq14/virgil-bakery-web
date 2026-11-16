@@ -9,6 +9,7 @@ import type { CollectionConfig } from 'payload';
 
 import { anyone } from '../access/anyone';
 import { authenticatedExceptPreview } from '../access/authenticatedExceptPreview';
+import { blobStaticHandler } from '../utilities/blobStaticHandler';
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
@@ -43,6 +44,9 @@ export const Media: CollectionConfig = {
       staticDir: path.resolve(dirname, '../../public/media'),
     }),
     adminThumbnail: 'thumbnail',
+    // Runs before the blob plugin's staticHandler: serves /api/media/file/*
+    // without its per-request head() call. See src/utilities/blobStaticHandler.ts.
+    handlers: [blobStaticHandler],
     focalPoint: true,
     imageSizes: [
       {
