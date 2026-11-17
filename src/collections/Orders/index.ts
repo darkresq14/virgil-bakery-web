@@ -52,7 +52,11 @@ export const Orders: CollectionConfig = {
       defaultValue: 'personal',
       options: [
         { label: 'Personală', value: 'personal' },
-        { label: 'Curier', value: 'curier' },
+        { label: 'GLS punct (locker/ParcelShop)', value: 'gls-punct' },
+        { label: 'GLS acasă', value: 'gls-acasa' },
+        // Retired with the Cargus → GLS switch (#47): kept so historical
+        // orders still render their stored value.
+        { label: 'Curier (Cargus, istoric)', value: 'curier' },
       ],
       admin: {
         components: {
@@ -113,6 +117,41 @@ export const Orders: CollectionConfig = {
       name: 'addressDetails',
       type: 'text',
       label: 'Detalii adresă',
+    },
+    {
+      name: 'glsPoint',
+      type: 'group',
+      label: 'Punct GLS ales',
+      admin: {
+        description: 'Completat doar pentru livrări la punct GLS (locker/ParcelShop).',
+      },
+      fields: [
+        {
+          name: 'goldId',
+          type: 'text',
+          label: 'goldId (PSD IntegerValue)',
+        },
+        {
+          name: 'matchcode',
+          type: 'text',
+          label: 'Matchcode',
+        },
+        {
+          name: 'nume',
+          type: 'text',
+          label: 'Nume punct',
+        },
+        {
+          name: 'adresa',
+          type: 'textarea',
+          label: 'Adresă punct',
+        },
+        {
+          name: 'tip',
+          type: 'text',
+          label: 'Tip (parcel-locker / parcel-shop)',
+        },
+      ],
     },
     {
       name: 'whatsappMessage',

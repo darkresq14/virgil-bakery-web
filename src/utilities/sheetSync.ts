@@ -7,12 +7,21 @@ import { roDayKey } from '@/utilities/deliveryDates';
  * sync outcome and never a thrown error. See GitHub issue #33/#34.
  */
 
+/** GLS point (locker/ParcelShop) chosen at checkout, from the widget. */
+export interface GlsPointData {
+  goldId?: string | null;
+  matchcode?: string | null;
+  nume?: string | null;
+  adresa?: string | null;
+  tip?: string | null;
+}
+
 /** The order shape this seam needs (subset of the Payload `orders` doc). */
 export interface SheetSyncOrder {
   id: number | string;
   items: unknown;
   total: number;
-  deliveryMethod: 'personal' | 'curier';
+  deliveryMethod: 'personal' | 'gls-punct' | 'gls-acasa' | 'curier';
   deliveryDate: string | Date;
   customerName?: string | null;
   customerPhone?: string | null;
@@ -20,6 +29,7 @@ export interface SheetSyncOrder {
   localitate?: string | null;
   streetAddress?: string | null;
   addressDetails?: string | null;
+  glsPoint?: GlsPointData | null;
 }
 
 export type SheetSyncOutcome =
@@ -27,19 +37,25 @@ export type SheetSyncOutcome =
   | { status: 'failed'; reason: string }
   | { status: 'skipped'; reason: string };
 
-/** JSON body the Apps Script intake expects (verified live against dev). */
+/** JSON body the Apps Script intake expects. `punct*` fields ride along for
+ * GLS point orders (baker adapts his script — coordinated contract, #47). */
 interface WirePayload {
   secret: string;
   idComanda: string;
   nume: string;
   telefon: string;
   dataLivrare: string;
-  metoda: 'personala' | 'cargus';
+  metoda: 'personala' | 'gls-punct' | 'gls-acasa' | 'cargus';
   adresa: string;
   localitate: string;
   judet: string;
   detalii: string;
   total: number;
+  punctGoldId?: string;
+  punctMatchcode?: string;
+  punctNume?: string;
+  punctAdresa?: string;
+  punctTip?: string;
   produse: { denumire: unknown; cantitate: unknown }[];
 }
 
@@ -48,18 +64,32 @@ function coerceOrderItems(items: unknown): Record<string, unknown>[] {
 }
 
 function toWirePayload(order: SheetSyncOrder, secret: string): WirePayload {
+  // 'curier' (pre-GLS) keeps its legacy wire value 'cargus' so historical
+  // orders re-pushed by an admin re-save stay readable for the baker's script.
+  const METODA_BY_METHOD: Record<SheetSyncOrder['deliveryMethod'], WirePayload['metoda']> = {
+    personal: 'personala',
+    'gls-punct': 'gls-punct',
+    'gls-acasa': 'gls-acasa',
+    curier: 'cargus',
+  };
+  const metoda = METODA_BY_METHOD[order.deliveryMethod] ?? 'personala';
   return {
     secret,
     idComanda: String(order.id),
     nume: order.customerName ?? '',
     telefon: order.customerPhone ?? '',
     dataLivrare: roDayKey(new Date(order.deliveryDate)),
-    metoda: order.deliveryMethod === 'curier' ? 'cargus' : 'personala',
+    metoda,
     adresa: order.streetAddress ?? '',
     localitate: order.localitate ?? '',
     judet: order.judet ?? '',
     detalii: order.addressDetails ?? '',
     total: order.total,
+    punctGoldId: order.glsPoint?.goldId ?? undefined,
+    punctMatchcode: order.glsPoint?.matchcode ?? undefined,
+    punctNume: order.glsPoint?.nume ?? undefined,
+    punctAdresa: order.glsPoint?.adresa ?? undefined,
+    punctTip: order.glsPoint?.tip ?? undefined,
     produse: coerceOrderItems(order.items).map((item) => ({
       denumire: item.name,
       cantitate: item.quantity,

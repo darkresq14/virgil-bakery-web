@@ -1,6 +1,6 @@
 import type { Post, Product } from '@/payload-types';
-import { COURIER_SHIPPING_COST } from './detectDeliveryMethod';
 import { getServerSideURL } from './getURL';
+import { NATIONAL_SHIPPING_MIN } from './glsDelivery';
 import { BRAND_NAME } from './seoDefaults';
 
 const CURRENCY = 'RON';
@@ -134,7 +134,7 @@ export function productSchema(args: { product: Product; url: string }) {
             '@type': 'OfferShippingDetails',
             shippingRate: {
               '@type': 'MonetaryAmount',
-              value: COURIER_SHIPPING_COST,
+              value: NATIONAL_SHIPPING_MIN,
               currency: CURRENCY,
             },
             shippingDestination: {

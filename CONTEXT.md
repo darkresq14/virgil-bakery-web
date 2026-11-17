@@ -6,12 +6,13 @@
 A customer's request for bakery products, submitted via the site checkout: the cart POSTs the Order to the site (database save + Google Sheets sync) and redirects to the `/multumim` thank-you page. Each order has a delivery method, a delivery date, line items, and customer contact info. WhatsApp is not part of the ordering flow; historical orders may still carry a stored WhatsApp message from the old dual-track flow.
 
 ### Delivery Method (Metodă de livrare)
-How the order reaches the customer. Exactly one of:
+How the order reaches the customer. Determined by the Delivery Zone:
 
-- **Personal Delivery (Livrare personală)** — Free. Delivered by the baker in person on Tuesdays and Fridays, between 08:00–16:00. Available only in: Sibiu, Șura Mare, Șura Mică, Cisnădie, Cisnădioara, Șelimbăr.
-- **Courier Delivery (Livrare prin curier)** — 25 lei flat fee. Shipped via Cargus nationwide. Package dispatched the day before the delivery date.
+- **Personal Delivery (Livrare personală)** — Free. Delivered by the baker in person on Tuesdays and Fridays, between 08:00–16:00. The only method offered inside the Delivery Zone (Sibiu, Șura Mare, Șura Mică, Cisnădie, Cisnădioara, Șelimbăr).
+- **GLS Point Delivery (Livrare la punct GLS)** — 25 lei flat. Outside the zone only. Customer picks a parcel locker or ParcelShop on the official GLS map widget; the chosen point is the shipping destination. Package dispatched the day before the delivery date.
+- **GLS Home Delivery (Livrare GLS acasă)** — Outside the zone only. Tiered by total item quantity: 1–2 → 26 lei, 3 → 30, 4–5 → 39, 6–10 → 53. Above 10 items, home delivery is unavailable (locker still is).
 
-Both methods share the same delivery dates (Tuesdays and Fridays) and the same cutoff schedule.
+All delivery methods share the same delivery dates (Tuesdays and Fridays) and the same cutoff schedule.
 
 ### Delivery Date (Dată de livrare)
 The date the customer receives their order. Always a Tuesday or Friday. Cutoff for ordering:
@@ -19,13 +20,13 @@ The date the customer receives their order. Always a Tuesday or Friday. Cutoff f
 - Friday delivery → order by Wednesday 17:00 (Romania time)
 
 ### Delivery Zone (Zonă de livrare)
-The geographic area eligible for free personal delivery. Defined as Judet=Sibiu AND Localitate ∈ {Sibiu, Șura Mare, Șura Mică, Cisnădie, Cisnădioara, Șelimbăr}. Orders outside this zone incur a 25 lei courier fee.
+The geographic area eligible for free personal delivery. Defined as Judet=Sibiu AND Localitate ∈ {Sibiu, Șura Mare, Șura Mică, Cisnădie, Cisnădioara, Șelimbăr}. Orders outside this zone must choose a GLS delivery method (point or home).
 
 ### Subtotal
 Sum of all product line items (quantity × price). Does not include transport.
 
 ### Shipping Cost (Cost transport)
-0 lei for personal delivery. 25 lei flat for courier delivery (up to 10 products per package). Stored separately from subtotal.
+0 lei for personal delivery. 25 lei flat for GLS Point Delivery. Tiered by total item quantity for GLS Home Delivery (see Delivery Method). Stored separately from subtotal.
 
 ### Total (Grand Total)
 Subtotal + Shipping Cost. The amount the customer pays.
@@ -59,10 +60,10 @@ No toggle — the holiday is active purely based on dates. Auto-clears when toda
 ## Customer Types
 
 ### First-Time Buyer (Prima comandă)
-A customer who has not ordered before. Must provide: name, phone, and structured address (judet, localitate, strada+număr, optional detalii). The system auto-detects the delivery zone from judet+localitate and applies the courier fee if outside the personal delivery zone.
+A customer with no cached checkout profile. Provides: name, phone, and structured address (judet, localitate, strada+număr, optional detalii). The system auto-detects the delivery zone from judet+localitate: inside → personal delivery, outside → choice of GLS point or GLS home delivery.
 
-### Returning Customer (Am mai comandat)
-A customer who has ordered before, identified by a localStorage flag. Provides: delivery date, phone (required on every order — the customer identity used to match the client in the ops workbook), and optionally checks "Am nevoie de livrare prin curier (+25 lei)." No name or address fields — the baker already has this info from previous orders.
+### Cached Checkout Profile (Profil salvat)
+What replaced the old "Am mai comandat" mini-flow: the full checkout form (name, phone, address, delivery choice including a chosen GLS point) is cached in localStorage after an order and prefilled on the next visit. Everything stays editable; there is no separate reduced flow. A cached GLS point is shown for review but must be re-picked if it no longer exists in GLS’s public delivery-point feed. Phone remains the customer identity used to match the client in the ops workbook.
 
 ## Address Model
 

@@ -20,7 +20,7 @@ const ORDER: OrderFixture = {
   ],
   total: 48,
   subtotal: 40,
-  deliveryMethod: 'curier',
+  deliveryMethod: 'gls-acasa',
   shippingCost: 8,
   deliveryDate: '2026-07-20T21:00:00.000Z',
   customerName: 'Ion Popescu',
@@ -46,7 +46,7 @@ describe('pushOrderToSheet — wire contract', () => {
     vi.stubEnv('SHEETS_WEBAPP_TOKEN', WEBAPP_TOKEN);
   });
 
-  it('sends the exact contract the workbook script expects (curier order)', async () => {
+  it('sends the exact contract the workbook script expects (gls-acasa order)', async () => {
     const { calls } = stubFetch((url) =>
       url === WEBAPP_URL ? redirectPage(ECHO_URL) : jsonPage({ ok: true }),
     );
@@ -70,7 +70,7 @@ describe('pushOrderToSheet — wire contract', () => {
       nume: 'Ion Popescu',
       telefon: '0740123456',
       dataLivrare: '2026-07-21',
-      metoda: 'cargus',
+      metoda: 'gls-acasa',
       adresa: 'Str. Victoriei 10',
       localitate: 'Făgăraș',
       judet: 'Brașov',
@@ -93,6 +93,40 @@ describe('pushOrderToSheet — wire contract', () => {
     await pushOrderToSheet({ ...ORDER, deliveryMethod: 'personal' });
 
     expect(JSON.parse(String(calls[0]?.init?.body)).metoda).toBe('personala');
+  });
+
+  it('sends the punct* fields for GLS point orders (req #5 contract)', async () => {
+    const { calls } = stubFetch(() => redirectPage(ECHO_URL));
+
+    await pushOrderToSheet({
+      ...ORDER,
+      deliveryMethod: 'gls-punct',
+      streetAddress: '',
+      glsPoint: {
+        goldId: '4821',
+        matchcode: 'RO12345',
+        nume: 'Easybox Sibiu OMV',
+        adresa: 'Str. Cibinului 12, Sibiu',
+        tip: 'parcel-locker',
+      },
+    });
+
+    const body = JSON.parse(String(calls[0]?.init?.body));
+    expect(body.metoda).toBe('gls-punct');
+    expect(body.punctGoldId).toBe('4821');
+    expect(body.punctMatchcode).toBe('RO12345');
+    expect(body.punctNume).toBe('Easybox Sibiu OMV');
+    expect(body.punctAdresa).toBe('Str. Cibinului 12, Sibiu');
+    expect(body.punctTip).toBe('parcel-locker');
+    expect(body.adresa).toBe('');
+  });
+
+  it("maps the retired 'curier' to legacy wire 'cargus' (historical re-push)", async () => {
+    const { calls } = stubFetch(() => redirectPage(ECHO_URL));
+
+    await pushOrderToSheet({ ...ORDER, deliveryMethod: 'curier' });
+
+    expect(JSON.parse(String(calls[0]?.init?.body)).metoda).toBe('cargus');
   });
 
   it('renders dataLivrare in Europe/Bucharest also across the winter offset', async () => {

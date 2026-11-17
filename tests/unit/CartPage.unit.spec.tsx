@@ -110,36 +110,31 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('CartPageClient — first-time buyer', () => {
+describe('CartPageClient — address + zone-driven delivery (issue #47)', () => {
   it('renders AddressForm with structured fields instead of address textarea', () => {
     setupCartPage();
 
-    // First-time buyer should see the AddressForm, not a textarea
-    // AddressForm renders: Județ, Localitate, Strada și numărul, Detalii suplimentare
     expect(screen.getByLabelText(/județ/i)).toBeTruthy();
     expect(screen.getByLabelText(/localitate/i)).toBeTruthy();
     expect(screen.getByPlaceholderText(/strada și numărul/i)).toBeTruthy();
     expect(screen.getByPlaceholderText(/bloc, scară, apartament/i)).toBeTruthy();
 
-    // Old textarea for "Adresă de livrare" should NOT exist
     expect(screen.queryByPlaceholderText('Adresa completă de livrare')).toBeNull();
   });
 
   it('shows personal delivery indicator when Sibiu + Sibiu are selected', () => {
     setupCartPage();
 
-    // Select Sibiu as judet
     const judetSelect = screen.getByLabelText(/județ/i) as HTMLSelectElement;
     fireEvent.change(judetSelect, { target: { value: 'Sibiu' } });
 
-    // Type Sibiu as localitate
     const localitateInput = screen.getByLabelText(/localitate/i);
     fireEvent.change(localitateInput, { target: { value: 'Sibiu' } });
 
     expect(screen.getByText(/livrare personală — gratuită/i)).toBeTruthy();
   });
 
-  it('shows courier delivery indicator when judet is outside delivery zone', () => {
+  it('shows the GLS radio cards when judet is outside delivery zone', () => {
     setupCartPage();
 
     const judetSelect = screen.getByLabelText(/județ/i) as HTMLSelectElement;
@@ -148,56 +143,96 @@ describe('CartPageClient — first-time buyer', () => {
     const localitateInput = screen.getByLabelText(/localitate/i);
     fireEvent.change(localitateInput, { target: { value: 'Cluj-Napoca' } });
 
-    expect(screen.getByText(/livrare prin curier — 25 lei/i)).toBeTruthy();
+    expect(screen.getByText(/suntem în afara zonei de livrare personală/i)).toBeTruthy();
+    expect(screen.getByText('Punct GLS')).toBeTruthy();
+    expect(screen.getByText('Livrare acasă')).toBeTruthy();
+    // Flat 25 for the point option, tier price for home (3 items → 30 lei).
+    expect(screen.getByText('25 lei')).toBeTruthy();
+    expect(screen.getByText('30 lei')).toBeTruthy();
   });
 
-  it('does not show delivery indicator before both judet and localitate are filled', () => {
+  it('defaults to the GLS point option with the flat fee in the summary', () => {
     setupCartPage();
 
-    // Only judet selected, no localitate
+    const judetSelect = screen.getByLabelText(/județ/i) as HTMLSelectElement;
+    fireEvent.change(judetSelect, { target: { value: 'Cluj' } });
+    const localitateInput = screen.getByLabelText(/localitate/i);
+    fireEvent.change(localitateInput, { target: { value: 'Cluj-Napoca' } });
+
+    expect(screen.getByText(/transport \(gls\)/i)).toBeTruthy();
+  });
+
+  it('hides the street fields while the GLS point option is selected', () => {
+    setupCartPage();
+
+    const judetSelect = screen.getByLabelText(/județ/i) as HTMLSelectElement;
+    fireEvent.change(judetSelect, { target: { value: 'Cluj' } });
+    const localitateInput = screen.getByLabelText(/localitate/i);
+    fireEvent.change(localitateInput, { target: { value: 'Cluj-Napoca' } });
+
+    // Point delivery: street + details are not the destination.
+    expect(screen.queryByPlaceholderText(/strada și numărul/i)).toBeNull();
+    expect(screen.queryByPlaceholderText(/bloc, scară, apartament/i)).toBeNull();
+  });
+
+  it('shows the street fields again when home delivery is selected', () => {
+    setupCartPage();
+
+    const judetSelect = screen.getByLabelText(/județ/i) as HTMLSelectElement;
+    fireEvent.change(judetSelect, { target: { value: 'Cluj' } });
+    const localitateInput = screen.getByLabelText(/localitate/i);
+    fireEvent.change(localitateInput, { target: { value: 'Cluj-Napoca' } });
+
+    fireEvent.click(screen.getByLabelText(/livrare acasă/i));
+
+    expect(screen.getByPlaceholderText(/strada și numărul/i)).toBeTruthy();
+  });
+
+  it('does not show delivery choice before both judet and localitate are filled', () => {
+    setupCartPage();
+
     const judetSelect = screen.getByLabelText(/județ/i) as HTMLSelectElement;
     fireEvent.change(judetSelect, { target: { value: 'Sibiu' } });
 
     expect(screen.queryByText(/livrare personală/i)).toBeNull();
-    expect(screen.queryByText(/livrare prin curier/i)).toBeNull();
+    expect(screen.queryByText(/punct gls/i)).toBeNull();
   });
 
   it('shows cost breakdown with Subtotal and Total for personal delivery zone', () => {
     setupCartPage();
 
-    // Should show Subtotal and Total (no transport for personal delivery)
     expect(screen.getByText(/subtotal \(3 produse\)/i)).toBeTruthy();
-    // "Total" appears as a separate label element — use a precise match
     const totalLabels = screen.getAllByText(/^total$/i);
     expect(totalLabels.length).toBeGreaterThanOrEqual(1);
 
-    // No transport line when in personal delivery zone (default, no address selected)
     expect(screen.queryByText(/transport/i)).toBeNull();
-  });
-
-  it('shows transport line when address is outside delivery zone', () => {
-    setupCartPage();
-
-    // Select address outside delivery zone
-    const judetSelect = screen.getByLabelText(/județ/i) as HTMLSelectElement;
-    fireEvent.change(judetSelect, { target: { value: 'Cluj' } });
-    const localitateInput = screen.getByLabelText(/localitate/i);
-    fireEvent.change(localitateInput, { target: { value: 'Cluj-Napoca' } });
-
-    expect(screen.getByText(/transport \(curier cargus\)/i)).toBeTruthy();
   });
 
   it('shows validation errors for required address fields on submit', () => {
     setupCartPage();
 
-    // Click checkout without filling address fields
     const checkoutButton = screen.getByText(/trimite comanda/i);
     fireEvent.click(checkoutButton);
 
-    // Should show errors for judet, localitate, streetAddress
     expect(screen.getByText(/județul este obligatoriu/i)).toBeTruthy();
     expect(screen.getByText(/localitatea este obligatorie/i)).toBeTruthy();
     expect(screen.getByText(/strada este obligatorie/i)).toBeTruthy();
+  });
+
+  it('requires a GLS point when point delivery is selected', () => {
+    setupCartPage();
+
+    fireEvent.change(screen.getByLabelText(/nume/i), { target: { value: 'Ion Pop' } });
+    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
+    const judetSelect = screen.getByLabelText(/județ/i) as HTMLSelectElement;
+    fireEvent.change(judetSelect, { target: { value: 'Cluj' } });
+    fireEvent.change(screen.getByLabelText(/localitate/i), { target: { value: 'Cluj-Napoca' } });
+
+    fireEvent.click(screen.getByText(/trimite comanda/i));
+
+    expect(screen.getByText('Alege punctul GLS')).toBeTruthy();
+    // Street is not the destination for point delivery — no street error.
+    expect(screen.queryByText(/strada este obligatorie/i)).toBeNull();
   });
 
   it('does not call fetch when address validation fails', () => {
@@ -207,65 +242,43 @@ describe('CartPageClient — first-time buyer', () => {
     const checkoutButton = screen.getByText(/trimite comanda/i);
     fireEvent.click(checkoutButton);
 
-    // Only the mount-time availability revalidation may hit the network —
-    // a failed validation must never POST an order.
     const orderPosts = orderPostsOf(fetchSpy);
     expect(orderPosts).toHaveLength(0);
   });
 });
 
-describe('CartPageClient — returning customer', () => {
-  function setupReturningCustomer() {
-    return setupCartPage();
+describe('CartPageClient — single-form checkout (no returning-customer mini-flow)', () => {
+  /** Fills every required field for an in-zone personal delivery order. */
+  function fillCompleteForm({ outOfZone = false, home = false } = {}) {
+    fireEvent.change(screen.getByLabelText(/nume/i), { target: { value: 'Ion Pop' } });
+    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
+    const judetSelect = screen.getByLabelText(/județ/i) as HTMLSelectElement;
+    fireEvent.change(judetSelect, { target: { value: outOfZone ? 'Cluj' : 'Sibiu' } });
+    fireEvent.change(screen.getByLabelText(/localitate/i), {
+      target: { value: outOfZone ? 'Cluj-Napoca' : 'Sibiu' },
+    });
+    if (outOfZone && home) {
+      fireEvent.click(screen.getByLabelText(/livrare acasă/i));
+      fireEvent.change(screen.getByPlaceholderText(/strada și numărul/i), {
+        target: { value: 'Str. Victoriei 10' },
+      });
+    }
+    if (!outOfZone) {
+      fireEvent.change(screen.getByPlaceholderText(/strada și numărul/i), {
+        target: { value: 'Str. Cerului 1' },
+      });
+    }
   }
 
-  function switchToReturningCustomer() {
-    const returningButton = screen.getByText(/am mai comandat/i);
-    fireEvent.click(returningButton);
-  }
+  it('renders one form for everyone — no pills, no courier checkbox', () => {
+    setupCartPage();
 
-  it('shows courier checkbox after switching to returning customer mode', () => {
-    setupReturningCustomer();
-    switchToReturningCustomer();
-
-    expect(screen.getByLabelText(/am nevoie de livrare prin curier/i)).toBeTruthy();
-  });
-
-  it('does not show address fields for returning customers', () => {
-    setupReturningCustomer();
-    switchToReturningCustomer();
-
-    expect(screen.queryByLabelText(/județ/i)).toBeNull();
-    expect(screen.queryByLabelText(/localitate/i)).toBeNull();
-    expect(screen.queryByPlaceholderText(/strada și numărul/i)).toBeNull();
-  });
-
-  it('shows transport line and updated total when courier checkbox is checked', () => {
-    setupReturningCustomer();
-    switchToReturningCustomer();
-
-    // No transport line initially
-    expect(screen.queryByText(/transport \(curier cargus\)/i)).toBeNull();
-
-    // Check the courier checkbox
-    const checkbox = screen.getByLabelText(/am nevoie de livrare prin curier/i) as HTMLInputElement;
-    fireEvent.click(checkbox);
-
-    // Now transport line appears
-    expect(screen.getByText(/transport \(curier cargus\)/i)).toBeTruthy();
-  });
-
-  it('removes transport line when courier checkbox is unchecked', () => {
-    setupReturningCustomer();
-    switchToReturningCustomer();
-
-    // Check then uncheck
-    const checkbox = screen.getByLabelText(/am nevoie de livrare prin curier/i) as HTMLInputElement;
-    fireEvent.click(checkbox);
-    expect(screen.getByText(/transport \(curier cargus\)/i)).toBeTruthy();
-
-    fireEvent.click(checkbox);
-    expect(screen.queryByText(/transport \(curier cargus\)/i)).toBeNull();
+    expect(screen.queryByText(/prima comandă/i)).toBeNull();
+    expect(screen.queryByText(/am mai comandat/i)).toBeNull();
+    expect(screen.queryByLabelText(/am nevoie de livrare prin curier/i)).toBeNull();
+    // Name + address are always present now.
+    expect(screen.getByLabelText(/nume/i)).toBeTruthy();
+    expect(screen.getByLabelText(/județ/i)).toBeTruthy();
   });
 
   it('keeps the cart and unlocks retry when the order POST answers non-ok', async () => {
@@ -280,21 +293,17 @@ describe('CartPageClient — returning customer', () => {
       .mockResolvedValueOnce(Response.json({ ok: false }, { status: 500 }));
     const clearCart = vi.fn();
     setupCartPage({ clearCart });
-    switchToReturningCustomer();
 
-    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
-
+    fillCompleteForm();
     fireEvent.click(screen.getByText(/trimite comanda/i));
 
     const orderPosts = () => orderPostsOf(fetchSpy);
     await waitFor(() => expect(orderPosts()).toHaveLength(1));
 
-    // Failure: visible error banner, cart intact, no redirect.
     expect(await screen.findByText(/comanda nu a putut fi trimisă/i)).toBeTruthy();
     expect(clearCart).not.toHaveBeenCalled();
     expect(pushMock).not.toHaveBeenCalled();
 
-    // Submit unlocked: a second click fires a second POST.
     fireEvent.click(screen.getByText(/trimite comanda/i));
     await waitFor(() => expect(orderPosts()).toHaveLength(2));
     expect(clearCart).not.toHaveBeenCalled();
@@ -308,9 +317,8 @@ describe('CartPageClient — returning customer', () => {
       .mockRejectedValueOnce(new TypeError('network down'));
     const clearCart = vi.fn();
     setupCartPage({ clearCart });
-    switchToReturningCustomer();
 
-    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
+    fillCompleteForm();
     fireEvent.click(screen.getByText(/trimite comanda/i));
 
     expect(await screen.findByText(/comanda nu a putut fi trimisă/i)).toBeTruthy();
@@ -321,40 +329,30 @@ describe('CartPageClient — returning customer', () => {
     expect(orderPosts).toHaveLength(1);
   });
 
-  it('POSTs order with deliveryMethod and shippingCost when courier checkbox is checked', async () => {
+  it('POSTs order with deliveryMethod gls-acasa and the tiered shipping cost', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }));
-    setupReturningCustomer();
-    switchToReturningCustomer();
+    setupCartPage();
 
-    // Phone is required on every order — fill it so submit passes validation
-    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
+    // 3 items → home tier 30 lei.
+    fillCompleteForm({ outOfZone: true, home: true });
+    fireEvent.click(screen.getByText(/trimite comanda/i));
 
-    // Check courier checkbox
-    const checkbox = screen.getByLabelText(/am nevoie de livrare prin curier/i) as HTMLInputElement;
-    fireEvent.click(checkbox);
-
-    // Submit
-    const checkoutButton = screen.getByText(/trimite comanda/i);
-    fireEvent.click(checkoutButton);
-
-    // Ignore the mount-time /api/products availability fetch.
     const orderPosts = orderPostsOf(fetchSpy);
     expect(orderPosts).toHaveLength(1);
     const body = JSON.parse(String(orderPosts[0]?.[1]?.body));
-    expect(body.deliveryMethod).toBe('curier');
-    expect(body.shippingCost).toBe(25);
+    expect(body.deliveryMethod).toBe('gls-acasa');
+    expect(body.shippingCost).toBe(30);
     expect(body.subtotal).toBe(30);
-    expect(body.total).toBe(55);
+    expect(body.total).toBe(60);
   });
 
   it('ignores a second rapid checkout click while the order POST is in flight', () => {
     // Issue #41 — no double-submit guard: each impatient re-click created a
     // duplicate Payload order (prod incident: five orders in 10s).
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() => new Promise(() => {}));
-    setupReturningCustomer();
-    switchToReturningCustomer();
+    setupCartPage();
 
-    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
+    fillCompleteForm();
 
     const checkoutButton = screen.getByText(/trimite comanda/i);
     fireEvent.click(checkoutButton);
@@ -364,19 +362,13 @@ describe('CartPageClient — returning customer', () => {
     expect(orderPosts).toHaveLength(1);
   });
 
-  it('POSTs order with personal delivery when courier checkbox is unchecked', async () => {
+  it('POSTs order with personal delivery and zero shipping inside the zone', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }));
-    setupReturningCustomer();
-    switchToReturningCustomer();
+    setupCartPage();
 
-    // Phone is required on every order — fill it so submit passes validation
-    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
+    fillCompleteForm();
+    fireEvent.click(screen.getByText(/trimite comanda/i));
 
-    // Submit without checking courier
-    const checkoutButton = screen.getByText(/trimite comanda/i);
-    fireEvent.click(checkoutButton);
-
-    // Ignore the mount-time /api/products availability fetch.
     const orderPosts = orderPostsOf(fetchSpy);
     expect(orderPosts).toHaveLength(1);
     const body = JSON.parse(String(orderPosts[0]?.[1]?.body));
@@ -388,12 +380,16 @@ describe('CartPageClient — returning customer', () => {
 });
 
 describe('CartPageClient — site-only checkout submit', () => {
-  const PHONE_CACHE_KEY = 'virgil-bakery-phone';
-  const REPEAT_KEY = 'vb-repeat-customer';
+  const PROFILE_CACHE_KEY = 'virgil-bakery-profile';
 
-  function fillReturningCustomerPhone() {
-    fireEvent.click(screen.getByText(/am mai comandat/i));
+  function fillForm() {
+    fireEvent.change(screen.getByLabelText(/nume/i), { target: { value: 'Ion Pop' } });
     fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
+    fireEvent.change(screen.getByLabelText(/județ/i), { target: { value: 'Sibiu' } });
+    fireEvent.change(screen.getByLabelText(/localitate/i), { target: { value: 'Sibiu' } });
+    fireEvent.change(screen.getByPlaceholderText(/strada și numărul/i), {
+      target: { value: 'Str. Cerului 1' },
+    });
   }
 
   it('on success: clears the cart and navigates to /multumim, never opening WhatsApp', async () => {
@@ -406,7 +402,7 @@ describe('CartPageClient — site-only checkout submit', () => {
     const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
     setupCartPage({ clearCart });
 
-    fillReturningCustomerPhone();
+    fillForm();
     fireEvent.click(screen.getByText(/trimite comanda/i));
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/multumim'));
@@ -425,13 +421,7 @@ describe('CartPageClient — site-only checkout submit', () => {
       .mockResolvedValueOnce(Response.json({ ok: true }, { status: 201 }));
     setupCartPage();
 
-    fireEvent.change(screen.getByLabelText(/nume/i), { target: { value: 'Ion Pop' } });
-    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
-    fireEvent.change(screen.getByLabelText(/județ/i), { target: { value: 'Sibiu' } });
-    fireEvent.change(screen.getByLabelText(/localitate/i), { target: { value: 'Sibiu' } });
-    fireEvent.change(screen.getByPlaceholderText(/strada și numărul/i), {
-      target: { value: 'Str. Cerului 1' },
-    });
+    fillForm();
     fireEvent.click(screen.getByText(/trimite comanda/i));
 
     const orderPosts = () => orderPostsOf(fetchSpy);
@@ -444,37 +434,35 @@ describe('CartPageClient — site-only checkout submit', () => {
     expect(body.status).toBe('nou');
   });
 
-  it('caches the phone and the returning-customer flag only after a successful submit', async () => {
+  it('caches the full checkout profile only after a successful submit', async () => {
     const availability = availabilityResponse();
     vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(availability)
       .mockResolvedValueOnce(Response.json({ ok: true }, { status: 201 }));
     const { store } = setupCartPage();
 
-    fireEvent.click(screen.getByText(/am mai comandat/i));
-    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 333 444' } });
+    fillForm();
     fireEvent.click(screen.getByText(/trimite comanda/i));
 
-    await waitFor(() => {
-      expect(store[PHONE_CACHE_KEY]).toBe('0722 333 444');
-      expect(store[REPEAT_KEY]).toBe('true');
-    });
+    await waitFor(() => expect(store[PROFILE_CACHE_KEY]).toBeTruthy());
+    const profile = JSON.parse(store[PROFILE_CACHE_KEY]);
+    expect(profile.phone).toBe('0722 111 222');
+    expect(profile.judet).toBe('Sibiu');
+    expect(profile.streetAddress).toBe('Str. Cerului 1');
   });
 
-  it('does not cache the phone when the submit fails', async () => {
+  it('does not cache the profile when the submit fails', async () => {
     const availability = availabilityResponse();
     vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(availability)
       .mockResolvedValueOnce(Response.json({ ok: false }, { status: 500 }));
-    const { store } = setupCartPage(undefined, { [PHONE_CACHE_KEY]: '0722 111 222' });
+    const { store } = setupCartPage();
 
-    fireEvent.click(screen.getByText(/am mai comandat/i));
-    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 333 444' } });
+    fillForm();
     fireEvent.click(screen.getByText(/trimite comanda/i));
 
     await screen.findByText(/comanda nu a putut fi trimisă/i);
-    // The submitted phone was NOT cached — the old value survives.
-    expect(store[PHONE_CACHE_KEY]).toBe('0722 111 222');
+    expect(store[PROFILE_CACHE_KEY]).toBeUndefined();
   });
 
   it('renders no wa.me link anywhere on the cart page', () => {
@@ -649,8 +637,7 @@ describe('CartPageClient — holiday info message', () => {
 });
 
 describe('CartPageClient — phone required on every order', () => {
-  const PHONE_CACHE_KEY = 'virgil-bakery-phone';
-  const REPEAT_KEY = 'vb-repeat-customer';
+  const PROFILE_CACHE_KEY = 'virgil-bakery-profile';
 
   function getPhoneInput() {
     return screen.getByLabelText(/telefon/i) as HTMLInputElement;
@@ -660,66 +647,64 @@ describe('CartPageClient — phone required on every order', () => {
     fireEvent.click(screen.getByText(/trimite comanda/i));
   }
 
-  it('renders the phone input for a returning customer, not just first order', () => {
-    setupCartPage();
-
-    // Returning customer via the "Am mai comandat" pill
-    fireEvent.click(screen.getByText(/am mai comandat/i));
-
-    expect(getPhoneInput()).toBeTruthy();
-  });
-
   it('phone input carries tel semantics for browsers and password managers', () => {
-    // First-order view (default)
     setupCartPage();
-    const firstOrderInput = getPhoneInput();
-    expect(firstOrderInput.type).toBe('tel');
-    expect(firstOrderInput.getAttribute('autocomplete')).toBe('tel');
-    expect(firstOrderInput.getAttribute('inputmode')).toBe('tel');
-
-    cleanup();
-
-    // Returning-customer view (same field, rendered outside the first-order gate)
-    setupCartPage(undefined, { [REPEAT_KEY]: 'true' });
-    const returningInput = getPhoneInput();
-    expect(returningInput.type).toBe('tel');
-    expect(returningInput.getAttribute('autocomplete')).toBe('tel');
-    expect(returningInput.getAttribute('inputmode')).toBe('tel');
+    const input = getPhoneInput();
+    expect(input.type).toBe('tel');
+    expect(input.getAttribute('autocomplete')).toBe('tel');
+    expect(input.getAttribute('inputmode')).toBe('tel');
   });
 
-  it('blocks submit without phone for a returning customer and shows the standard validation error', () => {
+  it('blocks submit without phone and shows the standard validation error', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }));
-    setupCartPage(undefined, { [REPEAT_KEY]: 'true' });
+    setupCartPage();
 
     submitOrder();
 
-    // Same validation style as the other required fields (error message + destructive border)
     expect(screen.getByText(/telefonul este obligatoriu/i)).toBeTruthy();
     expect(getPhoneInput().className).toContain('border-destructive');
 
-    // Blocked submit must never POST an order (ignore mount-time availability fetch)
     const orderPosts = orderPostsOf(fetchSpy);
     expect(orderPosts).toHaveLength(0);
   });
 
-  it('prefills the phone from the cache after mount (hydration-safe)', async () => {
+  it('prefills the whole form from the cached profile after mount (hydration-safe)', async () => {
     setupCartPage(undefined, {
-      [REPEAT_KEY]: 'true',
-      [PHONE_CACHE_KEY]: '0722 111 222',
+      [PROFILE_CACHE_KEY]: JSON.stringify({
+        name: 'Ion Pop',
+        phone: '0722 111 222',
+        judet: 'Sibiu',
+        localitate: 'Sibiu',
+        streetAddress: 'Str. Cerului 1',
+        addressDetails: '',
+        glsChoice: 'punct',
+        glsPoint: null,
+      }),
     });
 
-    // Server renders '' and the prefill lands post-mount via effect — no
-    // hydration mismatch, same end value.
     await waitFor(() => expect(getPhoneInput().value).toBe('0722 111 222'));
+    expect((screen.getByLabelText(/nume/i) as HTMLInputElement).value).toBe('Ion Pop');
+    expect((screen.getByPlaceholderText(/strada și numărul/i) as HTMLInputElement).value).toBe(
+      'Str. Cerului 1',
+    );
   });
 
   it('submits the edited phone, not the cached one', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }));
     setupCartPage(undefined, {
-      [REPEAT_KEY]: 'true',
-      [PHONE_CACHE_KEY]: '0722 111 222',
+      [PROFILE_CACHE_KEY]: JSON.stringify({
+        name: 'Ion Pop',
+        phone: '0722 111 222',
+        judet: 'Sibiu',
+        localitate: 'Sibiu',
+        streetAddress: 'Str. Cerului 1',
+        addressDetails: '',
+        glsChoice: 'punct',
+        glsPoint: null,
+      }),
     });
 
+    await waitFor(() => expect(getPhoneInput().value).toBe('0722 111 222'));
     fireEvent.change(getPhoneInput(), { target: { value: '0733 000 111' } });
     submitOrder();
 
@@ -729,28 +714,24 @@ describe('CartPageClient — phone required on every order', () => {
     expect(body.customerPhone).toBe('0733 000 111');
   });
 
-  it('caches the submitted phone after a successful order', async () => {
-    const { store } = setupCartPage(undefined, { [REPEAT_KEY]: 'true' });
-
-    fireEvent.change(getPhoneInput(), { target: { value: '0722 333 444' } });
-    submitOrder();
-
-    // The cache write happens after the fire-and-forget order POST resolves
-    await waitFor(() => expect(store[PHONE_CACHE_KEY]).toBe('0722 333 444'));
-  });
-
   it('cache does not overwrite a field the customer cleared before submit', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }));
     setupCartPage(undefined, {
-      [REPEAT_KEY]: 'true',
-      [PHONE_CACHE_KEY]: '0722 111 222',
+      [PROFILE_CACHE_KEY]: JSON.stringify({
+        name: 'Ion Pop',
+        phone: '0722 111 222',
+        judet: 'Sibiu',
+        localitate: 'Sibiu',
+        streetAddress: 'Str. Cerului 1',
+        addressDetails: '',
+        glsChoice: 'punct',
+        glsPoint: null,
+      }),
     });
 
-    // Customer clears the prefilled field, then submits
     fireEvent.change(getPhoneInput(), { target: { value: '' } });
     submitOrder();
 
-    // Submit is blocked with the validation error; the cleared field stays empty
     expect(screen.getByText(/telefonul este obligatoriu/i)).toBeTruthy();
     expect(getPhoneInput().value).toBe('');
 
@@ -758,21 +739,9 @@ describe('CartPageClient — phone required on every order', () => {
     expect(orderPosts).toHaveLength(0);
   });
 
-  it('keeps name and address gating unchanged for returning customers', () => {
-    setupCartPage(undefined, { [REPEAT_KEY]: 'true' });
-
-    // Phone is present, but name/address stay gated behind the first-order flow
-    expect(getPhoneInput()).toBeTruthy();
-    expect(screen.queryByLabelText(/nume/i)).toBeNull();
-    expect(screen.queryByLabelText(/județ/i)).toBeNull();
-    expect(screen.queryByLabelText(/localitate/i)).toBeNull();
-    expect(screen.queryByPlaceholderText(/strada și numărul/i)).toBeNull();
-  });
-
-  it('still requires name and address on the first-order flow', () => {
+  it('still requires name and address on the single form', () => {
     setupCartPage();
 
-    // Default = first order; empty submit shows name + address errors (phone too)
     submitOrder();
 
     expect(screen.getByText(/numele este obligatoriu/i)).toBeTruthy();

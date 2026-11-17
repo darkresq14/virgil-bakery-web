@@ -903,7 +903,7 @@ export interface Order {
     | boolean
     | null;
   total: number;
-  deliveryMethod: 'personal' | 'curier';
+  deliveryMethod: 'personal' | 'gls-punct' | 'gls-acasa' | 'curier';
   shippingCost: number;
   subtotal: number;
   deliveryDate: string;
@@ -913,6 +913,16 @@ export interface Order {
   localitate?: string | null;
   streetAddress?: string | null;
   addressDetails?: string | null;
+  /**
+   * Completat doar pentru livrări la punct GLS (locker/ParcelShop).
+   */
+  glsPoint?: {
+    goldId?: string | null;
+    matchcode?: string | null;
+    nume?: string | null;
+    adresa?: string | null;
+    tip?: string | null;
+  };
   whatsappMessage?: string | null;
   status: 'nou' | 'confirmat' | 'livrat' | 'anulat';
   sheetSyncStatus?: ('synced' | 'failed') | null;
@@ -1509,6 +1519,15 @@ export interface OrdersSelect<T extends boolean = true> {
   localitate?: T;
   streetAddress?: T;
   addressDetails?: T;
+  glsPoint?:
+    | T
+    | {
+        goldId?: T;
+        matchcode?: T;
+        nume?: T;
+        adresa?: T;
+        tip?: T;
+      };
   whatsappMessage?: T;
   status?: T;
   sheetSyncStatus?: T;

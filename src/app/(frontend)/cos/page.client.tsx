@@ -4,7 +4,10 @@ import {
   AlertCircle,
   ArrowLeft,
   CalendarOff,
+  Home,
+  MapPin,
   Minus,
+  Package,
   Plus,
   ShoppingBag,
   Trash2,
@@ -14,14 +17,20 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { type AddressFields, AddressForm } from '@/components/AddressForm';
+import { type GlsPoint, GlsPointPicker, glsPointStillExists } from '@/components/GlsPointPicker';
 import { useCart } from '@/providers/Cart';
 import {
   type DeliveryDateOption,
   formatRomanianDate,
   getDeliveryDates,
 } from '@/utilities/deliveryDates';
-import { detectDeliveryMethod } from '@/utilities/detectDeliveryMethod';
 import { formatPrice } from '@/utilities/formatPrice';
+import {
+  detectDeliveryZone,
+  homeShippingCost,
+  POINT_SHIPPING_COST,
+  shippingCostFor,
+} from '@/utilities/glsDelivery';
 import { holidayDates } from '@/utilities/holidayDates';
 import {
   type AvailableDays,
@@ -34,10 +43,21 @@ import {
   weekdayListLabel,
 } from '@/utilities/productAvailability';
 
-const STORAGE_KEY = 'vb-repeat-customer';
+/** Cached checkout profile (issue #47): full form + delivery choice + GLS
+ * point, prefilled on the next visit. Replaces the old phone-only cache and
+ * the "Am mai comandat" mini-flow. */
+const PROFILE_STORAGE_KEY = 'virgil-bakery-profile';
 
-/** Cached customer phone (prefill convenience only — the server never reads it). */
-const PHONE_STORAGE_KEY = 'virgil-bakery-phone';
+interface CachedProfile {
+  name: string;
+  phone: string;
+  judet: string;
+  localitate: string;
+  streetAddress: string;
+  addressDetails: string;
+  glsChoice: 'punct' | 'acasa';
+  glsPoint: GlsPoint | null;
+}
 
 interface HolidayCartNoticeProps {
   holidayStartDate: Date;
@@ -101,28 +121,61 @@ export function CartPageClient({
     phone: '',
     deliveryDate: '',
   });
-  // Hydration-safe phone prefill: localStorage is read only after mount, so
-  // server and client first paint the same '' (no mismatch). Cached value
-  // never overwrites what the customer typed while it landed.
+  // Hydration-safe prefill (issue #47): localStorage is read only after
+  // mount, so server and client first paint the same empty form. Cached
+  // values never overwrite what the customer typed while they landed.
   useEffect(() => {
-    const cached = localStorage.getItem(PHONE_STORAGE_KEY);
-    if (!cached) return;
-    setForm((f) => (f.phone === '' ? { ...f, phone: cached } : f));
+    try {
+      const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+      if (raw) {
+        const cached = JSON.parse(raw) as Partial<CachedProfile>;
+        setForm((f) => ({
+          ...f,
+          name: f.name === '' ? (cached.name ?? '') : f.name,
+          phone: f.phone === '' ? (cached.phone ?? '') : f.phone,
+        }));
+        if (cached.judet || cached.localitate || cached.streetAddress) {
+          setAddress((a) => ({
+            judet: a.judet === '' ? (cached.judet ?? '') : a.judet,
+            localitate: a.localitate === '' ? (cached.localitate ?? '') : a.localitate,
+            streetAddress: a.streetAddress === '' ? (cached.streetAddress ?? '') : a.streetAddress,
+            addressDetails:
+              a.addressDetails === '' ? (cached.addressDetails ?? '') : a.addressDetails,
+          }));
+        }
+        if (cached.glsChoice === 'acasa') setGlsChoice('acasa');
+        const cachedPoint = cached.glsPoint;
+        if (cachedPoint?.matchcode) {
+          setGlsPoint(cachedPoint);
+          // A removed point must never be silently reused (CONTEXT.md →
+          // Cached Checkout Profile) — verify against the live feed once.
+          glsPointStillExists(cachedPoint).then((exists) => {
+            if (!exists) {
+              setGlsPoint(null);
+              setPointWarning(true);
+            }
+          });
+        }
+      }
+    } catch {
+      /* corrupt cache — start fresh */
+    }
   }, []);
   const [address, setAddress] = useState<AddressFields>(emptyAddress);
   const [formError, setFormError] = useState('');
-  const [isFirstOrder, setIsFirstOrder] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    return localStorage.getItem(STORAGE_KEY) !== 'true';
-  });
   const [fieldErrors, setFieldErrors] = useState({
     name: '',
     phone: '',
     judet: '',
     localitate: '',
     streetAddress: '',
+    glsPoint: '',
   });
-  const [needsCourier, setNeedsCourier] = useState(false);
+  // GLS delivery choice for out-of-zone customers (issue #47).
+  const [glsChoice, setGlsChoice] = useState<'punct' | 'acasa'>('punct');
+  const [glsPoint, setGlsPoint] = useState<GlsPoint | null>(null);
+  const [pointWarning, setPointWarning] = useState(false);
+  const openGlsWidgetRef = useRef<(() => void) | null>(null);
   // Issue #41 — double-submit guard. The ref locks synchronously (a second
   // click before re-render must not pass); the state only drives the disabled
   // button. Unlocks on failure so the customer can retry; on success the cart
@@ -250,15 +303,8 @@ export function CartPageClient({
     [itemAvailability],
   );
 
-  const toggleFirstOrder = (value: boolean) => {
-    setIsFirstOrder(value);
-    localStorage.setItem(STORAGE_KEY, value ? 'false' : 'true');
-    setFieldErrors({ name: '', phone: '', judet: '', localitate: '', streetAddress: '' });
-    setNeedsCourier(false);
-  };
-
-  const deliveryInfo = useMemo(
-    () => detectDeliveryMethod(address.judet, address.localitate),
+  const zone = useMemo(
+    () => detectDeliveryZone(address.judet, address.localitate),
     [address.judet, address.localitate],
   );
 
@@ -285,23 +331,21 @@ export function CartPageClient({
       ? form.deliveryDate
       : '') || defaultDeliveryLabel;
 
-  const shippingCost = isFirstOrder
-    ? address.judet && address.localitate
-      ? deliveryInfo.shippingCost
-      : 0
-    : needsCourier
-      ? 25
-      : 0;
+  // Resolved delivery method + shipping (issue #47). Outside the zone the
+  // customer's radio choice decides; home above 10 items is unavailable
+  // (null) and the checkout blocks on it.
+  const deliveryMethod =
+    zone !== 'out' ? 'personal' : glsChoice === 'punct' ? 'gls-punct' : 'gls-acasa';
 
-  const deliveryMethod = isFirstOrder
-    ? address.judet && address.localitate
-      ? deliveryInfo.deliveryMethod
-      : 'personal'
-    : needsCourier
-      ? 'curier'
-      : 'personal';
+  const shippingCost = shippingCostFor(deliveryMethod, zone, itemCount);
 
-  const showTransport = shippingCost > 0;
+  /** Home-delivery tier for the current cart (null = unavailable, >10). */
+  const homePrice = homeShippingCost(itemCount);
+
+  const showTransport = shippingCost != null && shippingCost > 0;
+  // Summary/total need a concrete number; a null (home >10) blocks submit
+  // before the POST, so the fallback here is display-only.
+  const displayShippingCost = shippingCost ?? 0;
 
   const handleCheckout = async () => {
     if (staleItemIds.size > 0) {
@@ -331,17 +375,42 @@ export function CartPageClient({
     }
     setFormError('');
 
-    const errors = { name: '', phone: '', judet: '', localitate: '', streetAddress: '' };
+    if (shippingCost == null) {
+      // Home delivery above 10 items — the radio is disabled; a stale cached
+      // choice can still land here, so guard the submit too.
+      setFormError(
+        'Livrarea acasă nu este disponibilă peste 10 produse — alege un punct GLS sau scrie-ne pe WhatsApp',
+      );
+      return;
+    }
+
+    const errors = {
+      name: '',
+      phone: '',
+      judet: '',
+      localitate: '',
+      streetAddress: '',
+      glsPoint: '',
+    };
     // Phone is the customer identity for the whole pipeline — required on every order.
     if (!form.phone.trim()) errors.phone = 'Telefonul este obligatoriu';
-    if (isFirstOrder) {
-      if (!form.name.trim()) errors.name = 'Numele este obligatoriu';
-      if (!address.judet) errors.judet = 'Județul este obligatoriu';
-      if (!address.localitate.trim()) errors.localitate = 'Localitatea este obligatorie';
-      if (!address.streetAddress.trim()) errors.streetAddress = 'Strada este obligatorie';
-    }
+    if (!form.name.trim()) errors.name = 'Numele este obligatoriu';
+    if (!address.judet) errors.judet = 'Județul este obligatoriu';
+    if (!address.localitate.trim()) errors.localitate = 'Localitatea este obligatorie';
+    // Street is the destination for personal and home delivery; for GLS point
+    // delivery the chosen locker/ParcelShop replaces it.
+    if (deliveryMethod !== 'gls-punct' && !address.streetAddress.trim())
+      errors.streetAddress = 'Strada este obligatorie';
+    if (deliveryMethod === 'gls-punct' && !glsPoint) errors.glsPoint = 'Alege punctul GLS';
     setFieldErrors(errors);
-    if (errors.name || errors.phone || errors.judet || errors.localitate || errors.streetAddress)
+    if (
+      errors.name ||
+      errors.phone ||
+      errors.judet ||
+      errors.localitate ||
+      errors.streetAddress ||
+      errors.glsPoint
+    )
       return;
     if (submittingRef.current) return; // an order POST is already in flight
     submittingRef.current = true;
@@ -378,8 +447,20 @@ export function CartPageClient({
           customerPhone: form.phone || undefined,
           judet: address.judet || undefined,
           localitate: address.localitate || undefined,
-          streetAddress: address.streetAddress || undefined,
-          addressDetails: address.addressDetails || undefined,
+          streetAddress:
+            deliveryMethod === 'gls-punct' ? undefined : address.streetAddress || undefined,
+          addressDetails:
+            deliveryMethod === 'gls-punct' ? undefined : address.addressDetails || undefined,
+          glsPoint:
+            deliveryMethod === 'gls-punct' && glsPoint
+              ? {
+                  goldId: glsPoint.goldId ?? null,
+                  matchcode: glsPoint.matchcode,
+                  nume: glsPoint.nume,
+                  adresa: glsPoint.adresa,
+                  tip: glsPoint.tip,
+                }
+              : undefined,
           status: 'nou',
         }),
       });
@@ -394,11 +475,23 @@ export function CartPageClient({
       return;
     }
 
-    // Success: remember the phone for the next checkout prefill, mark the
-    // customer as returning, clear the cart, go to the thank-you page.
-    localStorage.setItem(PHONE_STORAGE_KEY, form.phone);
-    if (!isFirstOrder) {
-      localStorage.setItem(STORAGE_KEY, 'true');
+    // Success: cache the checkout profile for the next visit prefill (the
+    // full form — single flow for everyone now, issue #47), clear the cart,
+    // go to the thank-you page.
+    const profile: CachedProfile = {
+      name: form.name,
+      phone: form.phone,
+      judet: address.judet,
+      localitate: address.localitate,
+      streetAddress: address.streetAddress,
+      addressDetails: address.addressDetails,
+      glsChoice,
+      glsPoint: deliveryMethod === 'gls-punct' ? glsPoint : null,
+    };
+    try {
+      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+    } catch {
+      /* storage full — prefill is a convenience, never a blocker */
     }
     clearCart();
     router.push('/multumim');
@@ -593,16 +686,16 @@ export function CartPageClient({
                 </div>
                 {showTransport && (
                   <div className="flex justify-between">
-                    <span className="font-sans text-muted-foreground">
-                      Transport (Curier Cargus)
+                    <span className="font-sans text-muted-foreground">Transport (GLS)</span>
+                    <span className="font-sans font-medium">
+                      {formatPrice(displayShippingCost)}
                     </span>
-                    <span className="font-sans font-medium">{formatPrice(shippingCost)}</span>
                   </div>
                 )}
                 <div className="flex justify-between pt-2 border-t border-border">
                   <span className="font-sans text-lg font-bold">Total</span>
                   <span className="font-sans text-xl font-bold text-primary">
-                    {formatPrice(total + shippingCost)}
+                    {formatPrice(total + displayShippingCost)}
                   </span>
                 </div>
               </div>
@@ -640,43 +733,195 @@ export function CartPageClient({
                   )}
                 </div>
 
-                {/* First order pills */}
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => toggleFirstOrder(true)}
-                    className={`rounded-full px-3 py-1 text-xs font-sans font-medium transition-all ${
-                      isFirstOrder
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-secondary text-muted-foreground hover:text-foreground'
-                    }`}
+                {/* Name — single flow for everyone (issue #47) */}
+                <div>
+                  <label
+                    htmlFor="customer-name"
+                    className="block text-sm font-sans font-medium mb-1"
                   >
-                    Prima comandă
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => toggleFirstOrder(false)}
-                    className={`rounded-full px-3 py-1 text-xs font-sans font-medium transition-all ${
-                      !isFirstOrder
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-secondary text-muted-foreground hover:text-foreground'
+                    Nume <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    id="customer-name"
+                    type="text"
+                    autoComplete="name"
+                    value={form.name}
+                    onChange={(e) => {
+                      setForm({ ...form, name: e.target.value });
+                      setFieldErrors({ ...fieldErrors, name: '' });
+                    }}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring ${
+                      fieldErrors.name ? 'border-destructive' : 'border-input'
                     }`}
-                  >
-                    Am mai comandat
-                  </button>
+                    placeholder="Numele tău"
+                  />
+                  {fieldErrors.name && (
+                    <p className="text-xs text-destructive font-sans mt-1">{fieldErrors.name}</p>
+                  )}
                 </div>
 
-                {/* Courier checkbox for returning customers */}
-                {!isFirstOrder && (
-                  <div className="space-y-3 pt-1">
-                    <label className="flex items-center gap-2 text-sm font-sans cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={needsCourier}
-                        onChange={(e) => setNeedsCourier(e.target.checked)}
-                        className="rounded border-input"
-                      />
-                      Am nevoie de livrare prin curier (+25 lei)
+                {/* Address — always; street hidden for GLS point delivery */}
+                <AddressForm
+                  values={address}
+                  onChange={setAddress}
+                  hideStreetFields={deliveryMethod === 'gls-punct'}
+                  errors={{
+                    judet: fieldErrors.judet || undefined,
+                    localitate: fieldErrors.localitate || undefined,
+                    streetAddress: fieldErrors.streetAddress || undefined,
+                  }}
+                />
+
+                {/* Zone-driven delivery info (issue #47) */}
+                {zone === 'in' && (
+                  <div className="rounded-lg bg-secondary/50 px-3 py-2 text-sm font-sans">
+                    🚗 Livrare personală — Gratuită
+                  </div>
+                )}
+                {zone === 'unknown' && (
+                  <p className="text-xs text-muted-foreground font-sans">
+                    Completează județul și localitatea pentru a vedea opțiunile de livrare.
+                  </p>
+                )}
+                {zone === 'out' && (
+                  <div className="space-y-3" role="radiogroup" aria-label="Metodă de livrare GLS">
+                    <p className="text-xs text-muted-foreground font-sans">
+                      Suntem în afara zonei de livrare personală — trimitem prin GLS:
+                    </p>
+
+                    {/* Punct GLS card */}
+                    <label
+                      className={`block rounded-xl border-2 p-3 cursor-pointer transition-all ${
+                        glsChoice === 'punct'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/40'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="radio"
+                          name="gls-method"
+                          className="mt-1"
+                          checked={glsChoice === 'punct'}
+                          onChange={() => setGlsChoice('punct')}
+                        />
+                        <span className="flex-1">
+                          <span className="flex items-baseline justify-between gap-2">
+                            <span className="font-sans font-semibold text-sm">
+                              <Package className="mr-1 inline h-4 w-4 text-primary" />
+                              Punct GLS
+                            </span>
+                            <span className="font-sans font-bold text-sm">
+                              {POINT_SHIPPING_COST} lei
+                            </span>
+                          </span>
+                          <span className="mt-0.5 block text-xs text-muted-foreground font-sans">
+                            Locker sau ParcelShop — alegi punctul de pe hartă. Preț fix, indiferent
+                            de numărul de produse.
+                          </span>
+                        </span>
+                      </div>
+                      {glsChoice === 'punct' && (
+                        <div className="mt-3 space-y-2">
+                          {glsPoint ? (
+                            <>
+                              <div className="flex items-start gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2">
+                                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                                <div className="min-w-0 text-sm font-sans">
+                                  <p className="font-medium leading-tight">{glsPoint.nume}</p>
+                                  <p className="text-muted-foreground leading-tight">
+                                    {glsPoint.adresa || 'GLS'}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {glsPoint.tip === 'parcel-shop'
+                                      ? 'ParcelShop'
+                                      : 'Parcel locker'}
+                                    {glsPoint.goldId ? ` · ID ${glsPoint.goldId}` : ''}
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  openGlsWidgetRef.current?.();
+                                }}
+                                className="text-xs font-sans text-primary hover:underline"
+                              >
+                                Schimbă punctul
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-xs text-muted-foreground font-sans">
+                                În hartă, caută „{address.localitate || 'localitatea ta'}” sau
+                                folosește butonul de locație al hărții.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  openGlsWidgetRef.current?.();
+                                }}
+                                className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2.5 text-sm font-sans font-medium text-primary hover:bg-primary/20 transition-colors"
+                              >
+                                <MapPin className="h-4 w-4" />
+                                Alege punctul GLS pe hartă
+                              </button>
+                            </>
+                          )}
+                          {pointWarning && !glsPoint && (
+                            <p className="text-xs text-muted-foreground font-sans">
+                              Punctul salvat anterior nu mai este disponibil — alege altul.
+                            </p>
+                          )}
+                          {fieldErrors.glsPoint && (
+                            <p className="text-xs text-destructive font-sans">
+                              {fieldErrors.glsPoint}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </label>
+
+                    {/* Acasă card */}
+                    <label
+                      className={`block rounded-xl border-2 p-3 transition-all ${
+                        homePrice != null
+                          ? `cursor-pointer ${
+                              glsChoice === 'acasa'
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border hover:border-primary/40'
+                            }`
+                          : 'border-border opacity-50'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="radio"
+                          name="gls-method"
+                          className="mt-1"
+                          disabled={homePrice == null}
+                          checked={glsChoice === 'acasa'}
+                          onChange={() => setGlsChoice('acasa')}
+                        />
+                        <span className="flex-1">
+                          <span className="flex items-baseline justify-between gap-2">
+                            <span className="font-sans font-semibold text-sm">
+                              <Home className="mr-1 inline h-4 w-4 text-primary" />
+                              Livrare acasă
+                            </span>
+                            <span className="font-sans font-bold text-sm">
+                              {homePrice != null ? `${homePrice} lei` : 'indisponibil'}
+                            </span>
+                          </span>
+                          <span className="mt-0.5 block text-xs text-muted-foreground font-sans">
+                            {homePrice != null
+                              ? `Curier GLS livrează la adresa ta — ${homePrice} lei pentru ${itemCount} produse.`
+                              : 'Peste 10 produse — alege un punct GLS sau scrie-ne pe WhatsApp.'}
+                          </span>
+                        </span>
+                      </div>
                     </label>
                   </div>
                 )}
@@ -708,58 +953,6 @@ export function CartPageClient({
                     <p className="text-xs text-destructive font-sans mt-1">{fieldErrors.phone}</p>
                   )}
                 </div>
-
-                {/* Name + address — first-order flow only */}
-                {isFirstOrder && (
-                  <div className="space-y-3 pt-1">
-                    <div>
-                      <label
-                        htmlFor="customer-name"
-                        className="block text-sm font-sans font-medium mb-1"
-                      >
-                        Nume <span className="text-destructive">*</span>
-                      </label>
-                      <input
-                        id="customer-name"
-                        type="text"
-                        value={form.name}
-                        onChange={(e) => {
-                          setForm({ ...form, name: e.target.value });
-                          setFieldErrors({ ...fieldErrors, name: '' });
-                        }}
-                        className={`w-full rounded-lg border px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring ${
-                          fieldErrors.name ? 'border-destructive' : 'border-input'
-                        }`}
-                        placeholder="Numele tău"
-                      />
-                      {fieldErrors.name && (
-                        <p className="text-xs text-destructive font-sans mt-1">
-                          {fieldErrors.name}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <AddressForm
-                        values={address}
-                        onChange={setAddress}
-                        errors={{
-                          judet: fieldErrors.judet || undefined,
-                          localitate: fieldErrors.localitate || undefined,
-                          streetAddress: fieldErrors.streetAddress || undefined,
-                        }}
-                      />
-                    </div>
-                    {address.judet && address.localitate && (
-                      <div className="rounded-lg bg-secondary/50 px-3 py-2 text-sm font-sans">
-                        {deliveryInfo.deliveryMethod === 'personal' ? (
-                          <>🚗 Livrare personală — Gratuită</>
-                        ) : (
-                          <>📦 Livrare prin curier — 25 lei</>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
 
               {submitError && (
@@ -788,6 +981,12 @@ export function CartPageClient({
               >
                 {isSubmitting ? 'Se trimite…' : 'Trimite comanda'}
               </button>
+              <GlsPointPicker
+                onSelect={setGlsPoint}
+                registerOpen={(open) => {
+                  openGlsWidgetRef.current = open;
+                }}
+              />
             </div>
           </div>
         </div>

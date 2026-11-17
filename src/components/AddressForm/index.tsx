@@ -16,6 +16,9 @@ export interface AddressFormProps {
   values: AddressFields;
   onChange: (values: AddressFields) => void;
   errors?: Partial<Record<keyof AddressFields, string>>;
+  /** GLS point delivery: destination is the chosen locker/ParcelShop, so
+   * street + details are irrelevant and hidden (issue #47). */
+  hideStreetFields?: boolean;
 }
 
 /** Minimum characters before showing suggestions. */
@@ -23,7 +26,12 @@ const MIN_CHARS = 2;
 /** Maximum visible suggestions. */
 const MAX_SUGGESTIONS = 50;
 
-export function AddressForm({ values, onChange, errors }: AddressFormProps) {
+export function AddressForm({
+  values,
+  onChange,
+  errors,
+  hideStreetFields = false,
+}: AddressFormProps) {
   const localitati = values.judet ? (LOCALITIES_BY_JUDET[values.judet] ?? []) : [];
 
   function handleChange(partial: Partial<AddressFields>) {
@@ -69,38 +77,42 @@ export function AddressForm({ values, onChange, errors }: AddressFormProps) {
         onChange={(localitate) => handleChange({ localitate })}
       />
 
-      {/* Strada + Număr */}
-      <div>
-        <label htmlFor="address-street" className="block text-sm font-sans font-medium mb-1">
-          Strada și numărul <span className="text-destructive">*</span>
-        </label>
-        <input
-          type="text"
-          id="address-street"
-          value={values.streetAddress}
-          onChange={(e) => handleChange({ streetAddress: e.target.value })}
-          className={`${fieldBase} ${
-            errors?.streetAddress ? 'border-destructive' : 'border-input'
-          }`}
-          placeholder="Strada și numărul"
-        />
-        {errors?.streetAddress && <p className={errorClass}>{errors.streetAddress}</p>}
-      </div>
+      {/* Strada + Număr — hidden for GLS point delivery */}
+      {!hideStreetFields && (
+        <div>
+          <label htmlFor="address-street" className="block text-sm font-sans font-medium mb-1">
+            Strada și numărul <span className="text-destructive">*</span>
+          </label>
+          <input
+            type="text"
+            id="address-street"
+            value={values.streetAddress}
+            onChange={(e) => handleChange({ streetAddress: e.target.value })}
+            className={`${fieldBase} ${
+              errors?.streetAddress ? 'border-destructive' : 'border-input'
+            }`}
+            placeholder="Strada și numărul"
+          />
+          {errors?.streetAddress && <p className={errorClass}>{errors.streetAddress}</p>}
+        </div>
+      )}
 
-      {/* Detalii suplimentare */}
-      <div>
-        <label htmlFor="address-details" className="block text-sm font-sans font-medium mb-1">
-          Detalii suplimentare
-        </label>
-        <textarea
-          id="address-details"
-          value={values.addressDetails}
-          onChange={(e) => handleChange({ addressDetails: e.target.value })}
-          className={`${fieldBase} border-input resize-none`}
-          rows={3}
-          placeholder="Bloc, scară, apartament, interfon..."
-        />
-      </div>
+      {/* Detalii suplimentare — hidden for GLS point delivery */}
+      {!hideStreetFields && (
+        <div>
+          <label htmlFor="address-details" className="block text-sm font-sans font-medium mb-1">
+            Detalii suplimentare
+          </label>
+          <textarea
+            id="address-details"
+            value={values.addressDetails}
+            onChange={(e) => handleChange({ addressDetails: e.target.value })}
+            className={`${fieldBase} border-input resize-none`}
+            rows={3}
+            placeholder="Bloc, scară, apartament, interfon..."
+          />
+        </div>
+      )}
     </div>
   );
 }

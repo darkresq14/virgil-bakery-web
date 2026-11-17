@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Product } from '@/payload-types';
 
-import { COURIER_SHIPPING_COST } from '@/utilities/detectDeliveryMethod';
+import { NATIONAL_SHIPPING_MIN } from '@/utilities/glsDelivery';
 import { localBusinessSchema, productSchema } from '@/utilities/schema';
 
 const NOT_PERMITTED = 'https://schema.org/MerchantReturnNotPermitted';
@@ -128,16 +128,16 @@ describe('productSchema', () => {
     expect(details).toHaveLength(2);
 
     const free = details.find((d) => d.shippingRate.value === 0);
-    const courier = details.find((d) => d.shippingRate.value === COURIER_SHIPPING_COST);
+    const national = details.find((d) => d.shippingRate.value === NATIONAL_SHIPPING_MIN);
     expect(free).toBeDefined();
-    expect(courier).toBeDefined();
+    expect(national).toBeDefined();
 
     expect(free?.shippingDestination).toMatchObject({
       addressCountry: 'RO',
       addressRegion: 'Sibiu',
     });
-    expect(courier?.shippingDestination).toMatchObject({ addressCountry: 'RO' });
-    expect(courier?.shippingDestination.addressRegion).toBeUndefined();
+    expect(national?.shippingDestination).toMatchObject({ addressCountry: 'RO' });
+    expect(national?.shippingDestination.addressRegion).toBeUndefined();
 
     for (const detail of details) {
       expect(detail.shippingRate.currency).toBe('RON');
