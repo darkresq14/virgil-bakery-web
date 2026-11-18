@@ -1,12 +1,18 @@
 'use client';
 
 /**
- * Official GLS Romania DPM widget (map.gls-romania.com) mounted in dialog
- * mode. Renders nothing visible; `registerOpen` hands back an imperative
- * opener for the host's own trigger button (issue #47).
+ * Official GLS Romania DPM widget (map.gls-romania.com) mounted in
+ * dialog mode. Renders nothing visible; `registerOpen` hands back an
+ * imperative opener for the host's own trigger button (issue #47).
  *
- * Widget facts (verified against gls-dpm source): custom element `gls-dpm`,
- * attributes country/language/open, property mode='dialog'; emits `change`
+ * Widget facts (verified against gls-dpm-modern.js): the loader defines
+ * TWO elements — `gls-dpm` (class field mode='widget', inline map) and
+ * `gls-dpm-dialog` (class field mode='dialog'). `mode` is a constructor
+ * class field, NOT an attribute or accessor, so poking `el.mode='dialog'
+ * onto an unupgraded `gls-dpm` is clobbered at upgrade and the widget
+ * renders as an invisible inline widget — dialog mode is only reachable
+ * by mounting `gls-dpm-dialog`. Shared attributes: country/language/open
+ * (open = boolean attribute, present = true); both emit `change`
  * (CustomEvent, detail = selected point) and `close`.
  */
 
@@ -39,7 +45,10 @@ declare global {
   namespace React {
     namespace JSX {
       interface IntrinsicElements {
-        'gls-dpm': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+        'gls-dpm-dialog': React.DetailedHTMLProps<
+          React.HTMLAttributes<HTMLElement>,
+          HTMLElement
+        > & {
           country?: string;
           language?: string;
           open?: string;
@@ -55,7 +64,7 @@ function loadGlsWidget(): Promise<void> {
   if (typeof window === 'undefined') return Promise.resolve();
   if (widgetLoadPromise) return widgetLoadPromise;
   widgetLoadPromise = new Promise((resolve, reject) => {
-    if (window.customElements?.get('gls-dpm')) {
+    if (window.customElements?.get('gls-dpm-dialog')) {
       resolve();
       return;
     }
@@ -132,7 +141,6 @@ export function GlsPointPicker({
     };
     el.addEventListener('change', el._glsChange);
     el.addEventListener('close', el._glsClose);
-    (el as unknown as { mode?: string }).mode = 'dialog';
 
     // Script loads lazily on first open — in-zone customers never pay for it.
     handlersRef.current.registerOpen(() => {
@@ -146,7 +154,7 @@ export function GlsPointPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return <gls-dpm ref={setElement} country="RO" language="ro" />;
+  return <gls-dpm-dialog ref={setElement} country="RO" language="ro" />;
 }
 
 /** Feed entry shape (public ro.json delivery-point feed). */

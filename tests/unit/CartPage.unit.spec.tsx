@@ -890,7 +890,7 @@ describe('CartPageClient — cached GLS choice + point revalidation (issue #47 h
     expect(screen.getAllByText('Alege punctul GLS').length).toBeGreaterThan(0);
 
     // The widget element fires `change` with the picked point.
-    const widget = document.querySelector('gls-dpm');
+    const widget = document.querySelector('gls-dpm-dialog');
     expect(widget).not.toBeNull();
     fireEvent(
       widget as Element,
