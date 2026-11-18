@@ -3,7 +3,13 @@ import type React from 'react';
 import { getCachedGlobal } from '@/utilities/getGlobals';
 import { HeaderClient } from './Component.client';
 
-export async function Header({ holidayBanner }: { holidayBanner?: React.ReactNode } = {}) {
+export async function Header({
+  holidayBanner,
+  whatsappUrl,
+}: {
+  holidayBanner?: React.ReactNode;
+  whatsappUrl?: string;
+} = {}) {
   const headerData = await getCachedGlobal('header', 1)();
   const { isEnabled } = await draftMode();
 
@@ -12,6 +18,7 @@ export async function Header({ holidayBanner }: { holidayBanner?: React.ReactNod
       data={headerData}
       adminBarProps={{ preview: isEnabled }}
       holidayBanner={holidayBanner}
+      whatsappUrl={whatsappUrl}
     />
   );
 }

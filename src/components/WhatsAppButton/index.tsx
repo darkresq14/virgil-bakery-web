@@ -2,8 +2,9 @@
 
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { whatsappLink } from '@/utilities/whatsapp';
 
-export const WhatsAppButton = () => {
+export const WhatsAppButton = ({ whatsappUrl }: { whatsappUrl?: string }) => {
   const [visible, setVisible] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
 
@@ -31,7 +32,7 @@ export const WhatsAppButton = () => {
 
   return (
     <a
-      href="https://wa.me/40746245391"
+      href={whatsappUrl || whatsappLink()}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Contactează-ne pe WhatsApp"

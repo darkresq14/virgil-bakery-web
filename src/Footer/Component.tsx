@@ -5,6 +5,7 @@ import { CookieSettingsButton } from '@/components/CookieConsent/CookieSettingsB
 import { Logo } from '@/components/Logo/Logo';
 import { Media } from '@/components/Media';
 import { getCachedGlobal } from '@/utilities/getGlobals';
+import { whatsappLink } from '@/utilities/whatsapp';
 
 export async function Footer() {
   const footerData = await getCachedGlobal('footer', 1)();
@@ -93,7 +94,7 @@ export async function Footer() {
             <div className="flex gap-3 mt-4">
               {siteConfig?.whatsappNumber && (
                 <a
-                  href={`https://wa.me/${siteConfig.whatsappNumber.replace(/[^0-9]/g, '')}`}
+                  href={whatsappLink(siteConfig.whatsappNumber)}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="WhatsApp"

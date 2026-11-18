@@ -11,11 +11,13 @@ import { Logo } from '@/components/Logo/Logo';
 import { Media } from '@/components/Media';
 import type { Header as HeaderType } from '@/payload-types';
 import { useCart } from '@/providers/Cart';
+import { whatsappLink } from '@/utilities/whatsapp';
 
 interface HeaderClientProps {
   data: HeaderType;
   adminBarProps?: { preview: boolean };
   holidayBanner?: React.ReactNode;
+  whatsappUrl?: string;
 }
 
 const navLinks = [
@@ -31,6 +33,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({
   data,
   adminBarProps,
   holidayBanner,
+  whatsappUrl,
 }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { itemCount } = useCart();
@@ -233,7 +236,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({
 
           <div className="pb-8 flex justify-center">
             <a
-              href="https://wa.me/40746245391"
+              href={whatsappUrl || whatsappLink()}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-full bg-[#25D366] text-white px-6 py-3 font-sans font-medium"

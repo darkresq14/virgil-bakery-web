@@ -42,15 +42,12 @@ import {
   parseOneOffDate,
   weekdayListLabel,
 } from '@/utilities/productAvailability';
+import { whatsappLink } from '@/utilities/whatsapp';
 
 /** Cached checkout profile (issue #47): full form + delivery choice + GLS
  * point, prefilled on the next visit. Replaces the old phone-only cache and
  * the "Am mai comandat" mini-flow. */
 const PROFILE_STORAGE_KEY = 'virgil-bakery-profile';
-
-/** The bakery's WhatsApp — same number the floating button and footer use.
- * Used to link the "scrie-ne pe WhatsApp" fallback for >10-item carts. */
-const WHATSAPP_URL = 'https://wa.me/40746245391';
 
 interface CachedProfile {
   name: string;
@@ -95,6 +92,8 @@ interface CartPageClientProps {
   holidayStartDate?: Date | null;
   holidayEndDate?: Date | null;
   isNoticeActive?: boolean;
+  /** wa.me link from the siteConfig global; falls back to the shared default. */
+  whatsappUrl?: string;
 }
 
 /**
@@ -112,6 +111,7 @@ export function CartPageClient({
   holidayStartDate,
   holidayEndDate,
   isNoticeActive = false,
+  whatsappUrl,
 }: CartPageClientProps = {}) {
   const { items, updateQuantity, removeItem, clearCart, total, itemCount } = useCart();
   const emptyAddress: AddressFields = {
@@ -1131,7 +1131,7 @@ export function CartPageClient({
                                 <>
                                   Peste 10 produse — alege un punct GLS sau{' '}
                                   <a
-                                    href={WHATSAPP_URL}
+                                    href={whatsappUrl || whatsappLink()}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="underline"

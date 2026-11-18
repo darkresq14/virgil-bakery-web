@@ -19,6 +19,7 @@ import { mergeOpenGraph } from '@/utilities/mergeOpenGraph';
 import { localBusinessSchema } from '@/utilities/schema';
 import { SITE_DESCRIPTION, SITE_TITLE } from '@/utilities/seoDefaults';
 import { cn } from '@/utilities/ui';
+import { whatsappLink } from '@/utilities/whatsapp';
 
 import './globals.css';
 import { getServerSideURL } from '@/utilities/getURL';
@@ -45,6 +46,7 @@ const inter = Inter({
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const siteConfig = await getCachedGlobal('siteConfig', 1)();
   const homepage = await getCachedGlobal('homepage', 1)();
+  const whatsappUrl = whatsappLink(siteConfig?.whatsappNumber);
 
   const bizSchema = localBusinessSchema({
     name: 'Pâine cu Maia by Virgil',
@@ -104,12 +106,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   />
                 ) : undefined
               }
+              whatsappUrl={whatsappUrl}
             />
             <main id="main-content" className="flex-1 pt-(--header-height,4rem)">
               {children}
             </main>
             <Footer />
-            <WhatsAppButton />
+            <WhatsAppButton whatsappUrl={whatsappUrl} />
             <CookieConsent />
             <HolidayNotice
               active={holiday.isHolidayActive}

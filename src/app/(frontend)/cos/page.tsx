@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getCachedGlobal } from '@/utilities/getGlobals';
 import { holidayDates } from '@/utilities/holidayDates';
+import { whatsappLink } from '@/utilities/whatsapp';
 import { CartPageClient } from './page.client';
 
 export const metadata: Metadata = {
@@ -26,6 +27,7 @@ export default async function CartPage() {
       holidayStartDate={holidayStartDate}
       holidayEndDate={holidayEndDate}
       isNoticeActive={isNoticeActive}
+      whatsappUrl={whatsappLink(siteConfig?.whatsappNumber)}
     />
   );
 }

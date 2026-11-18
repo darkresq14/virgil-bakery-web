@@ -5,6 +5,7 @@ import Link from 'next/link';
 import RichText from '@/components/RichText';
 import { ScrollReveal } from '@/components/ScrollReveal';
 import { getCachedGlobal } from '@/utilities/getGlobals';
+import { whatsappLink } from '@/utilities/whatsapp';
 import PageClient from './page.client';
 
 export const metadata: Metadata = {
@@ -151,7 +152,7 @@ export default async function CumComandPage() {
               </a>
             ) : (
               <a
-                href={`https://wa.me/${whatsappNumber?.replace(/[^0-9]/g, '') || '40746245391'}`}
+                href={whatsappLink(whatsappNumber)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-full bg-[#25D366] text-white px-8 py-3 font-sans font-medium hover:bg-[#20bd5a] transition-colors"

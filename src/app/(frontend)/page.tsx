@@ -16,6 +16,7 @@ import { mergeOpenGraph } from '@/utilities/mergeOpenGraph';
 import { isActiveOneOff, isEffectivelyPurchaseable } from '@/utilities/productAvailability';
 import { SITE_DESCRIPTION, SITE_TITLE } from '@/utilities/seoDefaults';
 import { isExpandedDoc } from '@/utilities/type-guards';
+import { whatsappLink } from '@/utilities/whatsapp';
 
 // 24h ISR floor. On-demand revalidation hooks (product/post/testimonial saves)
 // keep content fresh; this just bounds baseline regen churn. Was 600s (10m), which
@@ -213,10 +214,7 @@ export default async function HomePage() {
 
               {/* Card: WhatsApp */}
               <a
-                href={
-                  siteConfig?.whatsappGroupUrl ||
-                  `https://wa.me/${siteConfig?.whatsappNumber?.replace(/[^0-9]/g, '') || '40746245391'}`
-                }
+                href={siteConfig?.whatsappGroupUrl || whatsappLink(siteConfig?.whatsappNumber)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group flex flex-col items-center text-center p-6 rounded-xl bg-secondary/50 hover:bg-secondary hover:shadow-md hover:-translate-y-0.5 transition-all"
@@ -282,7 +280,7 @@ export default async function HomePage() {
             </div>
             {siteConfig?.whatsappNumber && (
               <a
-                href={`https://wa.me/${siteConfig.whatsappNumber.replace(/[^0-9]/g, '')}`}
+                href={whatsappLink(siteConfig.whatsappNumber)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 mt-8 rounded-full bg-[#25D366] text-white px-8 py-3 font-sans font-medium hover:bg-[#20bd5a] hover:shadow-lg hover:shadow-[#25D366]/25 hover:scale-105 transition-all"
