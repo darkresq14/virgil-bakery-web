@@ -218,9 +218,9 @@ describe('CartPageClient — address + zone-driven delivery (issue #47)', () => 
     const checkoutButton = screen.getByText(/trimite comanda/i);
     fireEvent.click(checkoutButton);
 
-    expect(screen.getByText(/județul este obligatoriu/i)).toBeTruthy();
-    expect(screen.getByText(/localitatea este obligatorie/i)).toBeTruthy();
-    expect(screen.getByText(/strada este obligatorie/i)).toBeTruthy();
+    expect(screen.getAllByText(/județul este obligatoriu/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/localitatea este obligatorie/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/strada și numărul sunt obligatorii/i).length).toBeGreaterThan(0);
   });
 
   it('requires a GLS point when point delivery is selected', () => {
@@ -234,9 +234,9 @@ describe('CartPageClient — address + zone-driven delivery (issue #47)', () => 
 
     fireEvent.click(screen.getByText(/trimite comanda/i));
 
-    expect(screen.getByText('Alege punctul GLS')).toBeTruthy();
+    expect(screen.getAllByText('Alege punctul GLS').length).toBeGreaterThan(0);
     // Street is not the destination for point delivery — no street error.
-    expect(screen.queryByText(/strada este obligatorie/i)).toBeNull();
+    expect(screen.queryByText(/strada și numărul sunt obligatorii/i)).toBeNull();
   });
 
   it('does not call fetch when address validation fails', () => {
@@ -665,7 +665,7 @@ describe('CartPageClient — phone required on every order', () => {
 
     submitOrder();
 
-    expect(screen.getByText(/telefonul este obligatoriu/i)).toBeTruthy();
+    expect(screen.getAllByText(/telefonul este obligatoriu/i).length).toBeGreaterThan(0);
     expect(getPhoneInput().className).toContain('border-destructive');
 
     const orderPosts = orderPostsOf(fetchSpy);
@@ -736,7 +736,7 @@ describe('CartPageClient — phone required on every order', () => {
     fireEvent.change(getPhoneInput(), { target: { value: '' } });
     submitOrder();
 
-    expect(screen.getByText(/telefonul este obligatoriu/i)).toBeTruthy();
+    expect(screen.getAllByText(/telefonul este obligatoriu/i).length).toBeGreaterThan(0);
     expect(getPhoneInput().value).toBe('');
 
     const orderPosts = orderPostsOf(fetchSpy);
@@ -748,11 +748,11 @@ describe('CartPageClient — phone required on every order', () => {
 
     submitOrder();
 
-    expect(screen.getByText(/numele este obligatoriu/i)).toBeTruthy();
-    expect(screen.getByText(/telefonul este obligatoriu/i)).toBeTruthy();
-    expect(screen.getByText(/județul este obligatoriu/i)).toBeTruthy();
-    expect(screen.getByText(/localitatea este obligatorie/i)).toBeTruthy();
-    expect(screen.getByText(/strada este obligatorie/i)).toBeTruthy();
+    expect(screen.getAllByText(/numele este obligatoriu/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/telefonul este obligatoriu/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/județul este obligatoriu/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/localitatea este obligatorie/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/strada și numărul sunt obligatorii/i).length).toBeGreaterThan(0);
   });
 });
 
@@ -887,7 +887,7 @@ describe('CartPageClient — cached GLS choice + point revalidation (issue #47 h
 
     // Submit without a point → the error shows.
     fireEvent.click(screen.getByText(/trimite comanda/i));
-    expect(screen.getByText('Alege punctul GLS')).toBeTruthy();
+    expect(screen.getAllByText('Alege punctul GLS').length).toBeGreaterThan(0);
 
     // The widget element fires `change` with the picked point.
     const widget = document.querySelector('gls-dpm');
@@ -965,5 +965,63 @@ describe('CartPageClient — cached GLS choice + point revalidation (issue #47 h
     expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('map.gls-romania.com'))).toBe(
       true,
     );
+  });
+});
+
+describe('CartPageClient — accessible errors + form ergonomics (critique fixes)', () => {
+  function fillForm() {
+    fireEvent.change(screen.getByLabelText(/nume/i), { target: { value: 'Ion Pop' } });
+    fireEvent.change(screen.getByLabelText(/telefon/i), { target: { value: '0722 111 222' } });
+    fireEvent.change(screen.getByLabelText(/județ/i), { target: { value: 'Sibiu' } });
+    fireEvent.change(screen.getByLabelText(/localitate/i), { target: { value: 'Sibiu' } });
+    fireEvent.change(screen.getByPlaceholderText(/strada și numărul/i), {
+      target: { value: 'Str. Cerului 1' },
+    });
+  }
+
+  it('moves focus to a focusable error summary on failed submit', async () => {
+    setupCartPage();
+    // Nothing filled — every required field invalid.
+    fireEvent.click(screen.getByText(/trimite comanda/i));
+
+    const summary = screen.getByRole('alert');
+    await waitFor(() => expect(document.activeElement).toBe(summary));
+    // Summary links to the invalid fields (GOV.UK pattern).
+    expect(within(summary).getByRole('link', { name: /nume/i })).toBeTruthy();
+  });
+
+  it('marks invalid text fields with aria-invalid + aria-describedby', () => {
+    setupCartPage();
+    fireEvent.click(screen.getByText(/trimite comanda/i));
+
+    const name = screen.getByLabelText(/nume/i) as HTMLInputElement;
+    expect(name.getAttribute('aria-invalid')).toBe('true');
+    const describedBy = name.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy as string)).toBeTruthy();
+  });
+
+  it('submits via Enter key inside a real <form> element', async () => {
+    const availability = availabilityResponse();
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(availability)
+      .mockResolvedValueOnce(Response.json({ ok: true }, { status: 201 }));
+    const { view } = setupCartPage();
+    fillForm();
+
+    fireEvent.submit(view.container.querySelector('form') as HTMLFormElement);
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/multumim'));
+  });
+
+  it('requires a second tap before clearing the cart', () => {
+    const clearCart = vi.fn();
+    setupCartPage({ clearCart });
+
+    fireEvent.click(screen.getByText(/golește coșul/i));
+    expect(clearCart).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText(/apasă din nou/i));
+    expect(clearCart).toHaveBeenCalledTimes(1);
   });
 });

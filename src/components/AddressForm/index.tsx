@@ -48,6 +48,8 @@ export function AddressForm({
         <select
           id="address-judet"
           value={values.judet}
+          aria-invalid={errors?.judet ? true : undefined}
+          aria-describedby={errors?.judet ? 'address-judet-error' : undefined}
           onChange={(e) => {
             const judet = e.target.value;
             handleChange({ judet, localitate: '' });
@@ -65,7 +67,11 @@ export function AddressForm({
             </option>
           ))}
         </select>
-        {errors?.judet && <p className={errorClass}>{errors.judet}</p>}
+        {errors?.judet && (
+          <p id="address-judet-error" className={errorClass}>
+            {errors.judet}
+          </p>
+        )}
       </div>
 
       {/* Localitate — custom autocomplete */}
@@ -87,13 +93,19 @@ export function AddressForm({
             type="text"
             id="address-street"
             value={values.streetAddress}
+            aria-invalid={errors?.streetAddress ? true : undefined}
+            aria-describedby={errors?.streetAddress ? 'address-street-error' : undefined}
             onChange={(e) => handleChange({ streetAddress: e.target.value })}
             className={`${fieldBase} ${
               errors?.streetAddress ? 'border-destructive' : 'border-input'
             }`}
             placeholder="Strada și numărul"
           />
-          {errors?.streetAddress && <p className={errorClass}>{errors.streetAddress}</p>}
+          {errors?.streetAddress && (
+            <p id="address-street-error" className={errorClass}>
+              {errors.streetAddress}
+            </p>
+          )}
         </div>
       )}
 
@@ -218,6 +230,8 @@ function LocalityAutocomplete({
         aria-expanded={showDropdown}
         aria-controls={listboxId}
         aria-activedescendant={highlightIndex >= 0 ? `${listboxId}-${highlightIndex}` : undefined}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? 'address-localitate-error' : undefined}
         className={`${fieldBase} ${error ? 'border-destructive' : 'border-input'}`}
         placeholder={
           disabled ? 'Selectează mai întâi județul' : `Scrie cel puțin ${MIN_CHARS} caractere…`
@@ -251,7 +265,11 @@ function LocalityAutocomplete({
           ))}
         </div>
       )}
-      {error && <p className={errorClass}>{error}</p>}
+      {error && (
+        <p id="address-localitate-error" className={errorClass}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }

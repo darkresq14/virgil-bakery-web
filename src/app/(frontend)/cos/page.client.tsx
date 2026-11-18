@@ -48,6 +48,10 @@ import {
  * the "Am mai comandat" mini-flow. */
 const PROFILE_STORAGE_KEY = 'virgil-bakery-profile';
 
+/** The bakery's WhatsApp — same number the floating button and footer use.
+ * Used to link the "scrie-ne pe WhatsApp" fallback for >10-item carts. */
+const WHATSAPP_URL = 'https://wa.me/40746245391';
+
 interface CachedProfile {
   name: string;
   phone: string;
@@ -157,6 +161,13 @@ export function CartPageClient({
   }, []);
   const [address, setAddress] = useState<AddressFields>(emptyAddress);
   const [formError, setFormError] = useState('');
+  // Two-step "Golește coșul": first tap arms the confirm, second one clears.
+  const [confirmingClear, setConfirmingClear] = useState(false);
+  const clearConfirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Focus target for the error summary after a failed submit (GOV.UK pattern:
+  // announce what went wrong to keyboard and screen-reader users).
+  const errorSummaryRef = useRef<HTMLDivElement>(null);
+  const shouldFocusSummaryRef = useRef(false);
   const [fieldErrors, setFieldErrors] = useState({
     name: '',
     phone: '',
@@ -366,11 +377,23 @@ export function CartPageClient({
   const displayShippingCost = shippingCost ?? 0;
 
   const handleCheckout = async () => {
+    /** Any validation dead-end: arm the error-summary focus (after React
+     * commits the summary to the DOM), then return. */
+    const failValidation = () => {
+      shouldFocusSummaryRef.current = true;
+      requestAnimationFrame(() => {
+        if (!shouldFocusSummaryRef.current) return;
+        shouldFocusSummaryRef.current = false;
+        errorSummaryRef.current?.focus();
+      });
+    };
     if (staleItemIds.size > 0) {
+      failValidation();
       setFormError('Elimină produsele indisponibile din coș pentru a continua');
       return;
     }
     if (hasDayConflict || hasDateConflict) {
+      failValidation();
       setFormError(
         hasDateConflict
           ? 'Produsele din coș au date de livrare diferite — elimină unul pentru a continua'
@@ -379,15 +402,18 @@ export function CartPageClient({
       return;
     }
     if (!selectedDelivery) {
+      failValidation();
       setFormError('Selectează o dată de livrare');
       return;
     }
     const preSelected = deliveryDates.find((d) => d.label === selectedDelivery);
     if (preSelected && !cartAllowedDays.includes(preSelected.date.getDay())) {
+      failValidation();
       setFormError('Data selectată nu este disponibilă pentru toate produsele din coș');
       return;
     }
     if (preSelected && !preSelected.isSelectable) {
+      failValidation();
       setFormError('Data selectată nu este disponibilă pentru toate produsele din coș');
       return;
     }
@@ -396,6 +422,7 @@ export function CartPageClient({
     if (shippingCost == null) {
       // Home delivery above 10 items — the radio is disabled; a stale cached
       // choice can still land here, so guard the submit too.
+      failValidation();
       setFormError(
         'Livrarea acasă nu este disponibilă peste 10 produse — alege un punct GLS sau scrie-ne pe WhatsApp',
       );
@@ -410,7 +437,9 @@ export function CartPageClient({
       streetAddress: '',
       glsPoint: '',
     };
-    // Phone is the customer identity for the whole pipeline — required on every order.
+    // Phone is the customer identity for the whole pipeline — required on every
+    // order. No format validation on purpose: any reachable number beats a
+    // rejected order.
     if (!form.phone.trim()) errors.phone = 'Telefonul este obligatoriu';
     if (!form.name.trim()) errors.name = 'Numele este obligatoriu';
     if (!address.judet) errors.judet = 'Județul este obligatoriu';
@@ -418,7 +447,7 @@ export function CartPageClient({
     // Street is the destination for personal and home delivery; for GLS point
     // delivery the chosen locker/ParcelShop replaces it.
     if (deliveryMethod !== 'gls-punct' && !address.streetAddress.trim())
-      errors.streetAddress = 'Strada este obligatorie';
+      errors.streetAddress = 'Strada și numărul sunt obligatorii';
     if (deliveryMethod === 'gls-punct' && !glsPoint) errors.glsPoint = 'Alege punctul GLS';
     setFieldErrors(errors);
     if (
@@ -428,8 +457,10 @@ export function CartPageClient({
       errors.localitate ||
       errors.streetAddress ||
       errors.glsPoint
-    )
+    ) {
+      failValidation();
       return;
+    }
     if (submittingRef.current) return; // an order POST is already in flight
     submittingRef.current = true;
     setIsSubmitting(true);
@@ -514,6 +545,14 @@ export function CartPageClient({
     clearCart();
     router.push('/multumim');
   };
+
+  // Let an armed "Golește coșul" confirm disarm itself after a pause.
+  useEffect(
+    () => () => {
+      if (clearConfirmTimerRef.current) clearTimeout(clearConfirmTimerRef.current);
+    },
+    [],
+  );
 
   if (items.length === 0) {
     return (
@@ -637,7 +676,7 @@ export function CartPageClient({
                       <button
                         type="button"
                         onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                        className="flex items-center justify-center w-8 h-8 rounded-full border border-border hover:bg-secondary transition-colors"
+                        className="flex items-center justify-center h-11 w-11 rounded-full border border-border hover:bg-secondary transition-colors"
                         aria-label="Scade cantitatea"
                       >
                         <Minus className="w-3 h-3" />
@@ -646,7 +685,7 @@ export function CartPageClient({
                       <button
                         type="button"
                         onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                        className="flex items-center justify-center w-8 h-8 rounded-full border border-border hover:bg-secondary transition-colors"
+                        className="flex items-center justify-center h-11 w-11 rounded-full border border-border hover:bg-secondary transition-colors"
                         aria-label="Crește cantitatea"
                       >
                         <Plus className="w-3 h-3" />
@@ -662,7 +701,7 @@ export function CartPageClient({
                     <button
                       type="button"
                       onClick={() => removeItem(item.productId)}
-                      className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+                      className="flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
                       aria-label={`Elimină ${item.name}`}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -682,10 +721,26 @@ export function CartPageClient({
               </Link>
               <button
                 type="button"
-                onClick={clearCart}
+                onClick={() => {
+                  if (confirmingClear) {
+                    if (clearConfirmTimerRef.current) clearTimeout(clearConfirmTimerRef.current);
+                    setConfirmingClear(false);
+                    clearCart();
+                  } else {
+                    setConfirmingClear(true);
+                    // One stray thumb-tap must not destroy a checkout in
+                    // progress; the confirm disarms itself after 3s.
+                    clearConfirmTimerRef.current = setTimeout(
+                      () => setConfirmingClear(false),
+                      3000,
+                    );
+                  }
+                }}
                 className="text-sm font-sans text-destructive hover:underline"
               >
-                Golește coșul
+                {confirmingClear
+                  ? 'Golește coșul — apasă din nou pentru a confirma'
+                  : 'Golește coșul'}
               </button>
             </div>
           </div>
@@ -695,310 +750,431 @@ export function CartPageClient({
             <div className="rounded-xl border border-border bg-card p-6 sticky top-20">
               <h2 className="font-heading text-xl mb-4">Comandă</h2>
 
-              <div className="mb-6 pb-4 border-b border-border space-y-2">
-                <div className="flex justify-between">
-                  <span className="font-sans text-muted-foreground">
-                    Subtotal ({itemCount} produse)
-                  </span>
-                  <span className="font-sans font-medium">{formatPrice(total)}</span>
-                </div>
-                {showTransport && (
+              <form
+                noValidate
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleCheckout();
+                }}
+              >
+                {/* Error summary — the one announced, focusable place every failed
+                  submit lands on (role=alert + focus), linking to the invalid
+                  fields. Inline errors below stay as the per-field reminders. */}
+                {(formError || Object.values(fieldErrors).some(Boolean)) && (
+                  <div
+                    ref={errorSummaryRef}
+                    role="alert"
+                    tabIndex={-1}
+                    className="mb-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <p className="font-sans text-sm font-semibold text-destructive">
+                      {Object.values(fieldErrors).some(Boolean)
+                        ? 'Completează câmpurile evidențiate'
+                        : 'Corectează comanda'}
+                    </p>
+                    {formError && (
+                      <p className="mt-1 font-sans text-sm leading-relaxed text-foreground">
+                        {formError}
+                      </p>
+                    )}
+                    <ul className="mt-1 list-inside space-y-0.5">
+                      {fieldErrors.name && (
+                        <li>
+                          <a
+                            href="#customer-name"
+                            className="text-sm font-sans text-destructive underline"
+                          >
+                            {fieldErrors.name}
+                          </a>
+                        </li>
+                      )}
+                      {fieldErrors.phone && (
+                        <li>
+                          <a
+                            href="#customer-phone"
+                            className="text-sm font-sans text-destructive underline"
+                          >
+                            {fieldErrors.phone}
+                          </a>
+                        </li>
+                      )}
+                      {fieldErrors.judet && (
+                        <li>
+                          <a
+                            href="#address-judet"
+                            className="text-sm font-sans text-destructive underline"
+                          >
+                            {fieldErrors.judet}
+                          </a>
+                        </li>
+                      )}
+                      {fieldErrors.localitate && (
+                        <li>
+                          <a
+                            href="#address-localitate"
+                            className="text-sm font-sans text-destructive underline"
+                          >
+                            {fieldErrors.localitate}
+                          </a>
+                        </li>
+                      )}
+                      {fieldErrors.streetAddress && (
+                        <li>
+                          <a
+                            href="#address-street"
+                            className="text-sm font-sans text-destructive underline"
+                          >
+                            {fieldErrors.streetAddress}
+                          </a>
+                        </li>
+                      )}
+                      {fieldErrors.glsPoint && (
+                        <li>
+                          <a
+                            href="#gls-punct-card"
+                            className="text-sm font-sans text-destructive underline"
+                          >
+                            {fieldErrors.glsPoint}
+                          </a>
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="mb-6 pb-4 border-b border-border space-y-2">
                   <div className="flex justify-between">
-                    <span className="font-sans text-muted-foreground">Transport (GLS)</span>
-                    <span className="font-sans font-medium">
-                      {formatPrice(displayShippingCost)}
+                    <span className="font-sans text-muted-foreground">
+                      Subtotal ({itemCount} {itemCount === 1 ? 'produs' : 'produse'})
+                    </span>
+                    <span className="font-sans font-medium">{formatPrice(total)}</span>
+                  </div>
+                  {showTransport && (
+                    <div className="flex justify-between">
+                      <span className="font-sans text-muted-foreground">Transport (GLS)</span>
+                      <span className="font-sans font-medium">
+                        {formatPrice(displayShippingCost)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between pt-2 border-t border-border">
+                    <span className="font-sans text-lg font-bold">Total</span>
+                    <span className="font-sans text-xl font-bold text-primary">
+                      {formatPrice(total + displayShippingCost)}
                     </span>
                   </div>
-                )}
-                <div className="flex justify-between pt-2 border-t border-border">
-                  <span className="font-sans text-lg font-bold">Total</span>
-                  <span className="font-sans text-xl font-bold text-primary">
-                    {formatPrice(total + displayShippingCost)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-4 mb-6">
-                {/* Delivery date — required */}
-                <div>
-                  <label
-                    htmlFor="delivery-date"
-                    className="block text-sm font-sans font-medium mb-1"
-                  >
-                    Dată livrare *
-                  </label>
-                  <select
-                    id="delivery-date"
-                    value={selectedDelivery}
-                    onChange={(e) => setForm({ ...form, deliveryDate: e.target.value })}
-                    className="w-full rounded-lg border border-input px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring bg-background"
-                  >
-                    {deliveryDates.map((d) => (
-                      <option key={d.label} value={d.label} disabled={!d.isSelectable}>
-                        {formatDeliveryOptionLabel(d)}
-                      </option>
-                    ))}
-                  </select>
-                  {formError && (
-                    <p className="text-xs text-destructive font-sans mt-1">{formError}</p>
-                  )}
-                  {!hasDayConflict && !hasDateConflict && restrictedItems.length > 0 && (
-                    <p className="text-xs text-muted-foreground font-sans mt-1">
-                      {cartAllowedDates
-                        ? `Se poate livra doar ${formatRomanianDate(cartAllowedDates[0])} — ${oneOffItems.map((e) => e.item.name).join(', ')} ${oneOffItems.length === 1 ? 'este disponibil' : 'sunt disponibile'} doar atunci.`
-                        : `Se poate livra doar ${weekdayListLabel(cartAllowedDays)} — unele produse din coș nu sunt disponibile în alte zile.`}
-                    </p>
-                  )}
                 </div>
 
-                {/* Name — single flow for everyone (issue #47) */}
-                <div>
-                  <label
-                    htmlFor="customer-name"
-                    className="block text-sm font-sans font-medium mb-1"
-                  >
-                    Nume <span className="text-destructive">*</span>
-                  </label>
-                  <input
-                    id="customer-name"
-                    type="text"
-                    autoComplete="name"
-                    value={form.name}
-                    onChange={(e) => {
-                      setForm({ ...form, name: e.target.value });
-                      setFieldErrors({ ...fieldErrors, name: '' });
-                    }}
-                    className={`w-full rounded-lg border px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring ${
-                      fieldErrors.name ? 'border-destructive' : 'border-input'
-                    }`}
-                    placeholder="Numele tău"
-                  />
-                  {fieldErrors.name && (
-                    <p className="text-xs text-destructive font-sans mt-1">{fieldErrors.name}</p>
-                  )}
-                </div>
-
-                {/* Address — always; street hidden for GLS point delivery */}
-                <AddressForm
-                  values={address}
-                  onChange={setAddress}
-                  hideStreetFields={deliveryMethod === 'gls-punct'}
-                  errors={{
-                    judet: fieldErrors.judet || undefined,
-                    localitate: fieldErrors.localitate || undefined,
-                    streetAddress: fieldErrors.streetAddress || undefined,
-                  }}
-                />
-
-                {/* Zone-driven delivery info (issue #47) */}
-                {zone === 'in' && (
-                  <div className="rounded-lg bg-secondary/50 px-3 py-2 text-sm font-sans">
-                    🚗 Livrare personală — Gratuită
+                <div className="space-y-4 mb-6">
+                  {/* Delivery date — required */}
+                  <div>
+                    <label
+                      htmlFor="delivery-date"
+                      className="block text-sm font-sans font-medium mb-1"
+                    >
+                      Dată livrare *
+                    </label>
+                    <select
+                      id="delivery-date"
+                      value={selectedDelivery}
+                      onChange={(e) => setForm({ ...form, deliveryDate: e.target.value })}
+                      className="w-full rounded-lg border border-input px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring bg-background"
+                    >
+                      {deliveryDates.map((d) => (
+                        <option key={d.label} value={d.label} disabled={!d.isSelectable}>
+                          {formatDeliveryOptionLabel(d)}
+                        </option>
+                      ))}
+                    </select>
+                    {!hasDayConflict && !hasDateConflict && restrictedItems.length > 0 && (
+                      <p className="text-xs text-muted-foreground font-sans mt-1">
+                        {cartAllowedDates
+                          ? `Se poate livra doar ${formatRomanianDate(cartAllowedDates[0])} — ${oneOffItems.map((e) => e.item.name).join(', ')} ${oneOffItems.length === 1 ? 'este disponibil' : 'sunt disponibile'} doar atunci.`
+                          : `Se poate livra doar ${weekdayListLabel(cartAllowedDays)} — unele produse din coș nu sunt disponibile în alte zile.`}
+                      </p>
+                    )}
                   </div>
-                )}
-                {zone === 'unknown' && (
-                  <p className="text-xs text-muted-foreground font-sans">
-                    Completează județul și localitatea pentru a vedea opțiunile de livrare.
-                  </p>
-                )}
-                {zone === 'out' && (
-                  <div className="space-y-3" role="radiogroup" aria-label="Metodă de livrare GLS">
+
+                  {/* Name — single flow for everyone (issue #47) */}
+                  <div>
+                    <label
+                      htmlFor="customer-name"
+                      className="block text-sm font-sans font-medium mb-1"
+                    >
+                      Nume <span className="text-destructive">*</span>
+                    </label>
+                    <input
+                      id="customer-name"
+                      type="text"
+                      autoComplete="name"
+                      value={form.name}
+                      aria-invalid={fieldErrors.name ? true : undefined}
+                      aria-describedby={fieldErrors.name ? 'customer-name-error' : undefined}
+                      onChange={(e) => {
+                        setForm({ ...form, name: e.target.value });
+                        setFieldErrors({ ...fieldErrors, name: '' });
+                      }}
+                      className={`w-full rounded-lg border px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring ${
+                        fieldErrors.name ? 'border-destructive' : 'border-input'
+                      }`}
+                      placeholder="Numele tău"
+                    />
+                    {fieldErrors.name && (
+                      <p
+                        id="customer-name-error"
+                        className="text-xs text-destructive font-sans mt-1"
+                      >
+                        {fieldErrors.name}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Phone — required on every order; the customer identity the
+                    whole pipeline (confirmation, sheet matching) keys on. Kept
+                    next to the name so a typo surfaces before the customer
+                    invests in the rest of the form. */}
+                  <div>
+                    <label
+                      htmlFor="customer-phone"
+                      className="block text-sm font-sans font-medium mb-1"
+                    >
+                      Telefon <span className="text-destructive">*</span>
+                    </label>
+                    <input
+                      id="customer-phone"
+                      type="tel"
+                      autoComplete="tel"
+                      inputMode="tel"
+                      value={form.phone}
+                      aria-invalid={fieldErrors.phone ? true : undefined}
+                      aria-describedby={fieldErrors.phone ? 'customer-phone-error' : undefined}
+                      onChange={(e) => {
+                        setForm({ ...form, phone: e.target.value });
+                        setFieldErrors({ ...fieldErrors, phone: '' });
+                      }}
+                      className={`w-full rounded-lg border px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring ${
+                        fieldErrors.phone ? 'border-destructive' : 'border-input'
+                      }`}
+                      placeholder="07XX XXX XXX"
+                    />
+                    {fieldErrors.phone && (
+                      <p
+                        id="customer-phone-error"
+                        className="text-xs text-destructive font-sans mt-1"
+                      >
+                        {fieldErrors.phone}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Address — always; street hidden for GLS point delivery */}
+                  <AddressForm
+                    values={address}
+                    onChange={setAddress}
+                    hideStreetFields={deliveryMethod === 'gls-punct'}
+                    errors={{
+                      judet: fieldErrors.judet || undefined,
+                      localitate: fieldErrors.localitate || undefined,
+                      streetAddress: fieldErrors.streetAddress || undefined,
+                    }}
+                  />
+
+                  {/* Zone-driven delivery info (issue #47) */}
+                  {zone === 'in' && (
+                    <div className="rounded-lg bg-secondary/50 px-3 py-2 text-sm font-sans">
+                      🚗 Livrare personală — Gratuită
+                    </div>
+                  )}
+                  {zone === 'unknown' && (
                     <p className="text-xs text-muted-foreground font-sans">
-                      Suntem în afara zonei de livrare personală — trimitem prin GLS:
+                      Completează județul și localitatea pentru a vedea opțiunile de livrare.
                     </p>
+                  )}
+                  {zone === 'out' && (
+                    <div className="space-y-3" role="radiogroup" aria-label="Metodă de livrare GLS">
+                      <p className="text-xs text-muted-foreground font-sans">
+                        Suntem în afara zonei de livrare personală — trimitem prin GLS:
+                      </p>
 
-                    {/* Punct GLS card */}
-                    <label
-                      className={`block rounded-xl border-2 p-3 cursor-pointer transition-all ${
-                        glsChoice === 'punct'
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border hover:border-primary/40'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <input
-                          type="radio"
-                          name="gls-method"
-                          className="mt-1"
-                          checked={glsChoice === 'punct'}
-                          onChange={() => setGlsChoice('punct')}
-                        />
-                        <span className="flex-1">
-                          <span className="flex items-baseline justify-between gap-2">
-                            <span className="font-sans font-semibold text-sm">
-                              <Package className="mr-1 inline h-4 w-4 text-primary" />
-                              Punct GLS
+                      {/* Punct GLS card */}
+                      <label
+                        id="gls-punct-card"
+                        className={`block rounded-xl border-2 p-3 cursor-pointer transition-all has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring ${
+                          glsChoice === 'punct'
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-primary/40'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="radio"
+                            name="gls-method"
+                            className="mt-1"
+                            checked={glsChoice === 'punct'}
+                            onChange={() => setGlsChoice('punct')}
+                          />
+                          <span className="flex-1">
+                            <span className="flex items-baseline justify-between gap-2">
+                              <span className="font-sans font-semibold text-sm">
+                                <Package className="mr-1 inline h-4 w-4 text-primary" />
+                                Punct GLS
+                              </span>
+                              <span className="font-sans font-bold text-sm">
+                                {POINT_SHIPPING_COST} lei
+                              </span>
                             </span>
-                            <span className="font-sans font-bold text-sm">
-                              {POINT_SHIPPING_COST} lei
+                            <span className="mt-0.5 block text-xs text-muted-foreground font-sans">
+                              Locker sau ParcelShop — alegi punctul de pe hartă. Preț fix,
+                              indiferent de numărul de produse.
                             </span>
                           </span>
-                          <span className="mt-0.5 block text-xs text-muted-foreground font-sans">
-                            Locker sau ParcelShop — alegi punctul de pe hartă. Preț fix, indiferent
-                            de numărul de produse.
-                          </span>
-                        </span>
-                      </div>
-                      {glsChoice === 'punct' && (
-                        <div className="mt-3 space-y-2">
-                          {glsPoint ? (
-                            <>
-                              <div className="flex items-start gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2">
-                                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                                <div className="min-w-0 text-sm font-sans">
-                                  <p className="font-medium leading-tight">{glsPoint.nume}</p>
-                                  <p className="text-muted-foreground leading-tight">
-                                    {glsPoint.adresa || 'GLS'}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {glsPoint.tip === 'parcel-shop'
-                                      ? 'ParcelShop'
-                                      : 'Parcel locker'}
-                                    {glsPoint.goldId ? ` · ID ${glsPoint.goldId}` : ''}
-                                  </p>
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  openGlsWidgetRef.current?.();
-                                }}
-                                className="text-xs font-sans text-primary hover:underline"
-                              >
-                                Schimbă punctul
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <p className="text-xs text-muted-foreground font-sans">
-                                În hartă, caută „{address.localitate || 'localitatea ta'}” sau
-                                folosește butonul de locație al hărții.
-                              </p>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  openGlsWidgetRef.current?.();
-                                }}
-                                className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2.5 text-sm font-sans font-medium text-primary hover:bg-primary/20 transition-colors"
-                              >
-                                <MapPin className="h-4 w-4" />
-                                Alege punctul GLS pe hartă
-                              </button>
-                            </>
-                          )}
-                          {pointWarning && !glsPoint && (
-                            <p className="text-xs text-muted-foreground font-sans">
-                              Punctul salvat anterior nu mai este disponibil — alege altul.
-                            </p>
-                          )}
-                          {fieldErrors.glsPoint && (
-                            <p className="text-xs text-destructive font-sans">
-                              {fieldErrors.glsPoint}
-                            </p>
-                          )}
                         </div>
-                      )}
-                    </label>
+                        {glsChoice === 'punct' && (
+                          <div className="mt-3 space-y-2">
+                            {glsPoint ? (
+                              <>
+                                <div className="flex items-start gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2">
+                                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                                  <div className="min-w-0 text-sm font-sans">
+                                    <p className="font-medium leading-tight">{glsPoint.nume}</p>
+                                    <p className="text-muted-foreground leading-tight">
+                                      {glsPoint.adresa || 'GLS'}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {glsPoint.tip === 'parcel-shop' ? 'ParcelShop' : 'Locker GLS'}
+                                      {glsPoint.goldId ? ` · ID ${glsPoint.goldId}` : ''}
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    openGlsWidgetRef.current?.();
+                                  }}
+                                  className="text-xs font-sans text-primary hover:underline"
+                                >
+                                  Schimbă punctul
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-xs text-muted-foreground font-sans">
+                                  În hartă, caută „{address.localitate || 'localitatea ta'}” sau
+                                  folosește butonul de locație al hărții.
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    openGlsWidgetRef.current?.();
+                                  }}
+                                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2.5 text-sm font-sans font-medium text-primary hover:bg-primary/20 transition-colors"
+                                >
+                                  <MapPin className="h-4 w-4" />
+                                  Alege punctul GLS pe hartă
+                                </button>
+                              </>
+                            )}
+                            {pointWarning && !glsPoint && (
+                              <p className="text-xs text-muted-foreground font-sans">
+                                Punctul salvat anterior nu mai este disponibil — alege altul.
+                              </p>
+                            )}
+                            {fieldErrors.glsPoint && (
+                              <p className="text-xs text-destructive font-sans">
+                                {fieldErrors.glsPoint}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </label>
 
-                    {/* Acasă card */}
-                    <label
-                      className={`block rounded-xl border-2 p-3 transition-all ${
-                        homePrice != null
-                          ? `cursor-pointer ${
-                              glsChoice === 'acasa'
-                                ? 'border-primary bg-primary/5'
-                                : 'border-border hover:border-primary/40'
-                            }`
-                          : 'border-border opacity-50'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <input
-                          type="radio"
-                          name="gls-method"
-                          className="mt-1"
-                          disabled={homePrice == null}
-                          checked={glsChoice === 'acasa'}
-                          onChange={() => setGlsChoice('acasa')}
-                        />
-                        <span className="flex-1">
-                          <span className="flex items-baseline justify-between gap-2">
-                            <span className="font-sans font-semibold text-sm">
-                              <Home className="mr-1 inline h-4 w-4 text-primary" />
-                              Livrare acasă
+                      {/* Acasă card */}
+                      <label
+                        className={`block rounded-xl border-2 p-3 transition-all has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring ${
+                          homePrice != null
+                            ? `cursor-pointer ${
+                                glsChoice === 'acasa'
+                                  ? 'border-primary bg-primary/5'
+                                  : 'border-border hover:border-primary/40'
+                              }`
+                            : 'border-border opacity-50'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="radio"
+                            name="gls-method"
+                            className="mt-1"
+                            disabled={homePrice == null}
+                            checked={glsChoice === 'acasa'}
+                            onChange={() => setGlsChoice('acasa')}
+                          />
+                          <span className="flex-1">
+                            <span className="flex items-baseline justify-between gap-2">
+                              <span className="font-sans font-semibold text-sm">
+                                <Home className="mr-1 inline h-4 w-4 text-primary" />
+                                Livrare acasă
+                              </span>
+                              <span className="font-sans font-bold text-sm">
+                                {homePrice != null ? `${homePrice} lei` : 'indisponibil'}
+                              </span>
                             </span>
-                            <span className="font-sans font-bold text-sm">
-                              {homePrice != null ? `${homePrice} lei` : 'indisponibil'}
+                            <span className="mt-0.5 block text-xs text-muted-foreground font-sans">
+                              {homePrice != null ? (
+                                <>
+                                  Curier GLS livrează la adresa ta — {homePrice} lei pentru{' '}
+                                  {itemCount} produse.
+                                </>
+                              ) : (
+                                <>
+                                  Peste 10 produse — alege un punct GLS sau{' '}
+                                  <a
+                                    href={WHATSAPP_URL}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="underline"
+                                  >
+                                    scrie-ne pe WhatsApp
+                                  </a>
+                                  .
+                                </>
+                              )}
                             </span>
                           </span>
-                          <span className="mt-0.5 block text-xs text-muted-foreground font-sans">
-                            {homePrice != null
-                              ? `Curier GLS livrează la adresa ta — ${homePrice} lei pentru ${itemCount} produse.`
-                              : 'Peste 10 produse — alege un punct GLS sau scrie-ne pe WhatsApp.'}
-                          </span>
-                        </span>
-                      </div>
-                    </label>
+                        </div>
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                {submitError && (
+                  <div
+                    role="alert"
+                    className="mb-4 flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4"
+                  >
+                    <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+                    <div className="font-sans text-sm leading-relaxed text-foreground">
+                      <p className="font-semibold">Comanda nu a putut fi trimisă</p>
+                      <p className="mt-1">
+                        Verifică conexiunea și apasă din nou butonul. Produsele din coș sunt
+                        păstrate — nu trebuie să le adaugi din nou.
+                      </p>
+                    </div>
                   </div>
                 )}
 
-                {/* Phone — required on every order (customer identity for order matching) */}
-                <div>
-                  <label
-                    htmlFor="customer-phone"
-                    className="block text-sm font-sans font-medium mb-1"
-                  >
-                    Telefon <span className="text-destructive">*</span>
-                  </label>
-                  <input
-                    id="customer-phone"
-                    type="tel"
-                    autoComplete="tel"
-                    inputMode="tel"
-                    value={form.phone}
-                    onChange={(e) => {
-                      setForm({ ...form, phone: e.target.value });
-                      setFieldErrors({ ...fieldErrors, phone: '' });
-                    }}
-                    className={`w-full rounded-lg border px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-ring ${
-                      fieldErrors.phone ? 'border-destructive' : 'border-input'
-                    }`}
-                    placeholder="+40 7XX XXX XXX"
-                  />
-                  {fieldErrors.phone && (
-                    <p className="text-xs text-destructive font-sans mt-1">{fieldErrors.phone}</p>
-                  )}
-                </div>
-              </div>
-
-              {submitError && (
-                <div
-                  role="alert"
-                  className="mb-4 flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4"
+                <button
+                  type="submit"
+                  disabled={
+                    hasDayConflict || hasDateConflict || staleItemIds.size > 0 || isSubmitting
+                  }
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-primary text-primary-foreground px-8 py-3 font-sans font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary"
                 >
-                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-                  <div className="font-sans text-sm leading-relaxed text-foreground">
-                    <p className="font-semibold">Comanda nu a putut fi trimisă</p>
-                    <p className="mt-1">
-                      Verifică conexiunea și apasă din nou butonul. Produsele din coș sunt păstrate
-                      — nu trebuie să le adaugi din nou.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={handleCheckout}
-                disabled={
-                  hasDayConflict || hasDateConflict || staleItemIds.size > 0 || isSubmitting
-                }
-                className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-primary text-primary-foreground px-8 py-3 font-sans font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary"
-              >
-                {isSubmitting ? 'Se trimite…' : 'Trimite comanda'}
-              </button>
+                  {isSubmitting ? 'Se trimite…' : 'Trimite comanda'}
+                </button>
+              </form>
               <GlsPointPicker
                 onSelect={(selected) => {
                   setGlsPoint(selected);
