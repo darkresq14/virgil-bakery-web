@@ -155,26 +155,42 @@ interface FeedPoint {
   goldId?: unknown;
 }
 
+let feedPromise: Promise<FeedPoint[] | null> | null = null;
+
+/** Loads the public ro.json feed at most once per page session — every
+ * checkout mount with a cached point used to re-download the full feed
+ * (code review on #47). null = unreachable; callers fail open. A network
+ * error clears the cache so a later mount can retry. */
+function loadPointFeed(): Promise<FeedPoint[] | null> {
+  if (!feedPromise) {
+    feedPromise = fetch('https://map.gls-romania.com/data/deliveryPoints/ro.json', {
+      signal: AbortSignal.timeout(10_000),
+    })
+      .then((res) => (res.ok ? (res.json() as Promise<FeedPoint[]>) : null))
+      .catch(() => {
+        feedPromise = null; // allow a later retry
+        return null;
+      });
+  }
+  return feedPromise;
+}
+
 /**
  * Checks a cached GLS point against the live public feed so a removed point
  * is never silently reused (see CONTEXT.md → Cached Checkout Profile).
- * Returns true when the point may stay: found, or the feed was unreachable
- * (fail-open — the widget is the source of truth at pick time anyway).
+ * Returns true when the point may stay: found, the feed was unreachable, or
+ * the feed's shape cannot be trusted (fail-open — the widget is the source
+ * of truth at pick time anyway).
  */
 export async function glsPointStillExists(point: GlsPoint): Promise<boolean> {
-  try {
-    const res = await fetch('https://map.gls-romania.com/data/deliveryPoints/ro.json', {
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!res.ok) return true;
-    const feed = (await res.json()) as FeedPoint[];
-    if (!Array.isArray(feed) || feed.length === 0) return true;
-    return feed.some(
-      (entry) =>
-        (point.matchcode && String(entry.id ?? '') === point.matchcode) ||
-        (point.goldId && String(entry.goldId ?? '') === point.goldId),
-    );
-  } catch {
-    return true;
-  }
+  const feed = await loadPointFeed();
+  if (!feed || !Array.isArray(feed) || feed.length === 0) return true;
+  // Shape guard: entries without any identifier cannot disprove the cached
+  // point — a feed-format change must not permanently reject valid points.
+  if (!feed.some((entry) => entry.id != null || entry.goldId != null)) return true;
+  return feed.some(
+    (entry) =>
+      (point.matchcode && String(entry.id ?? '') === point.matchcode) ||
+      (point.goldId && String(entry.goldId ?? '') === point.goldId),
+  );
 }

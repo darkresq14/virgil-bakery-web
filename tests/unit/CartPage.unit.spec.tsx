@@ -86,6 +86,7 @@ const orderPostsOf = (spy: ReturnType<typeof vi.spyOn>) =>
 function setupCartPage(
   overrides?: Partial<typeof mockCartContext>,
   initialStorage: Record<string, string> = {},
+  fetchImpl?: (input: RequestInfo | URL) => Promise<Response>,
 ) {
   vi.mocked(useCart).mockReturnValue({ ...mockCartContext, ...overrides });
 
@@ -96,8 +97,11 @@ function setupCartPage(
     store[key] = value;
   });
 
-  // Mock fetch
-  vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }));
+  // Mock fetch — a custom impl must be installed before render: mount-time
+  // effects (availability, GLS feed revalidation) fetch during render().
+  const fetchSpy = vi.spyOn(globalThis, 'fetch');
+  if (fetchImpl) fetchSpy.mockImplementation(fetchImpl);
+  else fetchSpy.mockResolvedValue(Response.json({ ok: true }));
 
   // Mock window.open
   vi.spyOn(window, 'open').mockReturnValue(null);
@@ -807,5 +811,159 @@ describe('CartPageClient — delivery date labels for availability-restricted ca
     expect(optionTexts).toContain('Marți, 10 Iunie — indisponibil');
     expect(optionTexts).toContain('Marți, 17 Iunie — indisponibil');
     expect(optionTexts.join('\n')).not.toContain('Marți, 17 Iunie — listă închisă');
+  });
+});
+
+describe('CartPageClient — cached GLS choice + point revalidation (issue #47 hardening)', () => {
+  const PROFILE_CACHE_KEY = 'virgil-bakery-profile';
+
+  const cachedPoint = {
+    matchcode: 'LOCKER-01',
+    goldId: '12345',
+    nume: 'Locker Ex',
+    adresa: 'Str. Ex 1, Cluj',
+    tip: 'parcel-locker',
+  };
+
+  function glsRadio(choice: 'punct' | 'acasa') {
+    // Radios share name="gls-method"; the point card renders first.
+    const radios = document.querySelectorAll<HTMLInputElement>('input[name="gls-method"]');
+    return choice === 'punct' ? radios[0] : radios[1];
+  }
+
+  it('falls back to point delivery when a cached "acasă" is unavailable (>10 items)', async () => {
+    setupCartPage(
+      { itemCount: 11, total: 110 },
+      {
+        [PROFILE_CACHE_KEY]: JSON.stringify({
+          name: 'Ion Pop',
+          phone: '0722 111 222',
+          judet: 'Cluj',
+          localitate: 'Cluj-Napoca',
+          streetAddress: 'Str. Ex 1',
+          addressDetails: '',
+          glsChoice: 'acasa',
+          glsPoint: null,
+        }),
+      },
+    );
+
+    await waitFor(() => expect(glsRadio('punct').checked).toBe(true));
+    expect(glsRadio('acasa').checked).toBe(false);
+    expect(glsRadio('acasa').disabled).toBe(true);
+  });
+
+  it('keeps a cached "acasă" selected when the home tier is available', async () => {
+    setupCartPage(undefined, {
+      [PROFILE_CACHE_KEY]: JSON.stringify({
+        name: 'Ion Pop',
+        phone: '0722 111 222',
+        judet: 'Cluj',
+        localitate: 'Cluj-Napoca',
+        streetAddress: 'Str. Ex 1',
+        addressDetails: '',
+        glsChoice: 'acasa',
+        glsPoint: null,
+      }),
+    });
+
+    await waitFor(() => expect(glsRadio('acasa').checked).toBe(true));
+    expect(glsRadio('acasa').disabled).toBe(false);
+  });
+
+  it('clears the glsPoint validation error when the customer picks a point', async () => {
+    setupCartPage(undefined, {
+      [PROFILE_CACHE_KEY]: JSON.stringify({
+        name: 'Ion Pop',
+        phone: '0722 111 222',
+        judet: 'Cluj',
+        localitate: 'Cluj-Napoca',
+        streetAddress: '',
+        addressDetails: '',
+        glsChoice: 'punct',
+        glsPoint: null,
+      }),
+    });
+
+    // Submit without a point → the error shows.
+    fireEvent.click(screen.getByText(/trimite comanda/i));
+    expect(screen.getByText('Alege punctul GLS')).toBeTruthy();
+
+    // The widget element fires `change` with the picked point.
+    const widget = document.querySelector('gls-dpm');
+    expect(widget).not.toBeNull();
+    fireEvent(
+      widget as Element,
+      new CustomEvent('change', {
+        detail: { id: 'LOCKER-01', goldId: '12345', name: 'Locker Ex', type: 'parcel-locker' },
+      }),
+    );
+
+    await waitFor(() => expect(screen.queryByText('Alege punctul GLS')).toBeNull());
+    // The picked point renders in its place.
+    expect(screen.getByText('Locker Ex')).toBeTruthy();
+  });
+
+  it('does not fetch the GLS feed for an in-zone customer with a cached point', async () => {
+    setupCartPage(undefined, {
+      [PROFILE_CACHE_KEY]: JSON.stringify({
+        name: 'Ion Pop',
+        phone: '0722 111 222',
+        judet: 'Sibiu',
+        localitate: 'Sibiu',
+        streetAddress: 'Str. Ex 1',
+        addressDetails: '',
+        glsChoice: 'punct',
+        glsPoint: cachedPoint,
+      }),
+    });
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ docs: [] }));
+
+    await waitFor(() =>
+      expect((screen.getByLabelText(/nume/i) as HTMLInputElement).value).toBe('Ion Pop'),
+    );
+
+    const feedCalls = fetchSpy.mock.calls.filter(([url]) =>
+      String(url).includes('map.gls-romania.com'),
+    );
+    expect(feedCalls).toHaveLength(0);
+  });
+
+  it('revalidates a cached point once the address is outside the zone', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    setupCartPage(
+      undefined,
+      {
+        [PROFILE_CACHE_KEY]: JSON.stringify({
+          name: 'Ion Pop',
+          phone: '0722 111 222',
+          judet: 'Cluj',
+          localitate: 'Cluj-Napoca',
+          streetAddress: '',
+          addressDetails: '',
+          glsChoice: 'punct',
+          glsPoint: cachedPoint,
+        }),
+      },
+      async (input) => {
+        if (String(input).includes('map.gls-romania.com')) {
+          // Feed without the cached point → revalidation drops it.
+          return Response.json([{ id: 'OTHER' }]);
+        }
+        return Response.json({
+          docs: [
+            { id: '1', available: true, availableDays: 'both' },
+            { id: '2', available: true, availableDays: 'both' },
+          ],
+        });
+      },
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(/punctul salvat anterior nu mai este disponibil/i)).toBeTruthy(),
+    );
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('map.gls-romania.com'))).toBe(
+      true,
+    );
   });
 });

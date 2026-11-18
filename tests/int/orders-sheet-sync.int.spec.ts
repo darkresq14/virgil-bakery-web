@@ -35,6 +35,23 @@ const orderData = () => ({
   status: 'nou' as const,
 });
 
+/** Create in an admin request context: this spec exercises the sheet-sync
+ * seam only, and the pricing-recompute hook (anonymous checkout only) would
+ * reject its minimal items — no productId, no address. The admin path is
+ * exactly the legacy re-push flow this spec also covers. */
+async function createOrder() {
+  const order = await payload.create({
+    collection: 'orders',
+    data: orderData(),
+    draft: false,
+    depth: 0,
+    context: { disableRevalidate: true },
+    req: { user: { collection: 'users', id: -1 } },
+  });
+  createdIds.push(Number(order.id));
+  return order;
+}
+
 function setSyncEnv() {
   process.env.SHEETS_WEBAPP_URL = WEBAPP_URL;
   process.env.SHEETS_WEBAPP_TOKEN = WEBAPP_TOKEN;
@@ -72,14 +89,7 @@ describe('orders sheet sync', () => {
     setSyncEnv();
     const { fetchMock } = stubFetch(() => jsonPage({ ok: true }));
 
-    const order = await payload.create({
-      collection: 'orders',
-      data: orderData(),
-      draft: false,
-      depth: 0,
-      context: { disableRevalidate: true },
-    });
-    createdIds.push(Number(order.id));
+    const order = await createOrder();
 
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(await settledStatus(order.id)).toBe('synced');
@@ -94,14 +104,7 @@ describe('orders sheet sync', () => {
     });
     stubFetch(() => gate);
 
-    const order = await payload.create({
-      collection: 'orders',
-      data: orderData(),
-      draft: false,
-      depth: 0,
-      context: { disableRevalidate: true },
-    });
-    createdIds.push(Number(order.id));
+    const order = await createOrder();
 
     // Create resolved while the push was still in flight: no verdict yet.
     const mid = await payload.findByID({ collection: 'orders', id: order.id, depth: 0 });
@@ -119,14 +122,7 @@ describe('orders sheet sync', () => {
       () => new Promise((resolve) => setTimeout(() => resolve(jsonPage({ ok: true })), 150)),
     );
 
-    const order = await payload.create({
-      collection: 'orders',
-      data: orderData(),
-      draft: false,
-      depth: 0,
-      context: { disableRevalidate: true },
-    });
-    createdIds.push(Number(order.id));
+    const order = await createOrder();
 
     expect(await settledStatus(order.id)).toBe('synced');
   });
@@ -137,14 +133,7 @@ describe('orders sheet sync', () => {
       throw new Error('network down');
     });
 
-    const order = await payload.create({
-      collection: 'orders',
-      data: orderData(),
-      draft: false,
-      depth: 0,
-      context: { disableRevalidate: true },
-    });
-    createdIds.push(Number(order.id));
+    const order = await createOrder();
 
     expect(await settledStatus(order.id)).toBe('failed');
   });
@@ -153,14 +142,7 @@ describe('orders sheet sync', () => {
     setSyncEnv();
     stubFetch(() => jsonPage({ ok: false, eroare: 'bad secret' }));
 
-    const order = await payload.create({
-      collection: 'orders',
-      data: orderData(),
-      draft: false,
-      depth: 0,
-      context: { disableRevalidate: true },
-    });
-    createdIds.push(Number(order.id));
+    const order = await createOrder();
 
     expect(await settledStatus(order.id)).toBe('failed');
   });
@@ -169,14 +151,7 @@ describe('orders sheet sync', () => {
     setSyncEnv();
     const { fetchMock } = stubFetch(() => jsonPage({ ok: true }));
 
-    const order = await payload.create({
-      collection: 'orders',
-      data: orderData(),
-      draft: false,
-      depth: 0,
-      context: { disableRevalidate: true },
-    });
-    createdIds.push(Number(order.id));
+    const order = await createOrder();
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(await settledStatus(order.id)).toBe('synced');
 
@@ -202,14 +177,7 @@ describe('orders sheet sync', () => {
     delete process.env.SHEETS_WEBAPP_TOKEN;
     const { fetchMock } = stubFetch(() => jsonPage({ ok: true }));
 
-    const order = await payload.create({
-      collection: 'orders',
-      data: orderData(),
-      draft: false,
-      depth: 0,
-      context: { disableRevalidate: true },
-    });
-    createdIds.push(Number(order.id));
+    const order = await createOrder();
 
     expect(fetchMock).not.toHaveBeenCalled();
     const persisted = await payload.findByID({
@@ -225,14 +193,7 @@ describe('orders sheet sync', () => {
     // First push fails — order lands as failed.
     stubFetch(() => jsonPage({ ok: false, eroare: 'bad secret' }));
 
-    const order = await payload.create({
-      collection: 'orders',
-      data: orderData(),
-      draft: false,
-      depth: 0,
-      context: { disableRevalidate: true },
-    });
-    createdIds.push(Number(order.id));
+    const order = await createOrder();
     expect(await settledStatus(order.id)).toBe('failed');
 
     // Admin re-save = the retry (issue #33 story 13).
@@ -259,14 +220,7 @@ describe('orders sheet sync', () => {
     setSyncEnv();
     stubFetch(() => jsonPage({ ok: false, eroare: 'still broken' }));
 
-    const order = await payload.create({
-      collection: 'orders',
-      data: orderData(),
-      draft: false,
-      depth: 0,
-      context: { disableRevalidate: true },
-    });
-    createdIds.push(Number(order.id));
+    const order = await createOrder();
     expect(await settledStatus(order.id)).toBe('failed');
 
     // Re-save: retry still fails — the update itself must not throw.
@@ -287,14 +241,7 @@ describe('orders sheet sync', () => {
     delete process.env.SHEETS_WEBAPP_URL;
     delete process.env.SHEETS_WEBAPP_TOKEN;
 
-    const order = await payload.create({
-      collection: 'orders',
-      data: orderData(),
-      draft: false,
-      depth: 0,
-      context: { disableRevalidate: true },
-    });
-    createdIds.push(Number(order.id));
+    const order = await createOrder();
 
     // Re-save with sync configured: previous status is null, not failed — no retry.
     setSyncEnv();
@@ -322,14 +269,7 @@ describe('orders sheet sync', () => {
     // First push fails — order lands as failed.
     stubFetch(() => jsonPage({ ok: false, eroare: 'bad secret' }));
 
-    const order = await payload.create({
-      collection: 'orders',
-      data: orderData(),
-      draft: false,
-      depth: 0,
-      context: { disableRevalidate: true },
-    });
-    createdIds.push(Number(order.id));
+    const order = await createOrder();
     expect(await settledStatus(order.id)).toBe('failed');
 
     // Re-save with env missing: retry skipped, no throw, status untouched.

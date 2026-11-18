@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload';
 
 import { anyone } from '../../access/anyone';
 import { authenticated } from '../../access/authenticated';
+import { recomputeDeliveryPricing } from './hooks/recomputeDeliveryPricing';
 import { revalidateOrder } from './hooks/revalidateOrder';
 import { syncOrderToSheet } from './hooks/syncOrderToSheet';
 import { validateDeliveryDate } from './hooks/validateDeliveryDate';
@@ -193,6 +194,6 @@ export const Orders: CollectionConfig = {
   ],
   hooks: {
     afterChange: [revalidateOrder, syncOrderToSheet],
-    beforeChange: [validateDeliveryDate],
+    beforeChange: [validateDeliveryDate, recomputeDeliveryPricing],
   },
 };

@@ -147,14 +147,8 @@ export function CartPageClient({
         const cachedPoint = cached.glsPoint;
         if (cachedPoint?.matchcode) {
           setGlsPoint(cachedPoint);
-          // A removed point must never be silently reused (CONTEXT.md →
-          // Cached Checkout Profile) — verify against the live feed once.
-          glsPointStillExists(cachedPoint).then((exists) => {
-            if (!exists) {
-              setGlsPoint(null);
-              setPointWarning(true);
-            }
-          });
+          // Revalidation against the live feed is deferred to the effect
+          // below — it only matters when the address is outside the zone.
         }
       }
     } catch {
@@ -341,6 +335,30 @@ export function CartPageClient({
 
   /** Home-delivery tier for the current cart (null = unavailable, >10). */
   const homePrice = homeShippingCost(itemCount);
+
+  // A cached "acasă" choice can outlive its availability — the cart may have
+  // grown past 10 items since. Fall back to point delivery instead of
+  // leaving the disabled radio checked and the only working option off.
+  useEffect(() => {
+    if (glsChoice === 'acasa' && homePrice == null) setGlsChoice('punct');
+  }, [glsChoice, homePrice]);
+
+  // A removed point must never be silently reused (CONTEXT.md → Cached
+  // Checkout Profile) — verify against the live feed, but only when it
+  // matters: the address resolves outside the personal zone. In-zone
+  // customers never download the feed (the picker is irrelevant to them).
+  const pointCheckDoneRef = useRef(false);
+  useEffect(() => {
+    if (pointCheckDoneRef.current) return;
+    if (zone !== 'out' || !glsPoint?.matchcode) return;
+    pointCheckDoneRef.current = true;
+    glsPointStillExists(glsPoint).then((exists) => {
+      if (!exists) {
+        setGlsPoint(null);
+        setPointWarning(true);
+      }
+    });
+  }, [zone, glsPoint]);
 
   const showTransport = shippingCost != null && shippingCost > 0;
   // Summary/total need a concrete number; a null (home >10) blocks submit
@@ -982,7 +1000,12 @@ export function CartPageClient({
                 {isSubmitting ? 'Se trimite…' : 'Trimite comanda'}
               </button>
               <GlsPointPicker
-                onSelect={setGlsPoint}
+                onSelect={(selected) => {
+                  setGlsPoint(selected);
+                  // Same contract as every text field: picking a valid point
+                  // clears its validation error.
+                  setFieldErrors((prev) => ({ ...prev, glsPoint: '' }));
+                }}
                 registerOpen={(open) => {
                   openGlsWidgetRef.current = open;
                 }}

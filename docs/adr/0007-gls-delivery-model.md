@@ -23,11 +23,12 @@ The bakery switched couriers from Cargus to GLS (#47). The old model had exactly
 - **Feature flag / provider constant for the Cargus→GLS swap.** Rejected — the work lives unmerged on a branch until the baker's go-date; holding the merge is a simpler gate than shipping a flag that exists to be flipped once and deleted.
 - **Keep `metoda: 'cargus'` wire value for compatibility.** Rejected — the baker is rewriting his intake for GLS anyway; keeping a value named after the retired courier in a contract meant to express GLS destinations would be permanent confusion.
 - **Separate UI options for locker vs ParcelShop.** Rejected — identical price and identical UX (same widget, same wire fields); the point `tip` travels in the contract, so the baker can diverge prices later without a site change.
-- **Admin-managed (SiteConfig) pricing.** Rejected — six numbers that change rarely; hardcoded in one module (`detectDeliveryMethod.ts`) until the baker confirms exact prices (#57), revisited if he starts tuning them often.
-- **Server-side caching of the GLS point feed.** Deferred — the feed is fetched once per checkout-with-cached-point for revalidation, fail-open; if GLS's map host becomes a availability problem, cache `ro.json` server-side per its 15-minute `max-age`.
+- **Admin-managed (SiteConfig) pricing.** Rejected — six numbers that change rarely; hardcoded in one module (`glsDelivery.ts`) until the baker confirms exact prices (#57), revisited if he starts tuning them often.
+- **Server-side caching of the GLS point feed.** Deferred — the feed is fetched client-side, cached for the page session and only when the address is outside the zone (fail-open); if GLS's map host becomes a availability problem, cache `ro.json` server-side per its 15-minute `max-age`.
 
 ## Consequences
 
 - Merging the branch is a breaking change for the baker's Apps Script — #57 (field contract + confirmations + go-date) must be resolved with him first.
 - Home-delivery tier prices are the baker's indicative values until he confirms; they live in exactly one module.
+- The anonymous checkout POST never trusts client pricing: subtotal/shipping/total are recomputed in an Orders `beforeChange` hook from Products prices + zone + method (admin manual orders keep their entered values).
 - The `curier` delivery-method option stays in the Orders schema (and `DeliveryMethodCell`) so historical orders keep rendering.
