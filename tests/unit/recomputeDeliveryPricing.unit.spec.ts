@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { recomputeDeliveryPricing } from '@/collections/Orders/hooks/recomputeDeliveryPricing';
 
+vi.mock('@/utilities/glsPointFeed', () => ({
+  glsPointExistsInFeed: vi.fn().mockResolvedValue(true),
+}));
+
 /**
  * Direct-invocation tests for the anonymous-checkout pricing recompute
  * (beforeChange). The DB write must never trust client-computed
@@ -95,6 +99,35 @@ describe('recomputeDeliveryPricing — anonymous creates', () => {
       ...outZoneAddress,
     };
     await expect(rejectionMessage(makeArgs(data))).resolves.toMatch(/punctul gls/i);
+  });
+
+  it('rejects gls-punct when the feed check confirms the point is gone', async () => {
+    const { glsPointExistsInFeed } = await import('@/utilities/glsPointFeed');
+    vi.mocked(glsPointExistsInFeed).mockResolvedValueOnce(false);
+    const data = {
+      items: items(),
+      deliveryMethod: 'gls-punct',
+      glsPoint: { matchcode: 'GONE', goldId: '7', nume: 'LockerDispărut' },
+      ...outZoneAddress,
+    };
+
+    await expect(rejectionMessage(makeArgs(data))).resolves.toMatch(
+      /punctul gls ales nu mai este disponibil/i,
+    );
+    expect(glsPointExistsInFeed).toHaveBeenCalledWith('GONE', '7');
+  });
+
+  it('checks the cached point against the feed with its goldId', async () => {
+    const { glsPointExistsInFeed } = await import('@/utilities/glsPointFeed');
+    const data = {
+      items: items(),
+      deliveryMethod: 'gls-punct',
+      glsPoint: { matchcode: 'ABC', goldId: '12345', nume: 'Locker 1' },
+      ...outZoneAddress,
+    };
+    await recomputeDeliveryPricing(makeArgs(data));
+
+    expect(glsPointExistsInFeed).toHaveBeenCalledWith('ABC', '12345');
   });
 
   it('rejects gls-acasa above 10 items', async () => {

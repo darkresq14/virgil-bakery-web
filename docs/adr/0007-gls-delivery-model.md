@@ -12,7 +12,7 @@ The bakery switched couriers from Cargus to GLS (#47). The old model had exactly
 
 **Zone-driven three-method model.** The delivery zone (Judet Sibiu + 6 localities) decides what the checkout offers: inside → personal delivery only; outside → a radio choice between *GLS Point Delivery* (flat 25 lei, destination = a locker/ParcelShop picked on the official GLS DPM widget) and *GLS Home Delivery* (tiered by total item quantity: 26/30/39/53 lei for 1-2/3/4-5/6-10 items; above 10, home is unavailable and only point delivery is offered).
 
-**One form, cached profile.** The "Prima comandă / Am mai comandat" mini-flow is removed. Everyone gets the same form; after a successful order the full profile (name, phone, address, delivery choice, chosen GLS point) is cached in localStorage and prefilled on the next visit. A cached GLS point is revalidated against GLS's public delivery-point feed before reuse. Phone remains the customer identity for the ops workbook.
+**One form, cached profile.** The "Prima comandă / Am mai comandat" mini-flow is removed. Everyone gets the same form; after a successful order the full profile (name, phone, address, delivery choice, chosen GLS point) is cached in localStorage and prefilled on the next visit. A cached GLS point is revalidated server-side against GLS's public delivery-point feed when the order is submitted (fail-open). Phone remains the customer identity for the ops workbook.
 
 **Wire contract: clean break.** The site sends `metoda: 'personala' | 'gls-punct' | 'gls-acasa'` plus `punctGoldId`, `punctMatchcode`, `punctNume`, `punctAdresa`, `punctTip` for point orders (the goldId/matchcode pair maps directly to MyGLS PSD parameters for label generation). The `'cargus'` value is not emulated or migrated — the baker adapts his script to the new contract at the switchover date. Historical orders re-pushed by an admin re-save still send their stored `'cargus'` value (legacy passthrough).
 
@@ -24,7 +24,7 @@ The bakery switched couriers from Cargus to GLS (#47). The old model had exactly
 - **Keep `metoda: 'cargus'` wire value for compatibility.** Rejected — the baker is rewriting his intake for GLS anyway; keeping a value named after the retired courier in a contract meant to express GLS destinations would be permanent confusion.
 - **Separate UI options for locker vs ParcelShop.** Rejected — identical price and identical UX (same widget, same wire fields); the point `tip` travels in the contract, so the baker can diverge prices later without a site change.
 - **Admin-managed (SiteConfig) pricing.** Rejected — six numbers that change rarely; hardcoded in one module (`glsDelivery.ts`) until the baker confirms exact prices (#57), revisited if he starts tuning them often.
-- **Server-side caching of the GLS point feed.** Deferred — the feed is fetched client-side, cached for the page session and only when the address is outside the zone (fail-open); if GLS's map host becomes a availability problem, cache `ro.json` server-side per its 15-minute `max-age`.
+- **Server-side caching of the GLS point feed.** Originally shipped client-side (each out-of-zone checkout downloaded the 1.5 MB `ro.json` to validate a cached point, fail-open). Moved server-side: the Orders `beforeChange` hook checks the point against the feed, fetched at most once per 15-minute window per server instance and shared by all orders (still fail-open) — customers download nothing, and the check no longer races a fast submit.
 
 ## Consequences
 

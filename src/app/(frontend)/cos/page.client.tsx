@@ -17,7 +17,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { type AddressFields, AddressForm } from '@/components/AddressForm';
-import { type GlsPoint, GlsPointPicker, glsPointStillExists } from '@/components/GlsPointPicker';
+import { type GlsPoint, GlsPointPicker } from '@/components/GlsPointPicker';
 import { useCart } from '@/providers/Cart';
 import {
   type DeliveryDateOption,
@@ -354,22 +354,9 @@ export function CartPageClient({
     if (glsChoice === 'acasa' && homePrice == null) setGlsChoice('punct');
   }, [glsChoice, homePrice]);
 
-  // A removed point must never be silently reused (CONTEXT.md → Cached
-  // Checkout Profile) — verify against the live feed, but only when it
-  // matters: the address resolves outside the personal zone. In-zone
-  // customers never download the feed (the picker is irrelevant to them).
-  const pointCheckDoneRef = useRef(false);
-  useEffect(() => {
-    if (pointCheckDoneRef.current) return;
-    if (zone !== 'out' || !glsPoint?.matchcode) return;
-    pointCheckDoneRef.current = true;
-    glsPointStillExists(glsPoint).then((exists) => {
-      if (!exists) {
-        setGlsPoint(null);
-        setPointWarning(true);
-      }
-    });
-  }, [zone, glsPoint]);
+  // A removed cached GLS point is caught server-side at order submit
+  // (recomputeDeliveryPricing → glsPointExistsInFeed, fail-open) — the
+  // client no longer downloads the 1.5 MB delivery-point feed.
 
   const showTransport = shippingCost != null && shippingCost > 0;
   // Summary/total need a concrete number; a null (home >10) blocks submit
@@ -514,8 +501,43 @@ export function CartPageClient({
         }),
       });
       if (!res.ok) {
-        // Order not persisted server-side: retryable failure.
-        failSubmit();
+        // Order not persisted server-side: retryable failure. Payload
+        // validation rejections (recomputed pricing, removed GLS point)
+        // carry a field message — surface it instead of the generic banner.
+        let message: string | null = null;
+        let path = '';
+        try {
+          const body = (await res.json()) as {
+            errors?: { message?: unknown; path?: unknown }[];
+          };
+          const first = body.errors?.find(
+            (e): e is { message: string; path?: unknown } =>
+              typeof e.message === 'string' && e.message !== '',
+          );
+          if (first) {
+            message = first.message;
+            path = typeof first.path === 'string' ? first.path : '';
+          }
+        } catch {
+          /* not a Payload error body — generic failure below */
+        }
+        submittingRef.current = false;
+        setIsSubmitting(false);
+        if (!message) {
+          setSubmitError(true);
+          return;
+        }
+        const text = message;
+        if (path === 'glsPoint') {
+          // Confirmed-removed cached point: drop it so the re-pick UI shows
+          // (pointWarning line below the button) and block the field.
+          setGlsPoint(null);
+          setPointWarning(true);
+          setFieldErrors((prev) => ({ ...prev, glsPoint: text }));
+        } else {
+          setFormError(text);
+        }
+        failValidation();
         return;
       }
     } catch {

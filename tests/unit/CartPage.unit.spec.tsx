@@ -86,7 +86,7 @@ const orderPostsOf = (spy: ReturnType<typeof vi.spyOn>) =>
 function setupCartPage(
   overrides?: Partial<typeof mockCartContext>,
   initialStorage: Record<string, string> = {},
-  fetchImpl?: (input: RequestInfo | URL) => Promise<Response>,
+  fetchImpl?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>,
 ) {
   vi.mocked(useCart).mockReturnValue({ ...mockCartContext, ...overrides });
 
@@ -929,7 +929,7 @@ describe('CartPageClient — cached GLS choice + point revalidation (issue #47 h
     expect(feedCalls).toHaveLength(0);
   });
 
-  it('revalidates a cached point once the address is outside the zone', async () => {
+  it('drops a cached point the server rejects at submit — no client feed download', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     setupCartPage(
       undefined,
@@ -945,10 +945,20 @@ describe('CartPageClient — cached GLS choice + point revalidation (issue #47 h
           glsPoint: cachedPoint,
         }),
       },
-      async (input) => {
-        if (String(input).includes('map.gls-romania.com')) {
-          // Feed without the cached point → revalidation drops it.
-          return Response.json([{ id: 'OTHER' }]);
+      async (input, init) => {
+        if (String(input).includes('/api/orders') && init?.method === 'POST') {
+          // Payload ValidationError: feed check confirmed the point is gone.
+          return new Response(
+            JSON.stringify({
+              errors: [
+                {
+                  message: 'Punctul GLS ales nu mai este disponibil — alege alt punct',
+                  path: 'glsPoint',
+                },
+              ],
+            }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } },
+          );
         }
         return Response.json({
           docs: [
@@ -959,12 +969,31 @@ describe('CartPageClient — cached GLS choice + point revalidation (issue #47 h
       },
     );
 
+    // Cached point is prefilled and shown before submit.
+    await waitFor(() => expect(screen.getByText('Locker Ex')).toBeTruthy());
+
+    fireEvent.click(screen.getByText(/trimite comanda/i));
+
     await waitFor(() =>
       expect(screen.getByText(/punctul salvat anterior nu mai este disponibil/i)).toBeTruthy(),
     );
-    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('map.gls-romania.com'))).toBe(
-      true,
+    // Field-level error from the server response, under the picker.
+    expect(
+      screen.getAllByText('Punctul GLS ales nu mai este disponibil — alege alt punct').length,
+    ).toBeGreaterThan(0);
+    // The dead point is dropped — the re-pick button renders in its place.
+    expect(screen.getByText(/Alege punctul GLS pe hartă/i)).toBeTruthy();
+
+    // The feed is never downloaded client-side (server-side check only).
+    const feedCalls = fetchSpy.mock.calls.filter(([url]) =>
+      String(url).includes('map.gls-romania.com'),
     );
+    expect(feedCalls).toHaveLength(0);
+    // The order POST did reach the server (rejected there, not pre-empted).
+    const orderPosts = fetchSpy.mock.calls.filter(
+      ([url, init]) => String(url).includes('/api/orders') && init?.method === 'POST',
+    );
+    expect(orderPosts).toHaveLength(1);
   });
 });
 

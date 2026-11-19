@@ -63,7 +63,7 @@ No toggle — the holiday is active purely based on dates. Auto-clears when toda
 A customer with no cached checkout profile. Provides: name, phone, and structured address (judet, localitate, strada+număr, optional detalii). The system auto-detects the delivery zone from judet+localitate: inside → personal delivery, outside → choice of GLS point or GLS home delivery.
 
 ### Cached Checkout Profile (Profil salvat)
-What replaced the old "Am mai comandat" mini-flow: the full checkout form (name, phone, address, delivery choice including a chosen GLS point) is cached in localStorage after an order and prefilled on the next visit. Everything stays editable; there is no separate reduced flow. A cached GLS point is shown for review but must be re-picked if it no longer exists in GLS’s public delivery-point feed. Phone remains the customer identity used to match the client in the ops workbook.
+What replaced the old "Am mai comandat" mini-flow: the full checkout form (name, phone, address, delivery choice including a chosen GLS point) is cached in localStorage after an order and prefilled on the next visit. Everything stays editable; there is no separate reduced flow. A cached GLS point is shown for review but is validated server-side at order submit against GLS's public delivery-point feed (fail-open) — the customer must re-pick if it no longer exists. Phone remains the customer identity used to match the client in the ops workbook.
 
 ## Address Model
 

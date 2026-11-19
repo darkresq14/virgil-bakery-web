@@ -2,6 +2,7 @@ import type { CollectionBeforeChangeHook } from 'payload';
 import { ValidationError } from 'payload';
 
 import { detectDeliveryZone, homeShippingCost, POINT_SHIPPING_COST } from '@/utilities/glsDelivery';
+import { glsPointExistsInFeed } from '@/utilities/glsPointFeed';
 
 /**
  * Server-side pricing guard for the anonymous checkout POST (code review on
@@ -94,6 +95,17 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook = async ({
       const matchcode = (dataRecord.glsPoint as { matchcode?: unknown } | undefined)?.matchcode;
       if (typeof matchcode !== 'string' || matchcode === '') {
         fail('Alege punctul GLS', 'glsPoint');
+      }
+      const goldId = (dataRecord.glsPoint as { goldId?: unknown } | undefined)?.goldId;
+      // Cached-point existence check, fail-open (glsPointFeed.ts): only a
+      // confirmed miss against a well-shaped live feed rejects — customers
+      // no longer download the 1.5 MB feed at checkout mount.
+      const exists = await glsPointExistsInFeed(
+        matchcode,
+        typeof goldId === 'string' ? goldId : null,
+      );
+      if (!exists) {
+        fail('Punctul GLS ales nu mai este disponibil — alege alt punct', 'glsPoint');
       }
       shippingCost = POINT_SHIPPING_COST;
     } else if (method === 'gls-acasa') {
