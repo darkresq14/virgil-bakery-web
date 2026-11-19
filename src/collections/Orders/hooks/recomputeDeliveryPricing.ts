@@ -53,10 +53,15 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook = async ({
     .filter((id): id is string => typeof id === 'string' && id !== '');
   if (!productIds.length) fail('Coșul este gol', 'items');
 
+  // overrideAccess: false keeps Products read access in force: anonymous
+  // requests resolve to published-only (authenticatedOrPublished), while
+  // admin requests still see drafts. The Local API default (true) would
+  // have let an anonymous order price a draft product.
   const products = await req.payload.find({
     collection: 'products',
     depth: 0,
     limit: 100,
+    overrideAccess: false,
     where: { id: { in: productIds } },
     req,
   });

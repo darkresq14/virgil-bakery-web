@@ -26,6 +26,9 @@ class StubDpmBase extends HTMLElement {
   isOpen = false;
   /** Set by syncRendered — true only when the dialog UI would show. */
   dialogRendered = false;
+  /** Only declared (no class field!) — subclasses define the real class
+   * fields, which must keep clobbering pre-upgrade property pokes. */
+  declare mode: string;
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null) {
     if (name !== 'open') return;

@@ -2,6 +2,7 @@ import { getPayload, type Payload } from 'payload';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { settleSheetSyncs } from '@/collections/Orders/hooks/syncOrderToSheet';
 import config from '@/payload.config';
+import type { User } from '@/payload-types';
 import { jsonPage, type ResponseLike, stubFetch } from '../helpers/fetchStub';
 
 /**
@@ -39,6 +40,16 @@ const orderData = () => ({
  * seam only, and the pricing-recompute hook (anonymous checkout only) would
  * reject its minimal items — no productId, no address. The admin path is
  * exactly the legacy re-push flow this spec also covers. */
+/** Minimal admin user for the Local API request context: satisfies the
+ * User type without a DB round-trip — hooks only check user presence. */
+const adminUser: User = {
+  collection: 'users',
+  id: -1,
+  email: 'admin@test.local',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+};
+
 async function createOrder() {
   const order = await payload.create({
     collection: 'orders',
@@ -46,7 +57,7 @@ async function createOrder() {
     draft: false,
     depth: 0,
     context: { disableRevalidate: true },
-    req: { user: { collection: 'users', id: -1 } },
+    req: { user: adminUser },
   });
   createdIds.push(Number(order.id));
   return order;

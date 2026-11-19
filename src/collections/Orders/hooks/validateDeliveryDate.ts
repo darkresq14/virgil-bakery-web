@@ -46,13 +46,17 @@ export const validateDeliveryDate: CollectionBeforeChangeHook = async ({
     deliveryDate.toLocaleString('en-US', { timeZone: 'Europe/Bucharest' }),
   ).getDay();
 
-  // Public read access returns published products only — unpublished/deleted
-  // products simply won't be found.
+  // overrideAccess: false keeps Products read access in force for this
+  // query: anonymous requests resolve to published-only, admin requests
+  // (manual entry / legacy re-push) still see drafts — same trust model as
+  // recomputeDeliveryPricing.
   const products = await req.payload.find({
     collection: 'products',
     depth: 0,
     limit: 100,
+    overrideAccess: false,
     where: { id: { in: productIds } },
+    req,
   });
 
   const fail = (message: string): never => {

@@ -1033,7 +1033,12 @@ export function CartPageClient({
                             name="gls-method"
                             className="mt-1"
                             checked={glsChoice === 'punct'}
-                            onChange={() => setGlsChoice('punct')}
+                            onChange={() => {
+                              setGlsChoice('punct');
+                              // Point delivery replaces the street address —
+                              // clear its stale submit error.
+                              setFieldErrors((prev) => ({ ...prev, streetAddress: '' }));
+                            }}
                           />
                           <span className="flex-1">
                             <span className="flex items-baseline justify-between gap-2">
@@ -1131,7 +1136,12 @@ export function CartPageClient({
                             className="mt-1"
                             disabled={homePrice == null}
                             checked={glsChoice === 'acasa'}
-                            onChange={() => setGlsChoice('acasa')}
+                            onChange={() => {
+                              setGlsChoice('acasa');
+                              // Home delivery replaces the GLS point — clear
+                              // its stale submit error.
+                              setFieldErrors((prev) => ({ ...prev, glsPoint: '' }));
+                            }}
                           />
                           <span className="flex-1">
                             <span className="flex items-baseline justify-between gap-2">
