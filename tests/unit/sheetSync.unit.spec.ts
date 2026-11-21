@@ -121,6 +121,30 @@ describe('pushOrderToSheet — wire contract', () => {
     expect(body.adresa).toBe('');
   });
 
+  it('omits punct* when a non-point method carries a residual glsPoint (admin-edited order)', async () => {
+    const { calls } = stubFetch(() => redirectPage(ECHO_URL));
+
+    await pushOrderToSheet({
+      ...ORDER,
+      deliveryMethod: 'gls-acasa',
+      glsPoint: {
+        goldId: '4821',
+        matchcode: 'RO12345',
+        nume: 'Easybox Sibiu OMV',
+        adresa: 'Str. Cibinului 12, Sibiu',
+        tip: 'parcel-locker',
+      },
+    });
+
+    const body = JSON.parse(String(calls[0]?.init?.body));
+    expect(body.metoda).toBe('gls-acasa');
+    expect(body.punctGoldId).toBeUndefined();
+    expect(body.punctMatchcode).toBeUndefined();
+    expect(body.punctNume).toBeUndefined();
+    expect(body.punctAdresa).toBeUndefined();
+    expect(body.punctTip).toBeUndefined();
+  });
+
   it("maps the retired 'curier' to legacy wire 'cargus' (historical re-push)", async () => {
     const { calls } = stubFetch(() => redirectPage(ECHO_URL));
 

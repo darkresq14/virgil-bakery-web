@@ -73,6 +73,9 @@ function toWirePayload(order: SheetSyncOrder, secret: string): WirePayload {
     curier: 'cargus',
   };
   const metoda = METODA_BY_METHOD[order.deliveryMethod] ?? 'personala';
+  // `punct*` are GLS point order fields only: a residual glsPoint left on
+  // an admin-edited order must not leak onto the wire for other methods.
+  const point = order.deliveryMethod === 'gls-punct' ? order.glsPoint : null;
   return {
     secret,
     idComanda: String(order.id),
@@ -85,11 +88,11 @@ function toWirePayload(order: SheetSyncOrder, secret: string): WirePayload {
     judet: order.judet ?? '',
     detalii: order.addressDetails ?? '',
     total: order.total,
-    punctGoldId: order.glsPoint?.goldId ?? undefined,
-    punctMatchcode: order.glsPoint?.matchcode ?? undefined,
-    punctNume: order.glsPoint?.nume ?? undefined,
-    punctAdresa: order.glsPoint?.adresa ?? undefined,
-    punctTip: order.glsPoint?.tip ?? undefined,
+    punctGoldId: point?.goldId ?? undefined,
+    punctMatchcode: point?.matchcode ?? undefined,
+    punctNume: point?.nume ?? undefined,
+    punctAdresa: point?.adresa ?? undefined,
+    punctTip: point?.tip ?? undefined,
     produse: coerceOrderItems(order.items).map((item) => ({
       denumire: item.name,
       cantitate: item.quantity,

@@ -108,6 +108,7 @@ export function GlsPointPicker({
   onSelect,
   onClose,
   registerOpen,
+  onLoadResult,
 }: {
   /** Fires with the picked point when the customer confirms on the map. */
   onSelect: (point: GlsPoint) => void;
@@ -115,11 +116,16 @@ export function GlsPointPicker({
   onClose?: () => void;
   /** Receives the imperative opener (safe to call before the script loads). */
   registerOpen: (open: () => void) => void;
+  /** Reports the widget-script load outcome: an Error when the script could
+   * not be loaded (retry is possible — the failed load resets the promise),
+   * null once it loaded. Out-of-zone carts over 10 items have the GLS point
+   * as their ONLY delivery path, so the host must surface the failure. */
+  onLoadResult?: (error: Error | null) => void;
 }) {
   const elementRef = useRef<GlsElement | null>(null);
   // Latest handlers without re-binding element listeners on every render.
-  const handlersRef = useRef({ onSelect, onClose, registerOpen });
-  handlersRef.current = { onSelect, onClose, registerOpen };
+  const handlersRef = useRef({ onSelect, onClose, registerOpen, onLoadResult });
+  handlersRef.current = { onSelect, onClose, registerOpen, onLoadResult };
 
   const setElement = useCallback((node: HTMLElement | null) => {
     const previous = elementRef.current;
@@ -145,9 +151,19 @@ export function GlsPointPicker({
     // Script loads lazily on first open — in-zone customers never pay for it.
     handlersRef.current.registerOpen(() => {
       loadGlsWidget()
-        .then(() => el.setAttribute('open', ''))
-        .catch(() => {
-          // Widget unreachable: nothing opens; home delivery still works.
+        .then(() => {
+          // A retry after an earlier failure succeeded — let the host drop
+          // its fallback message.
+          handlersRef.current.onLoadResult?.(null);
+          el.setAttribute('open', '');
+        })
+        .catch((error: unknown) => {
+          // Widget unreachable: the dialog never opens. The host decides what
+          // to show — for out-of-zone carts over 10 items this blocks the
+          // only delivery path, so it must not stay silent.
+          handlersRef.current.onLoadResult?.(
+            error instanceof Error ? error : new Error('gls-dpm.js failed to load'),
+          );
         });
     });
     // registerOpen identity is expected to be stable (host stores the opener).

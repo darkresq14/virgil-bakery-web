@@ -8,8 +8,12 @@
  */
 export const WHATSAPP_NUMBER_FALLBACK = '+40746245391';
 
-/** Builds a wa.me link from a possibly formatted phone number (e.g. "+40 746 245 391"). */
+const FALLBACK_DIGITS = WHATSAPP_NUMBER_FALLBACK.replace(/[^0-9]/g, '');
+
+/** Builds a wa.me link from a possibly formatted phone number (e.g. "+40 746 245 391").
+ * A configured number that strips down to no digits at all (e.g. "n/a") also
+ * falls back — the link must never degenerate into a bare wa.me root. */
 export function whatsappLink(number?: string | null): string {
-  const digits = (number || WHATSAPP_NUMBER_FALLBACK).replace(/[^0-9]/g, '');
-  return `https://wa.me/${digits}`;
+  const digits = (number ?? '').replace(/[^0-9]/g, '');
+  return `https://wa.me/${digits || FALLBACK_DIGITS}`;
 }

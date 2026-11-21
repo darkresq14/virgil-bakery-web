@@ -247,6 +247,15 @@ describe('recomputeDeliveryPricing — anonymous creates', () => {
     };
     await expect(rejectionMessage(makeArgs(data))).resolves.toMatch(/coș/i);
   });
+
+  it('rejects fractional quantities — the tier basis needs whole items (commit 7fb9264 promised this guard)', async () => {
+    const data = {
+      items: [{ productId: '1', name: 'Pâine', quantity: 2.5, price: 5 }],
+      deliveryMethod: 'personal',
+      ...inZoneAddress,
+    };
+    await expect(rejectionMessage(makeArgs(data))).resolves.toMatch(/numere întregi/i);
+  });
 });
 
 describe('recomputeDeliveryPricing — scope guards', () => {

@@ -181,6 +181,9 @@ export function CartPageClient({
   const [glsPoint, setGlsPoint] = useState<GlsPoint | null>(null);
   const [pointWarning, setPointWarning] = useState(false);
   const openGlsWidgetRef = useRef<(() => void) | null>(null);
+  // Widget script failed to load on the last open attempt (retry possible:
+  // the picker reports null once a retry succeeds).
+  const [glsWidgetFailed, setGlsWidgetFailed] = useState(false);
   // Issue #41 — double-submit guard. The ref locks synchronously (a second
   // click before re-render must not pass); the state only drives the disabled
   // button. Unlocks on failure so the customer can retry; on success the cart
@@ -1103,6 +1106,19 @@ export function CartPageClient({
                                 </button>
                               </>
                             )}
+                            {glsWidgetFailed && (
+                              <p className="text-xs text-destructive font-sans">
+                                Harta GLS nu se încarcă acum — verifică conexiunea și încearcă din
+                                nou, sau comandă pe{' '}
+                                <a
+                                  href={whatsappUrl || whatsappLink()}
+                                  className="underline hover:opacity-80"
+                                >
+                                  WhatsApp
+                                </a>
+                                .
+                              </p>
+                            )}
                             {pointWarning && !glsPoint && (
                               <p className="text-xs text-muted-foreground font-sans">
                                 Punctul salvat anterior nu mai este disponibil — alege altul.
@@ -1217,6 +1233,7 @@ export function CartPageClient({
                 registerOpen={(open) => {
                   openGlsWidgetRef.current = open;
                 }}
+                onLoadResult={(error) => setGlsWidgetFailed(error != null)}
               />
             </div>
           </div>

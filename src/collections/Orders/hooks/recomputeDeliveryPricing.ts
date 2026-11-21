@@ -38,11 +38,12 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook = async ({
     fail('Județul și localitatea sunt obligatorii pentru livrare', 'localitate');
   }
 
-  // Quantities drive the home tier — a non-positive value would skew it.
+  // Quantities drive the home tier — fractional or non-positive values
+  // would skew it (Number.isInteger implies finite).
   for (const item of rawItems as { quantity?: unknown }[]) {
     const quantity = Number(item?.quantity);
-    if (!Number.isFinite(quantity) || quantity < 1) {
-      fail('Coșul este invalid — cantități greșite', 'items');
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      fail('Coșul este invalid — cantitățile trebuie să fie numere întregi', 'items');
     }
   }
 

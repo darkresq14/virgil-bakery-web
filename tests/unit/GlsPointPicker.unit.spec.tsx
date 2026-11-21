@@ -72,6 +72,42 @@ afterEach(() => {
 });
 
 describe('GlsPointPicker', () => {
+  // Must run FIRST: once any test resolves the module-level load promise it
+  // stays cached, and this test needs the fresh-pending → onerror path.
+  it('reports a script-load failure via onLoadResult, then clears it once a retry loads', async () => {
+    let open: (() => void) | undefined;
+    const onLoadResult = vi.fn<(error: Error | null) => void>();
+    render(
+      <GlsPointPicker
+        onSelect={() => {}}
+        registerOpen={(fn) => (open = fn)}
+        onLoadResult={onLoadResult}
+      />,
+    );
+
+    // jsdom never fetches the loader script — fire its onerror manually.
+    open?.();
+    const script = document.head.querySelector<HTMLScriptElement>('script[src*="gls-dpm.js"]');
+    expect(script).not.toBeNull();
+    script?.dispatchEvent(new Event('error'));
+
+    // Rejection crosses two promise hops (then pass-through → catch), so a
+    // single microtask tick is not enough.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(onLoadResult).toHaveBeenCalledTimes(1);
+    expect(onLoadResult.mock.calls[0]?.[0]).toBeInstanceOf(Error);
+
+    // Retry after the custom elements are defined: loads instantly, and the
+    // stale failure is cleared with null.
+    simulateWidgetScriptLoaded();
+    open?.();
+    await Promise.resolve();
+    expect(onLoadResult).toHaveBeenLastCalledWith(null);
+    const dialog = document.querySelector<StubGlsDpmDialog>('gls-dpm-dialog');
+    expect(dialog?.hasAttribute('open')).toBe(true);
+  });
+
   it('opens as a dialog (gls-dpm-dialog) when the trigger fires, even when the widget script upgrades the element after mount', async () => {
     let open: (() => void) | undefined;
     render(<GlsPointPicker onSelect={() => {}} registerOpen={(fn) => (open = fn)} />);
