@@ -17,6 +17,11 @@ async function loadExists() {
   return mod.glsPointExistsInFeed;
 }
 
+async function loadGoldIdFor() {
+  const mod = await import('@/utilities/glsPointFeed');
+  return mod.glsPointGoldIdFor;
+}
+
 beforeEach(() => {
   vi.resetModules(); // drop the module-level feed memo between tests
   vi.restoreAllMocks();
@@ -50,6 +55,27 @@ describe('glsPointExistsInFeed', () => {
     );
 
     await expect(glsPointExistsInFeed(MATCHCODE, GOLD_ID)).resolves.toBe(false);
+  });
+
+  it('rejects a removed point against the live wire shape {"items":[...]}', async () => {
+    // The real ro.json endpoint wraps its array in {"items": [...]} — the
+    // array-only parse classified the live feed as malformed and silently
+    // disabled the existence check in production.
+    const glsPointExistsInFeed = await loadExists();
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      Response.json({ items: [{ id: 'OTHER' }, { id: 'ANOTHER' }] }),
+    );
+
+    await expect(glsPointExistsInFeed(MATCHCODE, GOLD_ID)).resolves.toBe(false);
+  });
+
+  it('accepts a hit against the live wire shape {"items":[...]}', async () => {
+    const glsPointExistsInFeed = await loadExists();
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      Response.json({ items: [{ id: MATCHCODE, goldId: Number(GOLD_ID) }] }),
+    );
+
+    await expect(glsPointExistsInFeed(MATCHCODE, null)).resolves.toBe(true);
   });
 
   it('fails open on a non-ok response', async () => {
@@ -103,5 +129,40 @@ describe('glsPointExistsInFeed', () => {
     vi.advanceTimersByTime(15 * 60_000 + 1); // TTL expired
     await expect(glsPointExistsInFeed(MATCHCODE, null)).resolves.toBe(true);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('glsPointGoldIdFor', () => {
+  it('returns the numeric goldId as a string from the live wire shape', async () => {
+    const goldIdFor = await loadGoldIdFor();
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      Response.json({ items: [{ id: MATCHCODE, goldId: 12370 }] }),
+    );
+
+    await expect(goldIdFor(MATCHCODE)).resolves.toBe('12370');
+  });
+
+  it('returns null for a matchcode the feed does not carry', async () => {
+    const goldIdFor = await loadGoldIdFor();
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      Response.json({ items: [{ id: 'OTHER', goldId: 1 }] }),
+    );
+
+    await expect(goldIdFor(MATCHCODE)).resolves.toBeNull();
+  });
+
+  it('returns null when the feed is unreachable (fail-open)', async () => {
+    const goldIdFor = await loadGoldIdFor();
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
+
+    await expect(goldIdFor(MATCHCODE)).resolves.toBeNull();
+  });
+
+  it('skips the fetch for an empty matchcode', async () => {
+    const goldIdFor = await loadGoldIdFor();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    await expect(goldIdFor('')).resolves.toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

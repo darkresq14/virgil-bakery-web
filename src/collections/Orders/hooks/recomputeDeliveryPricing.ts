@@ -2,7 +2,7 @@ import type { CollectionBeforeChangeHook } from 'payload';
 import { ValidationError } from 'payload';
 
 import { detectDeliveryZone, homeShippingCost, POINT_SHIPPING_COST } from '@/utilities/glsDelivery';
-import { glsPointExistsInFeed } from '@/utilities/glsPointFeed';
+import { glsPointExistsInFeed, glsPointGoldIdFor } from '@/utilities/glsPointFeed';
 
 /**
  * Server-side pricing guard for the anonymous checkout POST (code review on
@@ -90,6 +90,10 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook = async ({
   const zone = detectDeliveryZone(judet, localitate);
 
   let shippingCost: number;
+  // Set only when the GLS point gains a feed-backfilled goldId — spread into
+  // the returned data so the stored order (and the baker's sheet payload)
+  // carries the complete point.
+  let glsPoint: Record<string, unknown> | undefined;
   if (zone === 'in') {
     if (method !== 'personal') {
       fail('Adresa este în zona de livrare personală — metoda trebuie să fie personală');
@@ -101,7 +105,18 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook = async ({
       if (typeof matchcode !== 'string' || matchcode === '') {
         fail('Alege punctul GLS', 'glsPoint');
       }
-      const goldId = (dataRecord.glsPoint as { goldId?: unknown } | undefined)?.goldId;
+      let goldId = (dataRecord.glsPoint as { goldId?: unknown } | undefined)?.goldId;
+      if (typeof goldId !== 'string' || goldId === '') {
+        // The widget never emits goldId (zero references in gls-dpm-modern.js)
+        // but the feed carries it for every point — backfill it so the
+        // baker's MyGLS PSDParameter.IntegerValue is set whenever the feed is
+        // reachable. Best-effort: a miss never blocks the order.
+        const fedGoldId = await glsPointGoldIdFor(matchcode);
+        if (fedGoldId != null) {
+          goldId = fedGoldId;
+          glsPoint = { ...((dataRecord.glsPoint as object) ?? {}), goldId };
+        }
+      }
       // Cached-point existence check, fail-open (glsPointFeed.ts): only a
       // confirmed miss against a well-shaped live feed rejects — customers
       // no longer download the 1.5 MB feed at checkout mount.
@@ -128,6 +143,7 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook = async ({
 
   return {
     ...dataRecord,
+    ...(glsPoint ? { glsPoint } : {}),
     items,
     subtotal,
     shippingCost,

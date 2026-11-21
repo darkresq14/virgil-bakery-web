@@ -4,6 +4,7 @@ import { recomputeDeliveryPricing } from '@/collections/Orders/hooks/recomputeDe
 
 vi.mock('@/utilities/glsPointFeed', () => ({
   glsPointExistsInFeed: vi.fn().mockResolvedValue(true),
+  glsPointGoldIdFor: vi.fn().mockResolvedValue(null),
 }));
 
 /**
@@ -128,6 +129,45 @@ describe('recomputeDeliveryPricing — anonymous creates', () => {
     await recomputeDeliveryPricing(makeArgs(data));
 
     expect(glsPointExistsInFeed).toHaveBeenCalledWith('ABC', '12345');
+  });
+
+  it('backfills glsPoint.goldId from the feed when the widget omitted it', async () => {
+    // The widget never emits goldId (verified: zero references in the
+    // gls-dpm-modern.js bundle), but the feed carries it for every point —
+    // the requirement's "id-ul, dacă îl dă widgetul" becomes "dacă îl știm".
+    const { glsPointGoldIdFor, glsPointExistsInFeed } = await import('@/utilities/glsPointFeed');
+    vi.mocked(glsPointGoldIdFor).mockResolvedValueOnce('12370');
+    const data = {
+      items: items(),
+      deliveryMethod: 'gls-punct',
+      glsPoint: { matchcode: 'RO030602-PARCELLOCK', nume: 'GLS Locker 1083 Mol Romania' },
+      ...outZoneAddress,
+    };
+
+    const result = (await recomputeDeliveryPricing(makeArgs(data))) as Record<string, unknown>;
+
+    expect(result.glsPoint).toEqual({
+      matchcode: 'RO030602-PARCELLOCK',
+      nume: 'GLS Locker 1083 Mol Romania',
+      goldId: '12370',
+    });
+    // The backfilled id also strengthens the existence check.
+    expect(glsPointExistsInFeed).toHaveBeenCalledWith('RO030602-PARCELLOCK', '12370');
+  });
+
+  it('leaves glsPoint untouched when the feed lookup misses', async () => {
+    const { glsPointGoldIdFor } = await import('@/utilities/glsPointFeed');
+    vi.mocked(glsPointGoldIdFor).mockResolvedValueOnce(null);
+    const data = {
+      items: items(),
+      deliveryMethod: 'gls-punct',
+      glsPoint: { matchcode: 'ABC', nume: 'Locker 1' },
+      ...outZoneAddress,
+    };
+
+    const result = (await recomputeDeliveryPricing(makeArgs(data))) as Record<string, unknown>;
+
+    expect(result.glsPoint).toEqual({ matchcode: 'ABC', nume: 'Locker 1' });
   });
 
   it('rejects gls-acasa above 10 items', async () => {

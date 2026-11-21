@@ -32,7 +32,14 @@ async function fetchFeed(): Promise<FeedPoint[] | null> {
     const res = await fetch(FEED_URL, { signal: AbortSignal.timeout(FEED_TIMEOUT_MS) });
     if (!res.ok) return null;
     const feed = (await res.json()) as unknown;
-    return Array.isArray(feed) && feed.length > 0 ? (feed as FeedPoint[]) : null;
+    // The live endpoint wraps its array in {"items": [...]} (verified against
+    // map.gls-romania.com); a bare array is tolerated for shape drift.
+    const items = Array.isArray(feed)
+      ? feed
+      : Array.isArray((feed as { items?: unknown }).items)
+        ? ((feed as { items: unknown[] }).items as FeedPoint[])
+        : null;
+    return items && items.length > 0 ? items : null;
   } catch {
     return null;
   }
@@ -44,6 +51,19 @@ function loadFeed(): Promise<FeedPoint[] | null> {
     feedPromise = fetchFeed();
   }
   return feedPromise;
+}
+
+/** goldId from the cached feed for a matchcode — null when the feed is
+ * unavailable, the point is absent, or the entry carries no goldId. The
+ * widget never emits goldId (zero references in gls-dpm-modern.js), so this
+ * is the only source for MyGLS's PSDParameter.IntegerValue. */
+export async function glsPointGoldIdFor(matchcode: string): Promise<string | null> {
+  if (matchcode === '') return null;
+  const feed = await loadFeed();
+  if (!feed) return null;
+  const entry = feed.find((point) => String(point.id ?? '') === matchcode);
+  const goldId = entry?.goldId;
+  return goldId != null ? String(goldId) : null;
 }
 
 /**
