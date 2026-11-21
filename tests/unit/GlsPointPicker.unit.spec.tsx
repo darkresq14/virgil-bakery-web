@@ -1,7 +1,8 @@
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { type GlsPoint, GlsPointPicker } from '@/components/GlsPointPicker';
+import { GlsPointPicker } from '@/components/GlsPointPicker';
+import type { GlsPoint } from '@/utilities/glsDelivery';
 
 /**
  * Reproduces the gls-romania widget's custom element semantics (verified

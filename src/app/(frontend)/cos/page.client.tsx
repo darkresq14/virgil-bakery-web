@@ -17,7 +17,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { type AddressFields, AddressForm } from '@/components/AddressForm';
-import { type GlsPoint, GlsPointPicker } from '@/components/GlsPointPicker';
+import { GlsPointPicker } from '@/components/GlsPointPicker';
 import { useCart } from '@/providers/Cart';
 import {
   type DeliveryDateOption,
@@ -27,6 +27,7 @@ import {
 import { formatPrice } from '@/utilities/formatPrice';
 import {
   detectDeliveryZone,
+  type GlsPoint,
   homeShippingCost,
   POINT_SHIPPING_COST,
   shippingCostFor,

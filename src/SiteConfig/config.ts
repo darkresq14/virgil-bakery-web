@@ -1,5 +1,6 @@
 import type { GlobalConfig } from 'payload';
 import { defaultLexical } from '@/fields/defaultLexical';
+import { WHATSAPP_NUMBER_FALLBACK } from '@/utilities/whatsapp';
 import { revalidateSiteConfig } from './hooks/revalidateSiteConfig';
 
 export const SiteConfig: GlobalConfig = {
@@ -22,7 +23,7 @@ export const SiteConfig: GlobalConfig = {
               name: 'whatsappNumber',
               type: 'text',
               label: 'Număr WhatsApp',
-              defaultValue: '+40746245391',
+              defaultValue: WHATSAPP_NUMBER_FALLBACK,
             },
             {
               name: 'contactEmail',
@@ -34,7 +35,7 @@ export const SiteConfig: GlobalConfig = {
               name: 'contactPhone',
               type: 'text',
               label: 'Telefon contact',
-              defaultValue: '+40746245391',
+              defaultValue: WHATSAPP_NUMBER_FALLBACK,
             },
             {
               name: 'facebookUrl',

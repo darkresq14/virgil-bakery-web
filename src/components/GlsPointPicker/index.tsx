@@ -18,18 +18,9 @@
 
 import { useCallback, useRef } from 'react';
 
-const WIDGET_SRC = 'https://map.gls-romania.com/widget/gls-dpm.js';
+import type { GlsPoint } from '@/utilities/glsDelivery';
 
-/** A GLS delivery point as chosen on the widget map. */
-export interface GlsPoint {
-  /** Matchcode — MyGLS PSDParameter.StringValue. */
-  matchcode: string;
-  /** Numeric DropOffPoint ID — MyGLS PSDParameter.IntegerValue. */
-  goldId?: string;
-  nume: string;
-  adresa: string;
-  tip: 'parcel-locker' | 'parcel-shop' | string;
-}
+const WIDGET_SRC = 'https://map.gls-romania.com/widget/gls-dpm.js';
 
 interface GlsSelectionDetail {
   id?: unknown;

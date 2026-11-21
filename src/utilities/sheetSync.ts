@@ -1,4 +1,5 @@
 import { roDayKey } from '@/utilities/deliveryDates';
+import type { GlsPointData } from '@/utilities/glsDelivery';
 
 /**
  * Sheet-sync seam — the ONLY module in the app that knows anything about the
@@ -6,15 +7,6 @@ import { roDayKey } from '@/utilities/deliveryDates';
  * created order to the verified wire contract and pushes it; callers get a
  * sync outcome and never a thrown error. See GitHub issue #33/#34.
  */
-
-/** GLS point (locker/ParcelShop) chosen at checkout, from the widget. */
-export interface GlsPointData {
-  goldId?: string | null;
-  matchcode?: string | null;
-  nume?: string | null;
-  adresa?: string | null;
-  tip?: string | null;
-}
 
 /** The order shape this seam needs (subset of the Payload `orders` doc). */
 export interface SheetSyncOrder {

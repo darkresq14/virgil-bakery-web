@@ -1,10 +1,11 @@
 /**
- * Single source of truth for the bakery's WhatsApp links.
+ * Single source of truth for the bakery's WhatsApp number and links.
  *
- * The canonical number lives in the `siteConfig` global (`whatsappNumber`,
- * editable in the Payload admin). This helper only holds the fallback used
- * when that global is unavailable — keep it in sync with the `defaultValue`
- * in `src/SiteConfig/config.ts`.
+ * The canonical, editable value lives in the `siteConfig` global
+ * (`whatsappNumber`, admin-editable). `WHATSAPP_NUMBER_FALLBACK` is the
+ * number's only hardcoded occurrence — the `defaultValue`s in
+ * `src/SiteConfig/config.ts` import it from here, and `whatsappLink` falls
+ * back to it when the global is unavailable.
  */
 export const WHATSAPP_NUMBER_FALLBACK = '+40746245391';
 

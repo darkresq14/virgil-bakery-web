@@ -1,7 +1,7 @@
 import type { CollectionBeforeChangeHook } from 'payload';
 import { ValidationError } from 'payload';
-
-import { detectDeliveryZone, homeShippingCost, POINT_SHIPPING_COST } from '@/utilities/glsDelivery';
+import type { Order } from '@/payload-types';
+import { detectDeliveryZone, shippingCostFor } from '@/utilities/glsDelivery';
 import { glsPointExistsInFeed, glsPointGoldIdFor } from '@/utilities/glsPointFeed';
 
 /**
@@ -14,7 +14,7 @@ import { glsPointExistsInFeed, glsPointGoldIdFor } from '@/utilities/glsPointFee
  * Scoped to anonymous creates — admin-entered orders (manual / re-push,
  * including the legacy 'curier' passthrough, ADR 0007) keep their values.
  */
-export const recomputeDeliveryPricing: CollectionBeforeChangeHook = async ({
+export const recomputeDeliveryPricing: CollectionBeforeChangeHook<Order> = async ({
   data,
   operation,
   req,
@@ -22,9 +22,10 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook = async ({
   if (operation !== 'create') return data;
   if (req.user) return data;
 
-  const dataRecord = data as Record<string, unknown>;
-  const rawItems = Array.isArray(dataRecord.items) ? dataRecord.items : [];
-  const method = typeof dataRecord.deliveryMethod === 'string' ? dataRecord.deliveryMethod : '';
+  // `items` is a JSON field, so its generated type is loose — one narrowing
+  // for the untrusted array instead of per-use casts.
+  const rawItems = Array.isArray(data.items) ? (data.items as Record<string, unknown>[]) : [];
+  const method = data.deliveryMethod ?? '';
 
   // Function declaration (not const arrow): TS control-flow narrowing only
   // follows never-returning calls declared this way.
@@ -32,16 +33,16 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook = async ({
     throw new ValidationError({ errors: [{ message, path }] });
   }
 
-  const judet = typeof dataRecord.judet === 'string' ? dataRecord.judet : '';
-  const localitate = typeof dataRecord.localitate === 'string' ? dataRecord.localitate : '';
+  const judet = data.judet ?? '';
+  const localitate = data.localitate ?? '';
   if (!judet || !localitate) {
     fail('Județul și localitatea sunt obligatorii pentru livrare', 'localitate');
   }
 
   // Quantities drive the home tier — fractional or non-positive values
   // would skew it (Number.isInteger implies finite).
-  for (const item of rawItems as { quantity?: unknown }[]) {
-    const quantity = Number(item?.quantity);
+  for (const item of rawItems) {
+    const quantity = Number(item.quantity);
     if (!Number.isInteger(quantity) || quantity < 1) {
       fail('Coșul este invalid — cantitățile trebuie să fie numere întregi', 'items');
     }
@@ -50,7 +51,7 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook = async ({
   // Public read access returns published products only — same trust model
   // as validateDeliveryDate.
   const productIds = rawItems
-    .map((item) => (item as { productId?: unknown }).productId)
+    .map((item) => item.productId)
     .filter((id): id is string => typeof id === 'string' && id !== '');
   if (!productIds.length) fail('Coșul este gol', 'items');
 
@@ -70,7 +71,7 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook = async ({
 
   let subtotal = 0;
   let itemCount = 0;
-  const items = (rawItems as Record<string, unknown>[]).map((item) => {
+  const items = rawItems.map((item) => {
     const id = String(item.productId ?? '');
     const price = prices.get(id);
     // Two guards, not one `||`: TS never-return narrowing only works on a
@@ -94,7 +95,7 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook = async ({
   // Set only when the GLS point gains a feed-backfilled goldId — spread into
   // the returned data so the stored order (and the baker's sheet payload)
   // carries the complete point.
-  let glsPoint: Record<string, unknown> | undefined;
+  let glsPoint: Order['glsPoint'];
   if (zone === 'in') {
     if (method !== 'personal') {
       fail('Adresa este în zona de livrare personală — metoda trebuie să fie personală');
@@ -102,11 +103,12 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook = async ({
     shippingCost = 0;
   } else {
     if (method === 'gls-punct') {
-      const matchcode = (dataRecord.glsPoint as { matchcode?: unknown } | undefined)?.matchcode;
+      const point = data.glsPoint;
+      const matchcode = point?.matchcode;
       if (typeof matchcode !== 'string' || matchcode === '') {
         fail('Alege punctul GLS', 'glsPoint');
       }
-      let goldId = (dataRecord.glsPoint as { goldId?: unknown } | undefined)?.goldId;
+      let goldId = point?.goldId;
       if (typeof goldId !== 'string' || goldId === '') {
         // The widget never emits goldId (zero references in gls-dpm-modern.js)
         // but the feed carries it for every point — backfill it so the
@@ -115,7 +117,7 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook = async ({
         const fedGoldId = await glsPointGoldIdFor(matchcode);
         if (fedGoldId != null) {
           goldId = fedGoldId;
-          glsPoint = { ...((dataRecord.glsPoint as object) ?? {}), goldId };
+          glsPoint = { ...(point ?? {}), goldId };
         }
       }
       // Cached-point existence check, fail-open (glsPointFeed.ts): only a
@@ -128,22 +130,22 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook = async ({
       if (!exists) {
         fail('Punctul GLS ales nu mai este disponibil — alege alt punct', 'glsPoint');
       }
-      shippingCost = POINT_SHIPPING_COST;
-    } else if (method === 'gls-acasa') {
-      const tier = homeShippingCost(itemCount);
-      if (tier == null) {
-        fail('Livrarea acasă nu este disponibilă peste 10 produse — alege un punct GLS');
-      }
-      shippingCost = tier;
     } else if (method === 'personal') {
       fail('Adresa este în afara zonei de livrare personală — alege o metodă GLS');
-    } else {
+    } else if (method !== 'gls-acasa') {
       fail('Metodă de livrare invalidă');
     }
+    // One pricing source (glsDelivery.ts) for every method — null means
+    // home delivery above 10 items, the only unavailable combination.
+    const cost = shippingCostFor(method, zone, itemCount);
+    if (cost == null) {
+      fail('Livrarea acasă nu este disponibilă peste 10 produse — alege un punct GLS');
+    }
+    shippingCost = cost;
   }
 
   return {
-    ...dataRecord,
+    ...data,
     ...(glsPoint ? { glsPoint } : {}),
     items,
     subtotal,

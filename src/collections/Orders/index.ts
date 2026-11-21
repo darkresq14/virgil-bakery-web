@@ -120,6 +120,8 @@ export const Orders: CollectionConfig = {
       label: 'Detalii adresă',
     },
     {
+      // Field names mirror the GlsPoint/GlsPointData types in
+      // src/utilities/glsDelivery.ts and the wire `punct*` contract (ADR 0007).
       name: 'glsPoint',
       type: 'group',
       label: 'Punct GLS ales',
