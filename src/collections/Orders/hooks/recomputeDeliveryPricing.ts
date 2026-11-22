@@ -7,9 +7,10 @@ import { glsPointExistsInFeed, glsPointGoldIdFor } from '@/utilities/glsPointFee
 /**
  * Server-side pricing guard for the anonymous checkout POST (code review on
  * #47): the public create never trusts client-computed subtotal /
- * shippingCost / total. Prices come from the Products collection, shipping
- * from the glsDelivery tiers + the zone derived from judet/localitate, and
- * the method must be consistent with the zone.
+ * shippingCost / total. Prices and shipping weights come from the Products
+ * collection, shipping from the glsDelivery tiers on the cart's weight sum
+ * + the zone derived from judet/localitate, and the method must be
+ * consistent with the zone.
  *
  * Scoped to anonymous creates — admin-entered orders (manual / re-push,
  * including the legacy 'curier' passthrough, ADR 0007) keep their values.
@@ -39,7 +40,7 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook<Order> = async
     fail('Județul și localitatea sunt obligatorii pentru livrare', 'localitate');
   }
 
-  // Quantities drive the home tier — fractional or non-positive values
+  // Quantities scale the weight sum — fractional or non-positive values
   // would skew it (Number.isInteger implies finite).
   for (const item of rawItems) {
     const quantity = Number(item.quantity);
