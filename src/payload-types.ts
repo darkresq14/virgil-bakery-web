@@ -837,9 +837,9 @@ export interface Product {
       }[]
     | null;
   /**
-   * Ex: "800g", "1kg", "Set 5 buc"
+   * Greutatea de livrare în grame — ex: 800
    */
-  weight: string;
+  weight: number;
   price: number;
   orderingInfo?: {
     root: {

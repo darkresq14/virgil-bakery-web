@@ -5,6 +5,7 @@ import * as migration_20261014_054621_one_off_availability_date from './20261014
 import * as migration_20261019_103246_orders_sheet_sync_status from './20261019_103246_orders_sheet_sync_status';
 import * as migration_20261112_083700_site_config_thank_you_fields from './20261112_083700_site_config_thank_you_fields';
 import * as migration_20261117_134208_gls_point_delivery from './20261117_134208_gls_point_delivery';
+import * as migration_20261122_084906_product_weight_grams from './20261122_084906_product_weight_grams';
 
 export const migrations = [
   {
@@ -40,6 +41,11 @@ export const migrations = [
   {
     up: migration_20261117_134208_gls_point_delivery.up,
     down: migration_20261117_134208_gls_point_delivery.down,
-    name: '20261117_134208_gls_point_delivery'
+    name: '20261117_134208_gls_point_delivery',
+  },
+  {
+    up: migration_20261122_084906_product_weight_grams.up,
+    down: migration_20261122_084906_product_weight_grams.down,
+    name: '20261122_084906_product_weight_grams'
   },
 ];

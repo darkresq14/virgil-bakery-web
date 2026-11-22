@@ -266,11 +266,17 @@ export const Products: CollectionConfig<'products'> = {
           fields: [
             {
               name: 'weight',
-              type: 'text',
-              label: 'Greutate',
+              type: 'number',
+              label: 'Greutate de livrare (grame)',
               required: true,
               admin: {
-                description: 'Ex: "800g", "1kg", "Set 5 buc"',
+                description: 'Greutatea de livrare în grame — ex: 800',
+              },
+              validate: (value: number | null | undefined) => {
+                if (value == null) return true;
+                if (!Number.isInteger(value) || value <= 0)
+                  return 'Introdu un număr întreg de grame mai mare ca 0';
+                return true;
               },
             },
             {
