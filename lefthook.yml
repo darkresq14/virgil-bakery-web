@@ -7,3 +7,7 @@ pre-commit:
     schema-reminder:
       glob: "src/**/*.{ts,tsx}"
       run: pnpm tsx scripts/schema-change-reminder.ts {staged_files}
+pre-push:
+  commands:
+    migrate-verify-reminder:
+      run: pnpm tsx scripts/migrate-verify-reminder.ts {pushed_files}

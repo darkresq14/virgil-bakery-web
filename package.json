@@ -23,6 +23,7 @@
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
     "db:baseline": "tsx scripts/db-baseline.ts",
     "db:migrate:guarded": "tsx scripts/migrate-guard.ts",
+    "migrate:verify": "tsx scripts/migrate-verify.ts",
     "db:pull": "tsx scripts/db-pull-entry.ts",
     "media:pull": "tsx scripts/media-pull-entry.ts",
     "reinstall": "cross-env NODE_OPTIONS=--no-deprecation rm -rf node_modules && rm pnpm-lock.yaml && pnpm --ignore-workspace install",
@@ -70,6 +71,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.16",
     "@evilmartians/lefthook": "^2.1.8",
+    "@libsql/client": "0.14.0",
     "@playwright/test": "1.58.2",
     "@tailwindcss/postcss": "^4.1.18",
     "@tailwindcss/typography": "^0.5.19",
