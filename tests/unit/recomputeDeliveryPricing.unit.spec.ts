@@ -49,6 +49,12 @@ async function rejectionMessage(args: HookArgs): Promise<string> {
 const outZoneAddress = { judet: 'Cluj', localitate: 'Cluj-Napoca' };
 const inZoneAddress = { judet: 'Sibiu', localitate: 'Sibiu' };
 
+/** Override the mocked Products lookup for a specific scenario. */
+function withDocs(args: HookArgs, docs: unknown[]): HookArgs {
+  (args.req.payload.find as ReturnType<typeof vi.fn>).mockResolvedValue({ docs });
+  return args;
+}
+
 function items(quantity1 = 1, quantity2 = 2) {
   return [
     { productId: '1', name: 'Pâine', quantity: quantity1, price: 0.01 },
@@ -171,13 +177,35 @@ describe('recomputeDeliveryPricing — anonymous creates', () => {
     expect(result.glsPoint).toEqual({ matchcode: 'ABC', nume: 'Locker 1' });
   });
 
-  it('rejects gls-acasa above 10 kg (interim: itemCount fed as grams until #63)', async () => {
+  it('prices exactly 10 kg at the top home tier (inclusive bound)', async () => {
+    // 2 × 4500 g + 1000 g = 10000 g — the "până la 10 kg" label promises
+    // the top tier, not unavailability.
     const data = {
-      items: items(5000, 5001),
+      items: items(2, 1),
       deliveryMethod: 'gls-acasa',
       ...outZoneAddress,
     };
-    await expect(rejectionMessage(makeArgs(data))).resolves.toMatch(/peste 10 produse/i);
+    const result = (await recomputeDeliveryPricing(
+      withDocs(makeArgs(data), [{ ...productsById['1'], weight: 4500 }, productsById['2']]),
+    )) as Record<string, unknown>;
+
+    expect(result.subtotal).toBe(40);
+    expect(result.shippingCost).toBe(43);
+    expect(result.total).toBe(83);
+  });
+
+  it('rejects gls-acasa above 10 kg', async () => {
+    // 800 g + 10000 g = 10800 g — past the last tier.
+    const data = {
+      items: items(1, 1),
+      deliveryMethod: 'gls-acasa',
+      ...outZoneAddress,
+    };
+    const args = withDocs(makeArgs(data), [
+      productsById['1'],
+      { ...productsById['2'], weight: 10000 },
+    ]);
+    await expect(rejectionMessage(args)).resolves.toMatch(/peste 10 kg/i);
   });
 
   it('gives personal delivery zero shipping inside the zone', async () => {

@@ -140,7 +140,7 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook<Order> = async
     // home delivery above 10 kg, the only unavailable combination.
     const cost = shippingCostFor(method, zone, totalWeight);
     if (cost == null) {
-      fail('Livrarea acasă nu este disponibilă peste 10 produse — alege un punct GLS');
+      fail('Livrarea acasă nu este disponibilă peste 10 kg — alege un punct GLS');
     }
     shippingCost = cost;
   }
