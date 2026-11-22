@@ -67,13 +67,14 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook<Order> = async
     where: { id: { in: productIds } },
     req,
   });
-  const prices = new Map(products.docs.map((p) => [String(p.id), p.price as number]));
+  const productsById = new Map(products.docs.map((p) => [String(p.id), p]));
 
   let subtotal = 0;
-  let itemCount = 0;
+  let totalWeight = 0;
   const items = rawItems.map((item) => {
     const id = String(item.productId ?? '');
-    const price = prices.get(id);
+    const product = productsById.get(id);
+    const price = product?.price;
     // Two guards, not one `||`: TS never-return narrowing only works on a
     // single condition — collapsing them widens `price` back to `number |
     // undefined` for the arithmetic below.
@@ -85,7 +86,7 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook<Order> = async
     }
     const quantity = Number(item.quantity);
     subtotal += price * quantity;
-    itemCount += quantity;
+    totalWeight += (product?.weight ?? 0) * quantity;
     return { ...item, price };
   });
 
@@ -136,8 +137,8 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook<Order> = async
       fail('Metodă de livrare invalidă');
     }
     // One pricing source (glsDelivery.ts) for every method — null means
-    // home delivery above 10 items, the only unavailable combination.
-    const cost = shippingCostFor(method, zone, itemCount);
+    // home delivery above 10 kg, the only unavailable combination.
+    const cost = shippingCostFor(method, zone, totalWeight);
     if (cost == null) {
       fail('Livrarea acasă nu este disponibilă peste 10 produse — alege un punct GLS');
     }

@@ -16,9 +16,9 @@ vi.mock('@/utilities/glsPointFeed', () => ({
 
 type HookArgs = Parameters<typeof recomputeDeliveryPricing>[0];
 
-const productsById: Record<string, { id: string; price: number }> = {
-  '1': { id: '1', price: 10 },
-  '2': { id: '2', price: 20 },
+const productsById: Record<string, { id: string; price: number; weight: number }> = {
+  '1': { id: '1', price: 10, weight: 800 },
+  '2': { id: '2', price: 20, weight: 1000 },
 };
 
 function makeArgs(
@@ -57,7 +57,7 @@ function items(quantity1 = 1, quantity2 = 2) {
 }
 
 describe('recomputeDeliveryPricing — anonymous creates', () => {
-  it('recomputes subtotal/shipping/total from server data (out zone, acasă, 3 items)', async () => {
+  it('recomputes subtotal/shipping/total from stored weights (out zone, acasă, 2800g → 33 lei)', async () => {
     const data = {
       items: items(),
       deliveryMethod: 'gls-acasa',
@@ -68,12 +68,11 @@ describe('recomputeDeliveryPricing — anonymous creates', () => {
     };
     const result = (await recomputeDeliveryPricing(makeArgs(data))) as Record<string, unknown>;
 
-    // 10×1 + 20×2 = 50. Interim (#61 until #63): the guard still feeds
-    // itemCount (3) into the weight-based tiers — 3 g lands in the ≤2 kg
-    // tier = 26 lei. #63 recomputes from stored product weights instead.
+    // 10×1 + 20×2 = 50 lei; 800×1 + 1000×2 = 2800 g → the ≤5 kg tier = 33
+    // lei. The client's forged 1-lei values never survive.
     expect(result.subtotal).toBe(50);
-    expect(result.shippingCost).toBe(26);
-    expect(result.total).toBe(76);
+    expect(result.shippingCost).toBe(33);
+    expect(result.total).toBe(83);
     // Client-sent per-item prices are overwritten too.
     expect((result.items as { price: number }[])[0].price).toBe(10);
   });
