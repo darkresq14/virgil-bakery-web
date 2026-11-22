@@ -21,7 +21,7 @@ interface ProductCardProps {
     slug: string;
     shortDescription?: string;
     price: number;
-    weight?: string;
+    weight?: number;
     productType?: string;
     tags?: string[];
     available?: boolean;
@@ -48,7 +48,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       productId: product.id,
       name: product.name,
       price: product.price,
-      weight: product.weight || '',
+      weight: product.weight ?? 0,
       productType: product.productType || 'paine',
       slug: product.slug,
       availableDays: product.availableDays ?? 'both',
@@ -111,9 +111,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 product.price,
               )}
             </span>
-            {product.weight && (
-              <span className="text-sm text-muted-foreground ml-1">/ {product.weight}</span>
-            )}
+            {product.weight ? (
+              <span className="text-sm text-muted-foreground ml-1">/ {product.weight}g</span>
+            ) : null}
           </div>
           {purchaseable ? (
             <button

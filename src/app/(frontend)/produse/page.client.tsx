@@ -14,7 +14,7 @@ interface Product {
   slug: string;
   shortDescription?: string;
   price: number;
-  weight?: string;
+  weight?: number;
   productType?: string;
   tags?: string[];
   available?: boolean;

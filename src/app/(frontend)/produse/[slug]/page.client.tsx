@@ -59,7 +59,7 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
       productId: String(product.id),
       name: product.name,
       price: product.price,
-      weight: product.weight || '',
+      weight: product.weight ?? 0,
       productType: product.productType || 'paine',
       slug: product.slug,
       availableDays: product.availableDays ?? 'both',
@@ -151,9 +151,9 @@ export const ProductDetailClient: React.FC<{ product: Product }> = ({ product })
                   product.price,
                 )}
               </span>
-              {product.weight && (
-                <span className="text-sm text-muted-foreground font-sans">{product.weight}</span>
-              )}
+              {product.weight ? (
+                <span className="text-sm text-muted-foreground font-sans">{product.weight}g</span>
+              ) : null}
             </div>
 
             {/* Availability */}

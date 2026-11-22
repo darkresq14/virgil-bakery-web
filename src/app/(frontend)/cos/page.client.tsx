@@ -666,9 +666,9 @@ export function CartPageClient({
                     >
                       {item.name}
                     </Link>
-                    {item.weight && (
-                      <p className="text-sm text-muted-foreground font-sans">{item.weight}</p>
-                    )}
+                    {item.weight ? (
+                      <p className="text-sm text-muted-foreground font-sans">{item.weight}g</p>
+                    ) : null}
                     {staleItemIds.has(item.productId) ? (
                       <p className="text-sm text-destructive font-sans mt-1">
                         Momentan indisponibil — elimină-l din coș pentru a continua

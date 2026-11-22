@@ -5,10 +5,12 @@ import { CartPageClient } from '@/app/(frontend)/cos/page.client';
 import { useCart } from '@/providers/Cart';
 import { getDeliveryDates } from '@/utilities/deliveryDates';
 
-// Mock useCart to provide test cart items
-vi.mock('@/providers/Cart', () => ({
-  useCart: vi.fn(),
-}));
+// Mock useCart to provide test cart items (the rest of the module stays real —
+// the legacy-cart tests below render the actual CartProvider).
+vi.mock('@/providers/Cart', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/providers/Cart')>();
+  return { ...actual, useCart: vi.fn() };
+});
 
 // Cart redirects to the thank-you route on success — mock the Next router.
 const pushMock = vi.fn();
@@ -41,7 +43,7 @@ const mockCartItems = [
     name: 'Pâine Albă',
     price: 10,
     quantity: 2,
-    weight: '500g',
+    weight: 500,
     productType: 'paine',
     slug: 'paine-alba',
     availableDays: 'both' as const,
@@ -52,7 +54,7 @@ const mockCartItems = [
     name: 'Scovergă',
     price: 10,
     quantity: 1,
-    weight: '300g',
+    weight: 300,
     productType: 'produs',
     slug: 'scoverga',
     availableDays: 'both' as const,
@@ -780,7 +782,7 @@ describe('CartPageClient — delivery date labels for availability-restricted ca
           name: 'Pâine Albă',
           price: 10,
           quantity: 2,
-          weight: '500g',
+          weight: 500,
           productType: 'paine',
           slug: 'paine-alba',
           availableDays: 'friday',
@@ -1052,5 +1054,72 @@ describe('CartPageClient — accessible errors + form ergonomics (critique fixes
 
     fireEvent.click(screen.getByText(/apasă din nou/i));
     expect(clearCart).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('CartPageClient — product weights in grams (#60)', () => {
+  it('renders raw grams on cart line items — no kilogram conversion', () => {
+    setupCartPage();
+
+    // Fixtures: Pâine Albă 500 g ×2, Scovergă 300 g ×1.
+    expect(screen.getByText('500g')).toBeTruthy();
+    expect(screen.getByText('300g')).toBeTruthy();
+    expect(screen.queryByText(/kg/i)).toBeNull();
+  });
+
+  it('keeps rendering weights for carts cached in the text-weight era', async () => {
+    // Before #60 the cart persisted free-text weights. Rehydration must
+    // coerce parseable ones to grams and strip the rest, without errors.
+    const legacyCart = [
+      {
+        productId: '1',
+        name: 'Pâine Albă',
+        price: 10,
+        quantity: 2,
+        weight: '500g',
+        productType: 'paine',
+        slug: 'paine-alba',
+        availableDays: 'both',
+        availableOnDate: null,
+      },
+      {
+        productId: '2',
+        name: 'Coș',
+        price: 10,
+        quantity: 1,
+        weight: 'Pachet',
+        productType: 'produs',
+        slug: 'cos',
+        availableDays: 'both',
+        availableOnDate: null,
+      },
+    ];
+    const actual = await vi.importActual<typeof import('@/providers/Cart')>('@/providers/Cart');
+    // Real provider + real hook: the page consumes what loadCart() rehydrates.
+    vi.mocked(useCart).mockImplementation(actual.useCart);
+
+    const store: Record<string, string> = {
+      'virgil-bakery-cart': JSON.stringify(legacyCart),
+    };
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation((key) => store[key] ?? null);
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key, value) => {
+      store[key] = value;
+    });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      Response.json({ docs: [{ id: '1', available: true, availableDays: 'both' }] }),
+    );
+    vi.spyOn(window, 'open').mockReturnValue(null);
+
+    render(
+      <actual.CartProvider>
+        <CartPageClient />
+      </actual.CartProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText('Pâine Albă')).toBeTruthy());
+    expect(screen.getByText('500g')).toBeTruthy();
+    // Unparseable legacy text is stripped, never rendered as-is.
+    expect(screen.queryByText('Pachet')).toBeNull();
+    expect(screen.queryByText('0g')).toBeNull();
   });
 });

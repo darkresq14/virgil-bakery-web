@@ -10,7 +10,8 @@ export interface CartItem {
   name: string;
   price: number;
   quantity: number;
-  weight: string;
+  /** Shipping weight in grams (0 = unknown/hidden on display). */
+  weight: number;
   productType: string;
   slug: string;
   availableDays: AvailableDays;
@@ -42,14 +43,24 @@ const CartContext = createContext(initialContext);
 
 const CART_STORAGE_KEY = 'virgil-bakery-cart';
 
+/** Grams parsed from a legacy free-text weight ("800g" → 800); 0 when unparseable. */
+function toGrams(value: unknown): number {
+  if (typeof value === 'number') return Number.isFinite(value) ? Math.round(value) : 0;
+  if (typeof value !== 'string') return 0;
+  const match = value.trim().match(/^(\d+(?:[.,]\d+)?)\s*g?$/i);
+  return match ? Math.round(Number.parseFloat(match[1].replace(',', '.'))) : 0;
+}
+
 function loadCart(): CartItem[] {
   if (typeof window === 'undefined') return [];
   try {
     const stored = localStorage.getItem(CART_STORAGE_KEY);
     if (!stored) return [];
     // Carts saved before Availability Day existed lack availableDays — treat as unrestricted.
+    // Carts from the free-text weight era carry strings — coerce to grams, strip junk.
     return (JSON.parse(stored) as CartItem[]).map((item) => ({
       ...item,
+      weight: toGrams(item.weight),
       availableDays: item.availableDays ?? 'both',
       availableOnDate: item.availableOnDate ?? null,
     }));
