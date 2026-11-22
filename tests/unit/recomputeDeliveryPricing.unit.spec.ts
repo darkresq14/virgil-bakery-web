@@ -208,6 +208,36 @@ describe('recomputeDeliveryPricing — anonymous creates', () => {
     await expect(rejectionMessage(args)).resolves.toMatch(/peste 10 kg/i);
   });
 
+  it('rejects when a cart product lacks its shipping weight (any method)', async () => {
+    // Defense in depth under the required field: required validates
+    // product saves, not order placement — a legacy row can still be NULL.
+    const data = {
+      items: items(),
+      deliveryMethod: 'gls-punct',
+      glsPoint: { matchcode: 'ABC', nume: 'Locker 1' },
+      ...outZoneAddress,
+    };
+    const args = withDocs(makeArgs(data), [
+      productsById['1'],
+      { ...productsById['2'], weight: null },
+    ]);
+    await expect(rejectionMessage(args)).resolves.toMatch(
+      /nu are greutatea de livrare completată/i,
+    );
+  });
+
+  it('rejects when a cart product carries an invalid shipping weight', async () => {
+    const data = {
+      items: items(),
+      deliveryMethod: 'personal',
+      ...inZoneAddress,
+    };
+    const args = withDocs(makeArgs(data), [{ ...productsById['1'], weight: 0 }, productsById['2']]);
+    await expect(rejectionMessage(args)).resolves.toMatch(
+      /nu are greutatea de livrare completată/i,
+    );
+  });
+
   it('gives personal delivery zero shipping inside the zone', async () => {
     const data = {
       items: items(),

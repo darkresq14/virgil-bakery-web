@@ -84,9 +84,19 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook<Order> = async
     if (!Number.isFinite(price)) {
       fail(`Unul dintre produse nu mai este disponibil (id: ${id})`, 'items');
     }
+    // Weight drives the home tier — a missing/invalid value must reject
+    // instead of silently mispricing (defense in depth under the required
+    // field: required validates product saves, not order placement).
+    const weight = product?.weight;
+    if (weight == null) {
+      fail(`Unul dintre produse nu are greutatea de livrare completată (id: ${id})`, 'items');
+    }
+    if (!Number.isInteger(weight) || weight < 1) {
+      fail(`Unul dintre produse nu are greutatea de livrare completată (id: ${id})`, 'items');
+    }
     const quantity = Number(item.quantity);
     subtotal += price * quantity;
-    totalWeight += (product?.weight ?? 0) * quantity;
+    totalWeight += weight * quantity;
     return { ...item, price };
   });
 
