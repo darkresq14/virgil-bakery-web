@@ -152,9 +152,9 @@ describe('CartPageClient — address + zone-driven delivery (issue #47)', () => 
     expect(screen.getByText(/suntem în afara zonei de livrare personală/i)).toBeTruthy();
     expect(screen.getByText('Punct GLS')).toBeTruthy();
     expect(screen.getByText('Livrare acasă')).toBeTruthy();
-    // Flat 25 for the point option, tier price for home (3 items → 30 lei).
+    // Flat 25 for the point option, tier price for home (1300 g → ≤2 kg tier = 26 lei).
     expect(screen.getByText('25 lei')).toBeTruthy();
-    expect(screen.getByText('30 lei')).toBeTruthy();
+    expect(screen.getByText('26 lei')).toBeTruthy();
   });
 
   it('defaults to the GLS point option with the flat fee in the summary', () => {
@@ -337,9 +337,13 @@ describe('CartPageClient — single-form checkout (no returning-customer mini-fl
 
   it('POSTs order with deliveryMethod gls-acasa and the tiered shipping cost', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }));
-    setupCartPage();
+    setupCartPage({
+      items: [{ ...mockCartItems[0], quantity: 3, weight: 800 }],
+      itemCount: 3,
+      total: 30,
+    });
 
-    // 3 items → home tier 30 lei.
+    // 3 × 800 g = 2400 g → ≤5 kg tier, 33 lei.
     fillCompleteForm({ outOfZone: true, home: true });
     fireEvent.click(screen.getByText(/trimite comanda/i));
 
@@ -347,9 +351,9 @@ describe('CartPageClient — single-form checkout (no returning-customer mini-fl
     expect(orderPosts).toHaveLength(1);
     const body = JSON.parse(String(orderPosts[0]?.[1]?.body));
     expect(body.deliveryMethod).toBe('gls-acasa');
-    expect(body.shippingCost).toBe(30);
+    expect(body.shippingCost).toBe(33);
     expect(body.subtotal).toBe(30);
-    expect(body.total).toBe(60);
+    expect(body.total).toBe(63);
   });
 
   it('ignores a second rapid checkout click while the order POST is in flight', () => {
@@ -833,9 +837,13 @@ describe('CartPageClient — cached GLS choice + point revalidation (issue #47 h
     return choice === 'punct' ? radios[0] : radios[1];
   }
 
-  it('falls back to point delivery when a cached "acasă" is unavailable (>10 items)', async () => {
+  it('falls back to point delivery when a cached "acasă" is unavailable (>10 kg)', async () => {
     setupCartPage(
-      { itemCount: 11, total: 110 },
+      {
+        items: [{ ...mockCartItems[0], quantity: 14, weight: 800 }],
+        itemCount: 14,
+        total: 140,
+      },
       {
         [PROFILE_CACHE_KEY]: JSON.stringify({
           name: 'Ion Pop',
@@ -1121,5 +1129,49 @@ describe('CartPageClient — product weights in grams (#60)', () => {
     // Unparseable legacy text is stripped, never rendered as-is.
     expect(screen.queryByText('Pachet')).toBeNull();
     expect(screen.queryByText('0g')).toBeNull();
+  });
+});
+
+describe('CartPageClient — weight-based home tiers (#61)', () => {
+  function chooseOutOfZoneAddress() {
+    const judetSelect = screen.getByLabelText(/județ/i) as HTMLSelectElement;
+    fireEvent.change(judetSelect, { target: { value: 'Cluj' } });
+    fireEvent.change(screen.getByLabelText(/localitate/i), {
+      target: { value: 'Cluj-Napoca' },
+    });
+  }
+
+  function glsRadios() {
+    return document.querySelectorAll<HTMLInputElement>('input[name="gls-method"]');
+  }
+
+  it('shows the cart total weight and the applied tier in the summary', () => {
+    setupCartPage({
+      items: [{ ...mockCartItems[0], quantity: 3, weight: 800 }],
+      itemCount: 3,
+      total: 30,
+    });
+
+    chooseOutOfZoneAddress();
+    fireEvent.click(screen.getByLabelText(/livrare acasă/i));
+
+    // 3 × 800 g = 2400 g → „până la 5 kg” tier.
+    expect(screen.getByText('Greutate totală: 2400g')).toBeTruthy();
+    expect(screen.getByText('până la 5 kg')).toBeTruthy();
+  });
+
+  it('marks home delivery unavailable above 10 kg while point stays offered', () => {
+    setupCartPage({
+      items: [{ ...mockCartItems[0], quantity: 14, weight: 800 }],
+      itemCount: 14,
+      total: 140,
+    });
+
+    chooseOutOfZoneAddress();
+
+    // 14 × 800 g = 11 200 g — home is off, the locker stays at its flat fee.
+    expect(screen.getByText(/peste 10 kg/i)).toBeTruthy();
+    expect(glsRadios()[1].disabled).toBe(true);
+    expect(screen.getByText('25 lei')).toBeTruthy();
   });
 });

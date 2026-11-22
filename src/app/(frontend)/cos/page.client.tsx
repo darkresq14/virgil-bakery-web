@@ -29,6 +29,7 @@ import {
   detectDeliveryZone,
   type GlsPoint,
   homeShippingCost,
+  homeTierLabel,
   POINT_SHIPPING_COST,
   shippingCostFor,
 } from '@/utilities/glsDelivery';
@@ -340,20 +341,24 @@ export function CartPageClient({
       ? form.deliveryDate
       : '') || defaultDeliveryLabel;
 
-  // Resolved delivery method + shipping (issue #47). Outside the zone the
-  // customer's radio choice decides; home above 10 items is unavailable
-  // (null) and the checkout blocks on it.
+  // Resolved delivery method + shipping (issues #47, #61). Outside the zone
+  // the customer's radio choice decides; home above 10 kg is unavailable
+  // (null) and the checkout blocks on it. Shipping weight = unit grams ×
+  // quantity across the cart.
   const deliveryMethod =
     zone !== 'out' ? 'personal' : glsChoice === 'punct' ? 'gls-punct' : 'gls-acasa';
 
-  const shippingCost = shippingCostFor(deliveryMethod, zone, itemCount);
+  const totalWeight = items.reduce((sum, item) => sum + item.weight * item.quantity, 0);
 
-  /** Home-delivery tier for the current cart (null = unavailable, >10). */
-  const homePrice = homeShippingCost(itemCount);
+  const shippingCost = shippingCostFor(deliveryMethod, zone, totalWeight);
+
+  /** Home-delivery tier for the current cart (null = unavailable, >10 kg). */
+  const homePrice = homeShippingCost(totalWeight);
+  const homeTier = homeTierLabel(totalWeight);
 
   // A cached "acasă" choice can outlive its availability — the cart may have
-  // grown past 10 items since. Fall back to point delivery instead of
-  // leaving the disabled radio checked and the only working option off.
+  // grown past 10 kg since. Fall back to point delivery instead of leaving
+  // the disabled radio checked and the only working option off.
   useEffect(() => {
     if (glsChoice === 'acasa' && homePrice == null) setGlsChoice('punct');
   }, [glsChoice, homePrice]);
@@ -363,7 +368,7 @@ export function CartPageClient({
   // client no longer downloads the 1.5 MB delivery-point feed.
 
   const showTransport = shippingCost != null && shippingCost > 0;
-  // Summary/total need a concrete number; a null (home >10) blocks submit
+  // Summary/total need a concrete number; a null (home >10 kg) blocks submit
   // before the POST, so the fallback here is display-only.
   const displayShippingCost = shippingCost ?? 0;
 
@@ -411,11 +416,11 @@ export function CartPageClient({
     setFormError('');
 
     if (shippingCost == null) {
-      // Home delivery above 10 items — the radio is disabled; a stale cached
+      // Home delivery above 10 kg — the radio is disabled; a stale cached
       // choice can still land here, so guard the submit too.
       failValidation();
       setFormError(
-        'Livrarea acasă nu este disponibilă peste 10 produse — alege un punct GLS sau scrie-ne pe WhatsApp',
+        'Livrarea acasă nu este disponibilă peste 10 kg — alege un punct GLS sau scrie-ne pe WhatsApp',
       );
       return;
     }
@@ -883,6 +888,16 @@ export function CartPageClient({
                       </span>
                     </div>
                   )}
+                  {showTransport && deliveryMethod === 'gls-acasa' && homeTier && (
+                    <p className="text-xs font-sans text-muted-foreground -mt-1">{homeTier}</p>
+                  )}
+                  {zone === 'out' && (
+                    <div className="flex justify-between">
+                      <span className="font-sans text-muted-foreground">
+                        Greutate totală: {totalWeight}g
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between pt-2 border-t border-border">
                     <span className="font-sans text-lg font-bold">Total</span>
                     <span className="font-sans text-xl font-bold text-primary">
@@ -1173,12 +1188,11 @@ export function CartPageClient({
                             <span className="mt-0.5 block text-xs text-muted-foreground font-sans">
                               {homePrice != null ? (
                                 <>
-                                  Curier GLS livrează la adresa ta — {homePrice} lei pentru{' '}
-                                  {itemCount} produse.
+                                  Curier GLS livrează la adresa ta — {homePrice} lei · {homeTier}.
                                 </>
                               ) : (
                                 <>
-                                  Peste 10 produse — alege un punct GLS sau{' '}
+                                  Peste 10 kg — alege un punct GLS sau{' '}
                                   <a
                                     href={whatsappUrl || whatsappLink()}
                                     target="_blank"
