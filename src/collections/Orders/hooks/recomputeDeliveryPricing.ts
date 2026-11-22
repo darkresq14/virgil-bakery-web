@@ -7,9 +7,10 @@ import { glsPointExistsInFeed, glsPointGoldIdFor } from '@/utilities/glsPointFee
 /**
  * Server-side pricing guard for the anonymous checkout POST (code review on
  * #47): the public create never trusts client-computed subtotal /
- * shippingCost / total. Prices come from the Products collection, shipping
- * from the glsDelivery tiers + the zone derived from judet/localitate, and
- * the method must be consistent with the zone.
+ * shippingCost / total. Prices and shipping weights come from the Products
+ * collection, shipping from the glsDelivery tiers on the cart's weight sum
+ * + the zone derived from judet/localitate, and the method must be
+ * consistent with the zone.
  *
  * Scoped to anonymous creates — admin-entered orders (manual / re-push,
  * including the legacy 'curier' passthrough, ADR 0007) keep their values.
@@ -39,7 +40,7 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook<Order> = async
     fail('Județul și localitatea sunt obligatorii pentru livrare', 'localitate');
   }
 
-  // Quantities drive the home tier — fractional or non-positive values
+  // Quantities scale the weight sum — fractional or non-positive values
   // would skew it (Number.isInteger implies finite).
   for (const item of rawItems) {
     const quantity = Number(item.quantity);
@@ -67,13 +68,14 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook<Order> = async
     where: { id: { in: productIds } },
     req,
   });
-  const prices = new Map(products.docs.map((p) => [String(p.id), p.price as number]));
+  const productsById = new Map(products.docs.map((p) => [String(p.id), p]));
 
   let subtotal = 0;
-  let itemCount = 0;
+  let totalWeight = 0;
   const items = rawItems.map((item) => {
     const id = String(item.productId ?? '');
-    const price = prices.get(id);
+    const product = productsById.get(id);
+    const price = product?.price;
     // Two guards, not one `||`: TS never-return narrowing only works on a
     // single condition — collapsing them widens `price` back to `number |
     // undefined` for the arithmetic below.
@@ -83,9 +85,19 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook<Order> = async
     if (!Number.isFinite(price)) {
       fail(`Unul dintre produse nu mai este disponibil (id: ${id})`, 'items');
     }
+    // Weight drives the home tier — a missing/invalid value must reject
+    // instead of silently mispricing (defense in depth under the required
+    // field: required validates product saves, not order placement).
+    const weight = product?.weight;
+    if (weight == null) {
+      fail(`Unul dintre produse nu are greutatea de livrare completată (id: ${id})`, 'items');
+    }
+    if (!Number.isInteger(weight) || weight < 1) {
+      fail(`Unul dintre produse nu are greutatea de livrare completată (id: ${id})`, 'items');
+    }
     const quantity = Number(item.quantity);
     subtotal += price * quantity;
-    itemCount += quantity;
+    totalWeight += weight * quantity;
     return { ...item, price };
   });
 
@@ -136,10 +148,10 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook<Order> = async
       fail('Metodă de livrare invalidă');
     }
     // One pricing source (glsDelivery.ts) for every method — null means
-    // home delivery above 10 items, the only unavailable combination.
-    const cost = shippingCostFor(method, zone, itemCount);
+    // home delivery above 10 kg, the only unavailable combination.
+    const cost = shippingCostFor(method, zone, totalWeight);
     if (cost == null) {
-      fail('Livrarea acasă nu este disponibilă peste 10 produse — alege un punct GLS');
+      fail('Livrarea acasă nu este disponibilă peste 10 kg — alege un punct GLS');
     }
     shippingCost = cost;
   }

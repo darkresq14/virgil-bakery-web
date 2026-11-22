@@ -16,9 +16,9 @@ vi.mock('@/utilities/glsPointFeed', () => ({
 
 type HookArgs = Parameters<typeof recomputeDeliveryPricing>[0];
 
-const productsById: Record<string, { id: string; price: number }> = {
-  '1': { id: '1', price: 10 },
-  '2': { id: '2', price: 20 },
+const productsById: Record<string, { id: string; price: number; weight: number }> = {
+  '1': { id: '1', price: 10, weight: 800 },
+  '2': { id: '2', price: 20, weight: 1000 },
 };
 
 function makeArgs(
@@ -49,6 +49,12 @@ async function rejectionMessage(args: HookArgs): Promise<string> {
 const outZoneAddress = { judet: 'Cluj', localitate: 'Cluj-Napoca' };
 const inZoneAddress = { judet: 'Sibiu', localitate: 'Sibiu' };
 
+/** Override the mocked Products lookup for a specific scenario. */
+function withDocs(args: HookArgs, docs: unknown[]): HookArgs {
+  (args.req.payload.find as ReturnType<typeof vi.fn>).mockResolvedValue({ docs });
+  return args;
+}
+
 function items(quantity1 = 1, quantity2 = 2) {
   return [
     { productId: '1', name: 'Pâine', quantity: quantity1, price: 0.01 },
@@ -57,7 +63,7 @@ function items(quantity1 = 1, quantity2 = 2) {
 }
 
 describe('recomputeDeliveryPricing — anonymous creates', () => {
-  it('recomputes subtotal/shipping/total from server data (out zone, acasă, 3 items)', async () => {
+  it('recomputes subtotal/shipping/total from stored weights (out zone, acasă, 2800g → 33 lei)', async () => {
     const data = {
       items: items(),
       deliveryMethod: 'gls-acasa',
@@ -68,12 +74,11 @@ describe('recomputeDeliveryPricing — anonymous creates', () => {
     };
     const result = (await recomputeDeliveryPricing(makeArgs(data))) as Record<string, unknown>;
 
-    // 10×1 + 20×2 = 50. Interim (#61 until #63): the guard still feeds
-    // itemCount (3) into the weight-based tiers — 3 g lands in the ≤2 kg
-    // tier = 26 lei. #63 recomputes from stored product weights instead.
+    // 10×1 + 20×2 = 50 lei; 800×1 + 1000×2 = 2800 g → the ≤5 kg tier = 33
+    // lei. The client's forged 1-lei values never survive.
     expect(result.subtotal).toBe(50);
-    expect(result.shippingCost).toBe(26);
-    expect(result.total).toBe(76);
+    expect(result.shippingCost).toBe(33);
+    expect(result.total).toBe(83);
     // Client-sent per-item prices are overwritten too.
     expect((result.items as { price: number }[])[0].price).toBe(10);
   });
@@ -172,13 +177,99 @@ describe('recomputeDeliveryPricing — anonymous creates', () => {
     expect(result.glsPoint).toEqual({ matchcode: 'ABC', nume: 'Locker 1' });
   });
 
-  it('rejects gls-acasa above 10 kg (interim: itemCount fed as grams until #63)', async () => {
+  it('prices exactly 10 kg at the top home tier (inclusive bound)', async () => {
+    // 2 × 4500 g + 1000 g = 10000 g — the "până la 10 kg" label promises
+    // the top tier, not unavailability.
     const data = {
-      items: items(5000, 5001),
+      items: items(2, 1),
       deliveryMethod: 'gls-acasa',
       ...outZoneAddress,
     };
-    await expect(rejectionMessage(makeArgs(data))).resolves.toMatch(/peste 10 produse/i);
+    const result = (await recomputeDeliveryPricing(
+      withDocs(makeArgs(data), [{ ...productsById['1'], weight: 4500 }, productsById['2']]),
+    )) as Record<string, unknown>;
+
+    expect(result.subtotal).toBe(40);
+    expect(result.shippingCost).toBe(43);
+    expect(result.total).toBe(83);
+  });
+
+  it('rejects gls-acasa above 10 kg', async () => {
+    // 800 g + 10000 g = 10800 g — past the last tier.
+    const data = {
+      items: items(1, 1),
+      deliveryMethod: 'gls-acasa',
+      ...outZoneAddress,
+    };
+    const args = withDocs(makeArgs(data), [
+      productsById['1'],
+      { ...productsById['2'], weight: 10000 },
+    ]);
+    await expect(rejectionMessage(args)).resolves.toMatch(/peste 10 kg/i);
+  });
+
+  it('rejects when a cart product lacks its shipping weight (any method)', async () => {
+    // Defense in depth under the required field: required validates
+    // product saves, not order placement — a legacy row can still be NULL.
+    const data = {
+      items: items(),
+      deliveryMethod: 'gls-punct',
+      glsPoint: { matchcode: 'ABC', nume: 'Locker 1' },
+      ...outZoneAddress,
+    };
+    const args = withDocs(makeArgs(data), [
+      productsById['1'],
+      { ...productsById['2'], weight: null },
+    ]);
+    await expect(rejectionMessage(args)).resolves.toMatch(
+      /nu are greutatea de livrare completată/i,
+    );
+  });
+
+  it('rejects when a cart product carries an invalid shipping weight', async () => {
+    const data = {
+      items: items(),
+      deliveryMethod: 'personal',
+      ...inZoneAddress,
+    };
+    const args = withDocs(makeArgs(data), [{ ...productsById['1'], weight: 0 }, productsById['2']]);
+    await expect(rejectionMessage(args)).resolves.toMatch(
+      /nu are greutatea de livrare completată/i,
+    );
+  });
+
+  it('keeps point delivery flat over 10 kg', async () => {
+    // Same 10800 g cart that home delivery rejects — the locker fee is
+    // weight-independent.
+    const data = {
+      items: items(1, 1),
+      deliveryMethod: 'gls-punct',
+      glsPoint: { matchcode: 'ABC', nume: 'Locker 1' },
+      ...outZoneAddress,
+    };
+    const args = withDocs(makeArgs(data), [
+      productsById['1'],
+      { ...productsById['2'], weight: 10000 },
+    ]);
+    const result = (await recomputeDeliveryPricing(args)) as Record<string, unknown>;
+
+    expect(result.shippingCost).toBe(25);
+    expect(result.total).toBe(55);
+  });
+
+  it('keeps personal delivery free over 10 kg inside the zone', async () => {
+    const data = {
+      items: items(1, 1),
+      deliveryMethod: 'personal',
+      ...inZoneAddress,
+    };
+    const args = withDocs(makeArgs(data), [
+      productsById['1'],
+      { ...productsById['2'], weight: 10000 },
+    ]);
+    const result = (await recomputeDeliveryPricing(args)) as Record<string, unknown>;
+
+    expect(result.shippingCost).toBe(0);
   });
 
   it('gives personal delivery zero shipping inside the zone', async () => {
