@@ -10,6 +10,8 @@
 // a seeded SQLite fixture the way prod runs it (transaction-wrapped, FKs
 // enforced) and fails loudly on silent data loss.
 
+export {};
+
 const MIGRATION_PATTERN = /^src\/migrations\/[^/]+\.ts$/;
 
 function main(): void {

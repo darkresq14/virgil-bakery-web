@@ -5,6 +5,8 @@
 // schema-bearing file is staged, and adjusts it if a migration is already
 // staged. See CLAUDE.md > Schema change workflow.
 
+export {};
+
 const SCHEMA_PATTERNS: RegExp[] = [
   /^src\/payload\.config\.ts$/,
   /^src\/plugins\/index\.ts$/,

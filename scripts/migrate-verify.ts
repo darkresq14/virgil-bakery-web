@@ -251,11 +251,11 @@ async function main(): Promise<void> {
         .rows[0].n,
     );
 
-    for (const name of effectiveTargets) {
+    for (const [name, file] of targetFiles) {
       console.log(
         `verify: applying ${name}${fileOverride && name === firstName ? ' (--file)' : ''}`,
       );
-      await runMigrationFile(client, targetFiles.get(name));
+      await runMigrationFile(client, file);
     }
 
     // If a migration managed to switch FK enforcement off (outside a
