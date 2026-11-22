@@ -10,7 +10,7 @@ How the order reaches the customer. Determined by the Delivery Zone:
 
 - **Personal Delivery (Livrare personală)** — Free. Delivered by the baker in person on Tuesdays and Fridays, between 08:00–16:00. The only method offered inside the Delivery Zone (Sibiu, Șura Mare, Șura Mică, Cisnădie, Cisnădioara, Șelimbăr).
 - **GLS Point Delivery (Livrare la punct GLS)** — 25 lei flat. Outside the zone only. Customer picks a parcel locker or ParcelShop on the official GLS map widget; the chosen point is the shipping destination. Package dispatched the day before the delivery date.
-- **GLS Home Delivery (Livrare GLS acasă)** — Outside the zone only. Tiered by total item quantity: 1–2 → 26 lei, 3 → 30, 4–5 → 39, 6–10 → 53. Above 10 items, home delivery is unavailable (locker still is).
+- **GLS Home Delivery (Livrare GLS acasă)** — Outside the zone only. Tiered by the cart's total shipping weight (Greutate de livrare), tier bounds inclusive: up to 2 kg → 26 lei, up to 5 kg → 33 lei, up to 10 kg → 43 lei. Above 10 kg, home delivery is unavailable (locker still is).
 
 All delivery methods share the same delivery dates (Tuesdays and Fridays) and the same cutoff schedule.
 
@@ -26,7 +26,7 @@ The geographic area eligible for free personal delivery. Defined as Judet=Sibiu 
 Sum of all product line items (quantity × price). Does not include transport.
 
 ### Shipping Cost (Cost transport)
-0 lei for personal delivery. 25 lei flat for GLS Point Delivery. Tiered by total item quantity for GLS Home Delivery (see Delivery Method). Stored separately from subtotal.
+0 lei for personal delivery. 25 lei flat for GLS Point Delivery. Tiered by total shipping weight for GLS Home Delivery (see Delivery Method). Stored separately from subtotal.
 
 ### Total (Grand Total)
 Subtotal + Shipping Cost. The amount the customer pays.
