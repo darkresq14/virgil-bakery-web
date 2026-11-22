@@ -238,6 +238,40 @@ describe('recomputeDeliveryPricing — anonymous creates', () => {
     );
   });
 
+  it('keeps point delivery flat over 10 kg', async () => {
+    // Same 10800 g cart that home delivery rejects — the locker fee is
+    // weight-independent.
+    const data = {
+      items: items(1, 1),
+      deliveryMethod: 'gls-punct',
+      glsPoint: { matchcode: 'ABC', nume: 'Locker 1' },
+      ...outZoneAddress,
+    };
+    const args = withDocs(makeArgs(data), [
+      productsById['1'],
+      { ...productsById['2'], weight: 10000 },
+    ]);
+    const result = (await recomputeDeliveryPricing(args)) as Record<string, unknown>;
+
+    expect(result.shippingCost).toBe(25);
+    expect(result.total).toBe(55);
+  });
+
+  it('keeps personal delivery free over 10 kg inside the zone', async () => {
+    const data = {
+      items: items(1, 1),
+      deliveryMethod: 'personal',
+      ...inZoneAddress,
+    };
+    const args = withDocs(makeArgs(data), [
+      productsById['1'],
+      { ...productsById['2'], weight: 10000 },
+    ]);
+    const result = (await recomputeDeliveryPricing(args)) as Record<string, unknown>;
+
+    expect(result.shippingCost).toBe(0);
+  });
+
   it('gives personal delivery zero shipping inside the zone', async () => {
     const data = {
       items: items(),
