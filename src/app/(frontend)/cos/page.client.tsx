@@ -341,7 +341,7 @@ export function CartPageClient({
       ? form.deliveryDate
       : '') || defaultDeliveryLabel;
 
-  // Resolved delivery method + shipping (issues #47, #61). Outside the zone
+  // Resolved delivery method + shipping (#59). Outside the zone
   // the customer's radio choice decides; home above 10 kg is unavailable
   // (null) and the checkout blocks on it. Shipping weight = unit grams ×
   // quantity across the cart.

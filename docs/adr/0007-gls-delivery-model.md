@@ -32,5 +32,6 @@ The bakery switched couriers from Cargus to GLS (#47). The old model had exactly
 
 - Merging the branch is a breaking change for the baker's Apps Script — #57 (field contract + confirmations + go-date) must be resolved with him first.
 - Home-delivery tier prices are baker-confirmed (comms, 2026-11-21); they live in exactly one module.
-- The anonymous checkout POST never trusts client pricing: subtotal/shipping/total are recomputed in an Orders `beforeChange` hook from Products prices + zone + method (admin manual orders keep their entered values).
+- The anonymous checkout POST never trusts client pricing: subtotal/shipping/total are recomputed in an Orders `beforeChange` hook from Products prices + shipping
+weights + zone + method (admin manual orders keep their entered values).
 - The `curier` delivery-method option stays in the Orders schema (and `DeliveryMethodCell`) so historical orders keep rendering.

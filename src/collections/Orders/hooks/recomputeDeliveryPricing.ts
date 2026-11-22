@@ -6,7 +6,7 @@ import { glsPointExistsInFeed, glsPointGoldIdFor } from '@/utilities/glsPointFee
 
 /**
  * Server-side pricing guard for the anonymous checkout POST (code review on
- * #47): the public create never trusts client-computed subtotal /
+ * #59): the public create never trusts client-computed subtotal /
  * shippingCost / total. Prices and shipping weights come from the Products
  * collection, shipping from the glsDelivery tiers on the cart's weight sum
  * + the zone derived from judet/localitate, and the method must be
@@ -75,10 +75,13 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook<Order> = async
   const items = rawItems.map((item) => {
     const id = String(item.productId ?? '');
     const product = productsById.get(id);
-    const price = product?.price;
-    // Two guards, not one `||`: TS never-return narrowing only works on a
-    // single condition — collapsing them widens `price` back to `number |
-    // undefined` for the arithmetic below.
+    // Guards in narrowing order (missing product → missing price → bad price):
+    // TS never-return narrowing follows one condition per guard, so each
+    // check below works on an already-narrowed value.
+    if (product == null) {
+      fail(`Unul dintre produse nu mai este disponibil (id: ${id})`, 'items');
+    }
+    const price = product.price;
     if (price == null) {
       fail(`Unul dintre produse nu mai este disponibil (id: ${id})`, 'items');
     }
@@ -88,7 +91,7 @@ export const recomputeDeliveryPricing: CollectionBeforeChangeHook<Order> = async
     // Weight drives the home tier — a missing/invalid value must reject
     // instead of silently mispricing (defense in depth under the required
     // field: required validates product saves, not order placement).
-    const weight = product?.weight;
+    const weight = product.weight;
     if (weight == null) {
       fail(`Unul dintre produse nu are greutatea de livrare completată (id: ${id})`, 'items');
     }

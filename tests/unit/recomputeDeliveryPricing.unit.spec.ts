@@ -10,7 +10,7 @@ vi.mock('@/utilities/glsPointFeed', () => ({
 /**
  * Direct-invocation tests for the anonymous-checkout pricing recompute
  * (beforeChange). The DB write must never trust client-computed
- * subtotal/shippingCost/total (code-review finding on #47): prices come from
+ * subtotal/shippingCost/total (code-review finding on #59): prices come from
  * the Products collection, shipping from glsDelivery tiers + zone.
  */
 
