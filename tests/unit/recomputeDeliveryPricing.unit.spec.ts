@@ -68,10 +68,12 @@ describe('recomputeDeliveryPricing — anonymous creates', () => {
     };
     const result = (await recomputeDeliveryPricing(makeArgs(data))) as Record<string, unknown>;
 
-    // 10×1 + 20×2 = 50; home tier for 3 items = 30.
+    // 10×1 + 20×2 = 50. Interim (#61 until #63): the guard still feeds
+    // itemCount (3) into the weight-based tiers — 3 g lands in the ≤2 kg
+    // tier = 26 lei. #63 recomputes from stored product weights instead.
     expect(result.subtotal).toBe(50);
-    expect(result.shippingCost).toBe(30);
-    expect(result.total).toBe(80);
+    expect(result.shippingCost).toBe(26);
+    expect(result.total).toBe(76);
     // Client-sent per-item prices are overwritten too.
     expect((result.items as { price: number }[])[0].price).toBe(10);
   });
@@ -170,9 +172,9 @@ describe('recomputeDeliveryPricing — anonymous creates', () => {
     expect(result.glsPoint).toEqual({ matchcode: 'ABC', nume: 'Locker 1' });
   });
 
-  it('rejects gls-acasa above 10 items', async () => {
+  it('rejects gls-acasa above 10 kg (interim: itemCount fed as grams until #63)', async () => {
     const data = {
-      items: items(6, 6),
+      items: items(5000, 5001),
       deliveryMethod: 'gls-acasa',
       ...outZoneAddress,
     };

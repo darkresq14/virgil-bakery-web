@@ -36,22 +36,21 @@ describe('detectDeliveryZone (issue #47)', () => {
   });
 });
 
-describe('homeShippingCost (baker indicative tiers)', () => {
+describe('homeShippingCost (baker-confirmed weight tiers, #59)', () => {
   it.each([
-    [1, 26],
-    [2, 26],
-    [3, 30],
-    [4, 39],
-    [5, 39],
-    [6, 53],
-    [10, 53],
-  ])('charges %i lei for %i items', (quantity, expected) => {
-    expect(homeShippingCost(quantity)).toBe(expected);
+    [500, 26],
+    [2000, 26],
+    [2001, 33],
+    [5000, 33],
+    [5001, 43],
+    [10000, 43],
+  ])('charges %i lei for %ig (bounds inclusive)', (grams, expected) => {
+    expect(homeShippingCost(grams)).toBe(expected);
   });
 
-  it('is unavailable above 10 items', () => {
-    expect(homeShippingCost(11)).toBeNull();
-    expect(homeShippingCost(20)).toBeNull();
+  it('is unavailable above 10 kg', () => {
+    expect(homeShippingCost(10001)).toBeNull();
+    expect(homeShippingCost(24000)).toBeNull();
   });
 });
 
@@ -60,17 +59,17 @@ describe('shippingCostFor', () => {
     expect(shippingCostFor('personal', 'in', 5)).toBe(0);
   });
 
-  it('flat 25 for GLS point delivery', () => {
-    expect(shippingCostFor('gls-punct', 'out', 1)).toBe(25);
-    expect(shippingCostFor('gls-punct', 'out', 10)).toBe(25);
+  it('flat 25 for GLS point delivery at any weight', () => {
+    expect(shippingCostFor('gls-punct', 'out', 300)).toBe(25);
+    expect(shippingCostFor('gls-punct', 'out', 12000)).toBe(25);
   });
 
-  it('tiered for GLS home delivery', () => {
-    expect(shippingCostFor('gls-acasa', 'out', 3)).toBe(30);
+  it('tiered by weight for GLS home delivery', () => {
+    expect(shippingCostFor('gls-acasa', 'out', 2400)).toBe(33);
   });
 
-  it('null for GLS home delivery above 10 items', () => {
-    expect(shippingCostFor('gls-acasa', 'out', 11)).toBeNull();
+  it('null for GLS home delivery above 10 kg', () => {
+    expect(shippingCostFor('gls-acasa', 'out', 10001)).toBeNull();
   });
 
   it('exposes the cheapest national rate for schema.org offers (GLS point flat fee)', () => {

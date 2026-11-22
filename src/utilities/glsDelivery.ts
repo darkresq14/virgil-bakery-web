@@ -5,10 +5,9 @@ import { isPersonalDeliveryZone } from '@/utilities/deliveryZone';
  *
  * Outside the personal delivery zone the customer picks between:
  * - GLS Point Delivery (parcel locker / ParcelShop) — flat fee
- * - GLS Home Delivery — tiered by total item quantity
+ * - GLS Home Delivery — tiered by total shipping weight (grams)
  *
- * Home tiers are the baker's indicative prices ("prețuri orientative");
- * exact values pending his confirmation (baker comms #57).
+ * Home tiers are baker-confirmed (comms, 2026-11-21).
  */
 
 /** Delivery methods stored on the Order and sent to the sheet wire. */
@@ -50,29 +49,45 @@ export function detectDeliveryZone(judet: string, localitate: string): DeliveryZ
 }
 
 /**
- * GLS Home Delivery fee by total item quantity (lei). Baker's indicative
- * tiers; null = unavailable (more than 10 items — locker still is).
+ * GLS Home Delivery tiers by total shipping weight — inclusive upper
+ * bound in grams, fee in lei, and the checkout label for the tier.
+ * Baker-confirmed (comms, 2026-11-21).
  */
-export function homeShippingCost(totalQuantity: number): number | null {
-  if (totalQuantity <= 2) return 26;
-  if (totalQuantity === 3) return 30;
-  if (totalQuantity <= 5) return 39;
-  if (totalQuantity <= 10) return 53;
-  return null;
+const HOME_TIERS = [
+  { maxGrams: 2000, cost: 26, label: 'până la 2 kg' },
+  { maxGrams: 5000, cost: 33, label: 'până la 5 kg' },
+  { maxGrams: 10000, cost: 43, label: 'până la 10 kg' },
+] as const;
+
+function homeTierFor(totalGrams: number) {
+  return HOME_TIERS.find((tier) => totalGrams <= tier.maxGrams) ?? null;
+}
+
+/**
+ * GLS Home Delivery fee by total shipping weight in grams (lei).
+ * null = unavailable (above 10 kg — point delivery still is).
+ */
+export function homeShippingCost(totalGrams: number): number | null {
+  return homeTierFor(totalGrams)?.cost ?? null;
+}
+
+/** Checkout label for the home tier the cart lands in ("până la 5 kg"). */
+export function homeTierLabel(totalGrams: number): string | null {
+  return homeTierFor(totalGrams)?.label ?? null;
 }
 
 /**
  * Shipping cost for the resolved method. null = the chosen method is
- * unavailable for this cart (home delivery above 10 items).
+ * unavailable for this cart (home delivery above 10 kg).
  */
 export function shippingCostFor(
   method: DeliveryMethod,
   zone: DeliveryZone,
-  totalQuantity: number,
+  totalGrams: number,
 ): number | null {
   if (zone !== 'out') return 0;
   if (method === 'gls-punct') return POINT_SHIPPING_COST;
-  if (method === 'gls-acasa') return homeShippingCost(totalQuantity);
+  if (method === 'gls-acasa') return homeShippingCost(totalGrams);
   return 0;
 }
 
