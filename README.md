@@ -214,6 +214,20 @@ pnpm payload migrate
 
 This command will check for any migrations that have not yet been run and try to run them and it will keep a record of migrations that have been run in the database.
 
+#### Migration safety: verify before pushing
+
+Payload runs every migration inside a transaction, and SQLite silently ignores `PRAGMA foreign_keys` inside transactions — so a generated table-rebuild migration (`DROP TABLE` on a table with inbound foreign keys) fires the live `ON DELETE CASCADE` / `SET NULL` actions and destroys data **without erroring**. Dev push mode never executes migration SQL, so the production build is the first place it runs. That is exactly how the 2026-11-22 incident orphaned every product version and deleted all product tags/characteristics/gallery rows — see `docs/retrospectives/2026-11-22-products-fk-cascade.md` and the known pitfall in `docs/adr/0004-database-topology-and-migrations.md`.
+
+Before pushing, replay the migration against a seeded local fixture the way prod runs it — same driver, same per-migration transaction, foreign keys enforced:
+
+```bash
+pnpm migrate:verify                    # newest migration
+pnpm migrate:verify 20261122_084906    # specific migration(s), by name prefix
+pnpm migrate:verify --file <path.ts>   # any migration file, e.g. from git history
+```
+
+It asserts referential integrity (`PRAGMA foreign_key_check`), seeded-row survival, and version-parent links, and exits non-zero on silent data loss. A pre-push hook prints a reminder whenever the pushed files touch `src/migrations/`. If generated SQL contains `DROP TABLE` on a table with inbound FKs, split the destructive part out — see ADR 0004.
+
 ### Docker
 
 Alternatively, you can use [Docker](https://www.docker.com) to spin up this template locally. To do so, follow these steps:

@@ -39,7 +39,8 @@ When editing any of these:
 
 1. **Decide if the change is schema-affecting.** It is, if it adds/removes/renames fields, or changes `type`, `relationTo`, `dbName`, or `indexes`. It is **not**, if it only touches `admin.*` UI, `hooks`, `access`, `labels`, or runtime logic.
 2. **If schema-affecting:** run `pnpm payload migrate:create <descriptive_name>`, review the generated SQL under `src/migrations/`, and commit the migration together with the config change. If the generated SQL is empty/no-op, the change is **not** schema-affecting — discard the migration.
-3. **If not schema-affecting:** no migration needed.
+3. **Before pushing any migration:** run `pnpm migrate:verify <name>` — it replays the migration SQL against a seeded local SQLite fixture with FKs enforced and transaction-wrapped exactly like prod, and fails loudly on silent data loss (`DROP TABLE` rebuilds fire live `ON DELETE` actions; see ADR 0004 pitfall).
+4. **If not schema-affecting:** no migration needed.
 
 A Lefthook `pre-commit` reminder (`scripts/schema-change-reminder.ts`) prints a prompt when schema files are staged. It **does not block**. It detects whether a migration is already staged and adjusts the message. Hooks self-install via the `prepare` script on every `pnpm install`.
 

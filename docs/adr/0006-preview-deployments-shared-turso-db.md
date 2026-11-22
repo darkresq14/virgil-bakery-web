@@ -13,6 +13,10 @@ ADR 0004 rejected a live backend for Vercel Preview Deployments. Reversing that:
 - **Concurrency hazard accepted.** Concurrent PRs share the DB; last-refresh-wins, cosmetic data mismatch only, never silent corruption (the `payload_migrations` table gates re-apply). Escape hatch: per-PR ephemeral DBs (`turso db create virgil-pr-N --from-dump`) if concurrency ever hurts.
 - **GDPR deletion lag.** A prod-deleted order lingers in preview until the next refresh. On a real deletion request, run `workflow_dispatch` immediately after deleting from prod. Accepted: the API stays auth-gated (`Orders.read = authenticated`), so preview adds no public leak path beyond prod's own.
 
+### Post-incident note (2026-11-22): the canary only fires on PRs
+
+The weight migration that corrupted production on 2026-11-22 (`20261122_084906`, see ADR 0004 pitfall) reached prod through a direct `git push` to master — no PR, so no preview refresh and no preview build ever ran it; the Vercel production build was its first execution. The canary's PR trigger is a workflow convention, not a structural gate. Closed locally since: `pnpm migrate:verify` (ADR 0004) exercises migration SQL against a seeded fixture before any push, PR or not, and a lefthook pre-push reminder fires on pushed migration files. Still open from the retro (`docs/retrospectives/2026-11-22-products-fk-cascade.md`): running the canary on master pushes before the prod build migrates, and a standing pre-migration backup.
+
 ## Considered options (rejected)
 
 - **Per-PR ephemeral DB.** Fully isolated, no concurrency hazard, but meaningfully more plumbing (create-on-open, destroy-on-close, per-PR creds). Premature for a solo maintainer with rarely-overlapping PRs. Recorded as the escape hatch.

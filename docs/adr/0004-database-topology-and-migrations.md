@@ -44,6 +44,14 @@ The Orders create path now performs a second, best-effort DB write: the sheet-sy
 
 ## Consequences
 
+### Known pitfall: table-recreate migrations fire FK actions (2026-11-22)
+
+Drizzle-generated migrations that alter a column type recreate the table (copy → `DROP TABLE` → rename) and emit `PRAGMA foreign_keys=OFF` around it. The sqlite adapter wraps migrations in a transaction, and `PRAGMA foreign_keys` is a **no-op inside a transaction** — so `DROP TABLE` fires the live `ON DELETE` actions (`SET NULL` on versions' `parent_id`, `CASCADE` on array/join tables). This orphaned every product version and deleted all `products_tags`/`products_characteristics`/`products_gallery` rows on 2026-11-22 (`20261122_084906`), repaired from a pre-migration backup.
+
+Rule for future migrations: if the generated SQL contains `DROP TABLE` on a table with inbound foreign keys, stop and split the destructive part out (or verify FK state after every recreated table) — the pragma guard cannot be trusted under this adapter.
+
+**Local pre-flight (added post-incident).** `pnpm migrate:verify <name>` replays real migration SQL against a seeded SQLite fixture (the products FK graph) before anything reaches prod: same driver (`@libsql/client`), same per-migration transaction wrapping as Payload's migrate, foreign keys enforced. It then asserts `PRAGMA foreign_key_check`, seeded-row survival across every FK-connected table, and version-parent integrity, exiting non-zero on silent loss. The original bad `20261122_084906` (PRAGMA + `DROP TABLE` rebuild) replays as data-losing — every child row gone, all versions orphaned; the in-place ALTER-swap rewrite passes. `--file <path>` verifies any migration file, e.g. one extracted from git history. A lefthook pre-push reminder points at it whenever pushed files touch `src/migrations/`. Full post-mortem: `docs/retrospectives/2026-11-22-products-fk-cascade.md`.
+
 ### Positive
 - Dev is fully isolated — schema experiments, test orders, and accidental edits cannot reach prod.
 - Schema changes are versioned, reviewable, and rollbackable; a failing migration rejects the deploy before it ships.
